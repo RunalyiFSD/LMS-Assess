@@ -1,0 +1,28 @@
+/* Tailwind CSS v3 base, component, and utility imports */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Establish clean light-theme typography and background properties */
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased font-sans transition-colors duration-150;
+  }
+
+  /* Accessible form focus indicator rings */
+  input:focus, textarea:focus, select:focus {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-1 border-brand-500;
+  }
+}
+
+@layer components {
+  /* Reusable glassmorphic styling utility with shadow tokens */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-sm rounded-xl;
+  }
+  
+  /* Smooth micro-animations for interactions */
+  .transition-micro {
+    @apply transition-all duration-200 ease-out;
+  }
+}
