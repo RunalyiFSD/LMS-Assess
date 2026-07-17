@@ -28,16 +28,16 @@ const Sidebar = () => {
     if (user.role === 'admin') {
       return [
         ...common,
-        { to: '/admin/users', label: 'Students & Instructors', icon: <Users size={18} /> },
+        { to: '/admin/users', label: 'Students & Teachers', icon: <Users size={18} /> },
         { to: '/admin/subjects', label: 'Subjects', icon: <BookOpen size={18} /> }
       ];
     }
 
-    if (user.role === 'instructor') {
+    if (user.role === 'teacher') {
       return [
         ...common,
-        { to: '/instructor/questions', label: 'Question Bank', icon: <FileQuestion size={18} /> },
-        { to: '/instructor/grade', label: 'Grade Submissions', icon: <GraduationCap size={18} /> }
+        { to: '/Teacher/questions', label: 'Question Bank', icon: <FileQuestion size={18} /> },
+        { to: '/Teacher/grade', label: 'Grade Submissions', icon: <GraduationCap size={18} /> }
       ];
     }
 

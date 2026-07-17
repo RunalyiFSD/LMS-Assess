@@ -1,7 +1,7 @@
-const Assessment = require('../models/Assessment');
-const MCQQuestion = require('../models/MCQQuestion');
-const CodingQuestion = require('../models/CodingQuestion');
-const TheoryQuestion = require('../models/TheoryQuestion');
+const Assessment = require('../legacy/models/Assessment');
+const MCQQuestion = require('../legacy/models/MCQQuestion');
+const CodingQuestion = require('../legacy/models/CodingQuestion');
+const TheoryQuestion = require('../legacy/models/TheoryQuestion');
 const AppError = require('../utils/AppError');
 
 // @desc    Create Assessment

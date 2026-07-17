@@ -5,16 +5,16 @@ const path = require('path');
 // Load env variables
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
-const User = require('../models/User');
-const Subject = require('../models/Subject');
-const Assessment = require('../models/Assessment');
-const MCQQuestion = require('../models/MCQQuestion');
-const CodingQuestion = require('../models/CodingQuestion');
-const TheoryQuestion = require('../models/TheoryQuestion');
-const Attempt = require('../models/Attempt');
-const Result = require('../models/Result');
-const Leaderboard = require('../models/Leaderboard');
-const Notification = require('../models/Notification');
+const User = require('../legacy/models/User');
+const Subject = require('../legacy/models/Subject');
+const Assessment = require('../legacy/models/Assessment');
+const MCQQuestion = require('../legacy/models/MCQQuestion');
+const CodingQuestion = require('../legacy/models/CodingQuestion');
+const TheoryQuestion = require('../legacy/models/TheoryQuestion');
+const Attempt = require('../legacy/models/Attempt');
+const Result = require('../legacy/models/Result');
+const Leaderboard = require('../legacy/models/Leaderboard');
+const Notification = require('../legacy/models/Notification');
 
 const seedData = async () => {
   try {

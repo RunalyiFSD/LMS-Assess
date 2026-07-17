@@ -1,4 +1,4 @@
-const Notification = require('../models/Notification');
+const Notification = require('../legacy/models/Notification');
 const AppError = require('../utils/AppError');
 
 // @desc    Get user notifications

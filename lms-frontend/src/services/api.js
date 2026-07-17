@@ -1,14 +1,22 @@
 import axios from 'axios';
+import { supabase } from '../config/supabase';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-  withCredentials: true, // Necessary for httpOnly session cookies
+  baseURL: 'http://localhost:5000/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 // Interceptor to handle global errors or token expirations
+api.interceptors.request.use(async (config) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    config.headers.Authorization = `Bearer ${session.access_token}`;
+  }
+  return config;
+});
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {

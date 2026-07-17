@@ -1,8 +1,8 @@
-const Subject = require('../models/Subject');
-const Assessment = require('../models/Assessment');
-const MCQQuestion = require('../models/MCQQuestion');
-const CodingQuestion = require('../models/CodingQuestion');
-const User = require('../models/User');
+const Subject = require('../legacy/models/Subject');
+const Assessment = require('../legacy/models/Assessment');
+const MCQQuestion = require('../legacy/models/MCQQuestion');
+const CodingQuestion = require('../legacy/models/CodingQuestion');
+const User = require('../legacy/models/User');
 
 const mockTemplates = [
   { title: 'SDE', time: '50 Minutes', objective: 5, programming: 2, type: 'coding', registrations: '69092 Registrations' },

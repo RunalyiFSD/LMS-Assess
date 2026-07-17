@@ -4,11 +4,11 @@ const path = require('path');
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
-const Attempt = require('../models/Attempt');
-const Assessment = require('../models/Assessment');
-const Subject = require('../models/Subject');
-const Result = require('../models/Result');
-const User = require('../models/User');
+const Attempt = require('../legacy/models/Attempt');
+const Assessment = require('../legacy/models/Assessment');
+const Subject = require('../legacy/models/Subject');
+const Result = require('../legacy/models/Result');
+const User = require('../legacy/models/User');
 
 const runDiagnostics = async () => {
   try {

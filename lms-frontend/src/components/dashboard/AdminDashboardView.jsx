@@ -149,7 +149,7 @@ const AdminDashboardView = () => {
       {/* Tab 1: User Management */}
       {activeTab === 'users' && (
         <Card
-          title="Students & Instructors List"
+          title="Students & Teachers List"
           extra={
             <Button size="sm" onClick={() => setShowUserModal(true)} className="gap-1">
               <Plus size={16} /> Add User Profile
@@ -176,7 +176,7 @@ const AdminDashboardView = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-xs font-bold capitalize">
                       <span className={`px-2 py-0.5 rounded ${
                         u.role === 'admin' ? 'bg-purple-50 text-purple-600' :
-                        u.role === 'instructor' ? 'bg-blue-50 text-blue-600' :
+                        u.role === 'teacher' ? 'bg-blue-50 text-blue-600' :
                         'bg-slate-50 text-slate-600'
                       }`}>
                         {u.role}
@@ -327,7 +327,7 @@ const AdminDashboardView = () => {
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
               >
                 <option value="student">Student</option>
-                <option value="instructor">Instructor</option>
+                <option value="teacher">Teacher</option>
                 <option value="admin">Administrator</option>
               </select>
             </div>

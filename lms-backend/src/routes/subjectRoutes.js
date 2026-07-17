@@ -10,7 +10,7 @@ router.use(protect);
 router
   .route('/')
   .get(subjectController.getAllSubjects)
-  .post(authorize('admin', 'instructor'), subjectController.createSubject);
+  .post(authorize('admin', 'teacher'), subjectController.createSubject);
 
 router
   .route('/:id')

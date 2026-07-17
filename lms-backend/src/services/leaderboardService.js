@@ -1,5 +1,5 @@
-const Leaderboard = require('../models/Leaderboard');
-const Attempt = require('../models/Attempt');
+const Leaderboard = require('../legacy/models/Leaderboard');
+const Attempt = require('../legacy/models/Attempt');
 
 /**
  * Calculates and updates rankings for a specific assessment.

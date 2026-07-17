@@ -1,7 +1,7 @@
-const Attempt = require('../models/Attempt');
-const Assessment = require('../models/Assessment');
-const Result = require('../models/Result');
-const User = require('../models/User');
+const Attempt = require('../legacy/models/Attempt');
+const Assessment = require('../legacy/models/Assessment');
+const Result = require('../legacy/models/Result');
+const User = require('../legacy/models/User');
 const evaluationService = require('../services/evaluationService');
 const leaderboardService = require('../services/leaderboardService');
 const notificationService = require('../services/notificationService');
@@ -411,7 +411,7 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
 exports.runCode = async (req, res, next) => {
   try {
     const { questionId, submittedCode, language } = req.body;
-    const CodingQuestion = require('../models/CodingQuestion');
+    const CodingQuestion = require('../legacy/models/CodingQuestion');
     
     const qData = await CodingQuestion.findById(questionId);
     if (!qData) {
@@ -465,7 +465,7 @@ exports.getAttemptDetails = async (req, res, next) => {
     if (
       attempt.student.toString() !== req.user._id.toString() &&
       req.user.role !== 'admin' &&
-      req.user.role !== 'instructor'
+      req.user.role !== 'teacher'
     ) {
       return next(new AppError('Unauthorized access to attempt session', 403));
     }

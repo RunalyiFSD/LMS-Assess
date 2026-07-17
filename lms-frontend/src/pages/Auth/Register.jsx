@@ -80,7 +80,7 @@ const Register = () => {
     setLoading(true);
     try {
       await register(formData);
-      navigate('/dashboard');
+      navigate('/login?message=' + encodeURIComponent('Registration successful! Please log in.'));
     } catch (err) {
       setError(err.message || 'Registration failed. Check details.');
     } finally {
@@ -178,7 +178,7 @@ const Register = () => {
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
                   >
                     <option value="student">Student</option>
-                    <option value="instructor">Instructor</option>
+                    <option value="teacher">Teacher</option>
                     <option value="admin">Administrator</option>
                   </select>
                 </div>
@@ -187,7 +187,7 @@ const Register = () => {
               {/* Optional role-based info */}
               {formData.role !== 'admin' && (
                 <div className="border-t border-slate-100 pt-4 mt-2">
-                  {formData.role === 'instructor' ? (
+                  {formData.role === 'teacher' ? (
                     <>
                       <p className="text-xs text-slate-400 font-medium mb-3">Professional Information (Optional)</p>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

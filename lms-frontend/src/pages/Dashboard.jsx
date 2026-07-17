@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/layout/Layout';
 import AdminDashboardView from '../components/dashboard/AdminDashboardView';
-import InstructorDashboardView from '../components/dashboard/InstructorDashboardView';
+import TeacherDashboardView from '../components/dashboard/TeacherDashboardView';
 import StudentDashboardView from '../components/dashboard/StudentDashboardView';
 import Button from '../components/common/Button';
 import api from '../services/api';
@@ -99,8 +99,8 @@ const Dashboard = () => {
     if (user?.role === 'admin') {
       return <AdminDashboardView />;
     }
-    if (user?.role === 'instructor') {
-      return <InstructorDashboardView />;
+    if (user?.role === 'teacher') {
+      return <TeacherDashboardView />;
     }
     return <StudentDashboardView />;
   };

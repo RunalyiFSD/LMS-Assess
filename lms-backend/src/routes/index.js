@@ -10,13 +10,20 @@ const userRoutes = require('./userRoutes');
 
 const router = express.Router();
 
-router.use('/auth', authRoutes);
-router.use('/subjects', subjectRoutes);
-router.use('/questions', questionRoutes);
-router.use('/assessments', assessmentRoutes);
-router.use('/attempts', attemptRoutes);
-router.use('/notifications', notificationRoutes);
-router.use('/leaderboard', leaderboardRoutes);
-router.use('/users', userRoutes);
+const { sendSuccess } = require('../helpers/apiResponse');
+
+// v1 API Routes
+router.get('/v1/health', (req, res) => {
+  return sendSuccess(res, { service: 'lms-backend', status: 'ok' }, 'Backend is running');
+});
+
+router.use('/v1/auth', authRoutes);
+router.use('/v1/subjects', subjectRoutes);
+router.use('/v1/questions', questionRoutes);
+router.use('/v1/assessments', assessmentRoutes);
+router.use('/v1/attempts', attemptRoutes);
+router.use('/v1/notifications', notificationRoutes);
+router.use('/v1/leaderboard', leaderboardRoutes);
+router.use('/v1/users', userRoutes);
 
 module.exports = router;

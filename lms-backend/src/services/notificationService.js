@@ -1,4 +1,4 @@
-const Notification = require('../models/Notification');
+const Notification = require('../legacy/models/Notification');
 const nodemailer = require('nodemailer');
 
 // Set up standard SMTP configuration transporter

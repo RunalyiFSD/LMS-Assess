@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: 
+      context: ./lms-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+
+  backend:
+    build:
+      context: ./lms-backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - ./lms-backend/.env
+    depends_on:
+      - ai-platform
+
+  ai-platform:
+    build:
+      context: ./ai-platform
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+    env_file:
+      - ./ai-platform/.env
