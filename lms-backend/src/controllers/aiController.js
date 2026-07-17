@@ -21,3 +21,28 @@ exports.chatWithAI = async (req, res) => {
     return sendError(res, error.message, null, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
+
+exports.ingestDocument = async (req, res) => {
+  try {
+    const { courseId, documentTitle } = req.body;
+    
+    if (!req.file) {
+      return sendError(res, 'PDF file is required', null, HTTP_STATUS.BAD_REQUEST);
+    }
+    
+    if (!courseId || !documentTitle) {
+      return sendError(res, 'courseId and documentTitle are required', null, HTTP_STATUS.BAD_REQUEST);
+    }
+    
+    const result = await aiPlatform.ingestDocument(
+      courseId, 
+      documentTitle, 
+      req.file.buffer, 
+      req.file.originalname
+    );
+    
+    return sendSuccess(res, result, 'Document ingested successfully into RAG pipeline');
+  } catch (error) {
+    return sendError(res, error.message, null, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
