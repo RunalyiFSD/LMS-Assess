@@ -1,8 +1,8 @@
-const User = require('../models/User');
-const Attempt = require('../models/Attempt');
-const Result = require('../models/Result');
-const Assessment = require('../models/Assessment');
-const Subject = require('../models/Subject');
+const User = require('../legacy/models/User');
+const Attempt = require('../legacy/models/Attempt');
+const Result = require('../legacy/models/Result');
+const Assessment = require('../legacy/models/Assessment');
+const Subject = require('../legacy/models/Subject');
 const AppError = require('../utils/AppError');
 
 // @desc    Get all users (Admin only)

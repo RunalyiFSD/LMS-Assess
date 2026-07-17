@@ -1,4 +1,4 @@
-const Subject = require('../models/Subject');
+const Subject = require('../legacy/models/Subject');
 const AppError = require('../utils/AppError');
 
 // @desc    Get all subjects

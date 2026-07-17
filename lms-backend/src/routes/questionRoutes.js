@@ -7,7 +7,7 @@ const router = express.Router();
 
 // All question routes are restricted to Instructors and Administrators
 router.use(protect);
-router.use(authorize('admin', 'instructor'));
+router.use(authorize('admin', 'teacher'));
 
 router.route('/').get(questionController.getAllQuestions);
 

@@ -1,7 +1,7 @@
-const Leaderboard = require('../models/Leaderboard');
-const Result = require('../models/Result');
-const User = require('../models/User');
-const Assessment = require('../models/Assessment');
+const Leaderboard = require('../legacy/models/Leaderboard');
+const Result = require('../legacy/models/Result');
+const User = require('../legacy/models/User');
+const Assessment = require('../legacy/models/Assessment');
 const AppError = require('../utils/AppError');
 const mongoose = require('mongoose');
 

@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../legacy/models/User');
 const AppError = require('../utils/AppError');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');

@@ -1,6 +1,6 @@
-const MCQQuestion = require('../models/MCQQuestion');
-const CodingQuestion = require('../models/CodingQuestion');
-const TheoryQuestion = require('../models/TheoryQuestion');
+const MCQQuestion = require('../legacy/models/MCQQuestion');
+const CodingQuestion = require('../legacy/models/CodingQuestion');
+const TheoryQuestion = require('../legacy/models/TheoryQuestion');
 const codeExecutionService = require('./codeExecutionService');
 
 /**

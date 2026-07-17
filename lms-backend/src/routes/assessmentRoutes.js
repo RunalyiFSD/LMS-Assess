@@ -10,12 +10,12 @@ router.use(protect);
 router
   .route('/')
   .get(assessmentController.getAllAssessments)
-  .post(authorize('admin', 'instructor'), assessmentController.createAssessment);
+  .post(authorize('admin', 'teacher'), assessmentController.createAssessment);
 
 router
   .route('/:id')
   .get(assessmentController.getAssessmentDetails)
-  .put(authorize('admin', 'instructor'), assessmentController.updateAssessment)
-  .delete(authorize('admin', 'instructor'), assessmentController.deleteAssessment);
+  .put(authorize('admin', 'teacher'), assessmentController.updateAssessment)
+  .delete(authorize('admin', 'teacher'), assessmentController.deleteAssessment);
 
 module.exports = router;
