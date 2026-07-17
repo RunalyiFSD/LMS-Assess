@@ -5,6 +5,8 @@ import os
 
 load_dotenv()
 
+from app.routers import gateway
+
 app = FastAPI(
     title="LMS-Assess AI Platform",
     description="AI services for question generation and grading.",
@@ -24,6 +26,8 @@ app.add_middleware(
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok", "service": "ai-platform"}
+
+app.include_router(gateway.router, prefix="/api/v1/ai", tags=["AI Gateway"])
 
 if __name__ == "__main__":
     import uvicorn
