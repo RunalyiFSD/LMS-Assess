@@ -13,6 +13,10 @@ import AssessmentLobby from './pages/AssessmentLobby';
 import ActiveAssessment from './pages/ActiveAssessment';
 import NotFound from './pages/NotFound';
 
+// Course Features
+import CourseList from './features/courses/CourseList';
+import CourseDetail from './features/courses/CourseDetail';
+
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -63,6 +67,24 @@ function App() {
             element={
               <ProtectedRoute>
                 <PublicProfile />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Courses Routes */}
+          <Route
+            path="/courses"
+            element={
+              <ProtectedRoute>
+                <CourseList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/courses/:id"
+            element={
+              <ProtectedRoute>
+                <CourseDetail />
               </ProtectedRoute>
             }
           />
