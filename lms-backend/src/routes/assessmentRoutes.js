@@ -1,21 +1,20 @@
 const express = require('express');
+const router = express.Router();
 const assessmentController = require('../controllers/assessmentController');
 const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
-
-const router = express.Router();
+const restrictTo = require('../middleware/roleMiddleware');
+const ROLES = require('../constants/roles');
 
 router.use(protect);
 
-router
-  .route('/')
-  .get(assessmentController.getAllAssessments)
-  .post(authorize('admin', 'teacher'), assessmentController.createAssessment);
+router.get('/', assessmentController.getAllAssessments);
+router.get('/:id', assessmentController.getAssessmentDetails);
 
-router
-  .route('/:id')
-  .get(assessmentController.getAssessmentDetails)
-  .put(authorize('admin', 'teacher'), assessmentController.updateAssessment)
-  .delete(authorize('admin', 'teacher'), assessmentController.deleteAssessment);
+// Teacher/Admin only
+router.use(restrictTo(ROLES.TEACHER, ROLES.ADMIN));
+
+router.post('/', assessmentController.createAssessment);
+router.put('/:id', assessmentController.updateAssessment);
+router.delete('/:id', assessmentController.deleteAssessment);
 
 module.exports = router;

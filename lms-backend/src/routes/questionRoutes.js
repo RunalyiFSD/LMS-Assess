@@ -1,22 +1,20 @@
 const express = require('express');
+const router = express.Router();
 const questionController = require('../controllers/questionController');
 const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
+const restrictTo = require('../middleware/roleMiddleware');
+const ROLES = require('../constants/roles');
 
-const router = express.Router();
-
-// All question routes are restricted to Instructors and Administrators
 router.use(protect);
-router.use(authorize('admin', 'teacher'));
 
-router.route('/').get(questionController.getAllQuestions);
+// Anyone enrolled can view questions for an assessment
+router.get('/assessment/:assessmentId', questionController.getQuestionsByAssessment);
 
-router.route('/:type').post(questionController.createQuestion);
+// Teacher/Admin only
+router.use(restrictTo(ROLES.TEACHER, ROLES.ADMIN));
 
-router
-  .route('/:type/:id')
-  .get(questionController.getQuestionDetails)
-  .put(questionController.updateQuestion)
-  .delete(questionController.deleteQuestion);
+router.post('/assessment/:assessmentId', questionController.createQuestion);
+router.put('/:id', questionController.updateQuestion);
+router.delete('/:id', questionController.deleteQuestion);
 
 module.exports = router;
