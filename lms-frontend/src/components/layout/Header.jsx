@@ -30,7 +30,7 @@ const Header = () => {
         if (response.data?.status === 'success') {
           const list = response.data.data || [];
           setNotifications(list);
-          setUnreadCount(list.filter((n) => !n.isRead).length);
+          setUnreadCount(list.filter((n) => !n.is_read).length);
         }
       } catch (err) {
         console.warn('Failed to fetch notifications');
@@ -45,7 +45,7 @@ const Header = () => {
     try {
       await api.put(`/notifications/${id}/read`);
       setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch (err) {
@@ -91,15 +91,15 @@ const Header = () => {
                 ) : (
                   notifications.map((notif) => (
                     <div
-                      key={notif._id}
-                      onClick={() => handleMarkAsRead(notif._id)}
+                      key={notif.id}
+                      onClick={() => handleMarkAsRead(notif.id)}
                       className={`px-4 py-3 text-xs border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${
-                        !notif.isRead ? 'bg-brand-50/20 font-medium' : ''
+                        !notif.is_read ? 'bg-brand-50/20 font-medium' : ''
                       }`}
                     >
                       <div className="flex justify-between items-start">
-                        <p className="text-slate-800 font-semibold">{notif.title}</p>
-                        {!notif.isRead && <span className="w-1.5 h-1.5 bg-brand-500 rounded-full mt-1"></span>}
+                        <p className="text-slate-800 font-semibold uppercase">{notif.type.replace('_', ' ')}</p>
+                        {!notif.is_read && <span className="w-1.5 h-1.5 bg-brand-500 rounded-full mt-1"></span>}
                       </div>
                       <p className="text-slate-500 mt-1 leading-relaxed">{notif.message}</p>
                     </div>
