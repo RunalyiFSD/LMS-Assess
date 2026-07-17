@@ -8,6 +8,9 @@ import {
   Award, Play, RotateCcw, ShieldCheck, Calendar, Clock,
   ClipboardList, Database, Network, Terminal, Atom, LayoutGrid, Code
 } from 'lucide-react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 
 const techTracks = [
   {
@@ -475,6 +478,33 @@ const StudentDashboardView = () => {
           </div>
         </Card>
       </div>
+
+      {/* Progress Chart */}
+      {myAttempts.length > 0 && (
+        <Card className="p-5">
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Performance Trend</h2>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={myAttempts.filter(a => a.status === 'graded').map(a => ({
+                  name: a.assessment?.title || 'Unknown',
+                  score: a.totalMarksObtained || 0
+                })).reverse()}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{fontSize: 10, fill: '#64748b'}} />
+                <YAxis tick={{fontSize: 10, fill: '#64748b'}} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  itemStyle={{ color: '#4f46e5', fontWeight: 'bold' }}
+                />
+                <Line type="monotone" dataKey="score" stroke="#4f46e5" strokeWidth={3} dot={{ r: 4, fill: '#4f46e5', strokeWidth: 2, stroke: 'white' }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      )}
 
       {/* Main Grid Layout split into Content & Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
