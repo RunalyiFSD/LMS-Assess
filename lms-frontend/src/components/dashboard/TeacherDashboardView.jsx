@@ -101,6 +101,26 @@ const InstructorDashboardView = () => {
       if (mockRes.data?.status === 'success') {
         setMockAssessments(mockRes.data.data.assessments || []);
       }
+
+      // Preload attempts to grade for stats widget
+      if (testRes.data?.status === 'success') {
+        const tests = testRes.data.data.assessments || [];
+        const allAttempts = [];
+        for (const test of tests) {
+          if (test.type === 'theory') {
+            try {
+              const res = await api.get(`/attempts/assessment/${test._id}`);
+              if (res.data?.status === 'success') {
+                const list = res.data.data.attempts || [];
+                allAttempts.push(...list.filter(a => a.status === 'submitted'));
+              }
+            } catch (e) {
+              console.warn('Failed to load attempts for stats');
+            }
+          }
+        }
+        setAttemptsToGrade(allAttempts);
+      }
     } catch (err) {
       console.warn('Failed to load instructor dashboard');
     } finally {
@@ -115,24 +135,7 @@ const InstructorDashboardView = () => {
   // Filter attempts when grading tab is selected
   const handleTabChange = async (tab) => {
     setActiveTab(tab);
-    if (tab === 'grade') {
-      try {
-        // Load all attempts for active assessments to identify theory papers that require manual review
-        const allAttempts = [];
-        for (const test of assessments) {
-          if (test.type === 'theory') {
-            const res = await api.get(`/attempts/assessment/${test._id}`);
-            if (res.data?.status === 'success') {
-              const list = res.data.data.attempts || [];
-              allAttempts.push(...list.filter(a => a.status === 'submitted'));
-            }
-          }
-        }
-        setAttemptsToGrade(allAttempts);
-      } catch (err) {
-        console.warn('Failed to load grading list');
-      }
-    }
+    // Data is preloaded now
   };
 
   // Toggle active status
@@ -326,6 +329,26 @@ const InstructorDashboardView = () => {
 
   return (
     <div className="space-y-6">
+      {/* High-Level Statistics Widget */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <Card className="p-4 border-l-4 border-brand-500">
+          <p className="text-xs text-slate-500 font-bold uppercase mb-1">Active Assessments</p>
+          <p className="text-2xl font-black text-slate-800">{assessments.filter(a => a.isActive).length}</p>
+        </Card>
+        <Card className="p-4 border-l-4 border-accent-warning">
+          <p className="text-xs text-slate-500 font-bold uppercase mb-1">Pending Reviews</p>
+          <p className="text-2xl font-black text-slate-800">{attemptsToGrade.length}</p>
+        </Card>
+        <Card className="p-4 border-l-4 border-emerald-500">
+          <p className="text-xs text-slate-500 font-bold uppercase mb-1">Question Bank</p>
+          <p className="text-2xl font-black text-slate-800">{questions.length}</p>
+        </Card>
+        <Card className="p-4 border-l-4 border-cyan-500">
+          <p className="text-xs text-slate-500 font-bold uppercase mb-1">Mock Tests</p>
+          <p className="text-2xl font-black text-slate-800">{mockAssessments.length}</p>
+        </Card>
+      </div>
+
       {/* Tab Navigation header */}
       <div className="flex border-b border-slate-200">
         <button
