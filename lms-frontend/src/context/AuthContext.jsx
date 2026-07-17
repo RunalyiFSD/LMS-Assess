@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '../services/api';
+import { supabase } from '../config/supabase';
 
 const AuthContext = createContext(null);
 
@@ -9,29 +10,43 @@ export const AuthProvider = ({ children }) => {
 
   // Fetch session data on initial render
   useEffect(() => {
-    const hydrateSession = async () => {
+    const fetchProfile = async (session) => {
+      if (!session) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
       try {
         const response = await api.get('/auth/me');
         if (response.data?.status === 'success') {
           setUser(response.data.data.user);
         }
       } catch (err) {
-        // Safe to ignore on first load (user is unauthenticated)
+        console.error('Failed to fetch user profile', err);
         setUser(null);
       } finally {
         setLoading(false);
       }
     };
-    hydrateSession();
+
+    // Initial session load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      fetchProfile(session);
+    });
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      fetchProfile(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
-      if (response.data?.status === 'success') {
-        setUser(response.data.data.user);
-      }
-      return response.data;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      return data;
     } catch (error) {
       throw new Error(error.message || 'Login failed');
     }
@@ -39,10 +54,8 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
+      // Backend handles registration via Supabase Admin API to enforce roles
       const response = await api.post('/auth/register', userData);
-      if (response.data?.status === 'success') {
-        setUser(response.data.data.user);
-      }
       return response.data;
     } catch (error) {
       throw new Error(error.message || 'Registration failed');
@@ -51,7 +64,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await api.post('/auth/logout');
+      await supabase.auth.signOut();
       setUser(null);
     } catch (error) {
       console.error('Logout error:', error);

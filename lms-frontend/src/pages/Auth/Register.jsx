@@ -80,7 +80,7 @@ const Register = () => {
     setLoading(true);
     try {
       await register(formData);
-      navigate('/dashboard');
+      navigate('/login?message=' + encodeURIComponent('Registration successful! Please log in.'));
     } catch (err) {
       setError(err.message || 'Registration failed. Check details.');
     } finally {
