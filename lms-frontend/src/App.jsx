@@ -12,6 +12,7 @@ import PublicProfile from './pages/PublicProfile';
 import AssessmentLobby from './pages/AssessmentLobby';
 import ActiveAssessment from './pages/ActiveAssessment';
 import NotFound from './pages/NotFound';
+import AIChatWindow from './features/ai/AIChatWindow';
 
 // Course Features
 import CourseList from './features/courses/CourseList';
@@ -107,10 +108,10 @@ function App() {
             }
           />
 
-          {/* Catch-all Fallback */}
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
+        <AIChatWindow />
       </Router>
     </AuthProvider>
   );

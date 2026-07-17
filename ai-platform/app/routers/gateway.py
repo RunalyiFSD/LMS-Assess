@@ -5,6 +5,7 @@ import logging
 
 from app.services.model_manager import ModelManager
 from app.services.memory_manager import MemoryManager
+from app.agents.tutor_agent import TutorAgent
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
     agent_type: Optional[str] = "general"
+    context_id: Optional[str] = "global"  # Usually maps to course_id
 
 class ChatResponse(BaseModel):
     session_id: str
@@ -36,21 +38,24 @@ async def chat_endpoint(request: ChatRequest):
         # 2. Get context
         context = memory_manager.get_context(request.session_id)
         
-        # 3. Route to agent logic (Mocked as a direct model call for foundation)
-        # Ideally, we would have an AgentManager that picks the right agent class.
-        
-        # We ensure there's a system prompt if it's the first message
-        messages_to_send = []
-        if len(context) == 1:
-            # First message
-            system_msg = {"role": "system", "content": f"You are a helpful AI assistant in the LMS-Assess platform. You are operating as the '{request.agent_type}' agent."}
-            messages_to_send.append(system_msg)
+        # 3. Route to agent logic
+        if request.agent_type == "tutor" and request.context_id != "global":
+            # Pass directly to Tutor Agent (which handles RAG)
+            tutor_agent = TutorAgent(model_manager)
+            ai_message = tutor_agent.handle_message(request.context_id, request.message)
+        else:
+            # Fallback to general conversational agent
+            messages_to_send = []
+            if len(context) == 1:
+                # First message
+                system_msg = {"role": "system", "content": f"You are a helpful AI assistant operating as the '{request.agent_type}' agent."}
+                messages_to_send.append(system_msg)
+                
+            messages_to_send.extend(context)
             
-        messages_to_send.extend(context)
-        
-        # 4. Generate response
-        result = model_manager.generate(messages=messages_to_send)
-        ai_message = result.get("content", "I am unable to process that right now.")
+            # 4. Generate response
+            result = model_manager.generate(messages=messages_to_send)
+            ai_message = result.get("content", "I am unable to process that right now.")
         
         # 5. Save AI response to memory
         memory_manager.add_message(request.session_id, "assistant", ai_message)
