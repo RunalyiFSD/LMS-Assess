@@ -6,6 +6,7 @@ import logging
 from app.services.model_manager import ModelManager
 from app.services.memory_manager import MemoryManager
 from app.agents.tutor_agent import TutorAgent
+from app.agents.question_generator_agent import QuestionGeneratorAgent
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -43,6 +44,13 @@ async def chat_endpoint(request: ChatRequest):
             # Pass directly to Tutor Agent (which handles RAG)
             tutor_agent = TutorAgent(model_manager)
             ai_message = tutor_agent.handle_message(request.context_id, request.message)
+            
+        elif request.agent_type == "question_generator":
+            # Pass to Question Generator Agent
+            # The message is used as the 'topic'
+            qgen_agent = QuestionGeneratorAgent(model_manager)
+            ai_message = qgen_agent.handle_message(topic=request.message)
+            
         else:
             # Fallback to general conversational agent
             messages_to_send = []

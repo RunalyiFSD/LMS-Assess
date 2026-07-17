@@ -18,6 +18,8 @@ const AssessmentBuilder = () => {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [aiTopic, setAiTopic] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (assessmentId) {
@@ -75,6 +77,54 @@ const AssessmentBuilder = () => {
       loadAssessment();
     } catch (err) {
       setError('Failed to delete question');
+    }
+  };
+
+  const handleGenerateQuestion = async () => {
+    if (!aiTopic.trim()) return;
+    try {
+      setIsGenerating(true);
+      setError(null);
+      
+      const { default: api } = await import('../../services/api');
+      const res = await api.post('/ai/chat', {
+        message: aiTopic,
+        agentType: 'question_generator'
+      });
+      
+      // Parse JSON
+      let generated;
+      try {
+        generated = JSON.parse(res.data.data.response);
+      } catch (e) {
+        throw new Error('AI returned invalid format.');
+      }
+      
+      if (generated.type === 'multiple_choice' || generated.type === 'true_false') {
+        const generatedOptions = generated.options.map((opt, i) => ({
+          text: opt,
+          is_correct: i === generated.correct_option_index
+        }));
+        
+        await assessmentApi.createQuestion(assessmentId, {
+          type: 'mcq',
+          content: generated.text,
+          marks: generated.points || 1,
+          order: questions.length + 1,
+          options: generatedOptions
+        });
+        
+        loadAssessment();
+        setAiTopic('');
+      } else {
+        throw new Error('Unsupported question type generated.');
+      }
+      
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Failed to generate question with AI');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -236,9 +286,28 @@ const AssessmentBuilder = () => {
               </div>
             )}
 
-            <button onClick={handleAddQuestion} className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
-              Add Question
-            </button>
+            <div className="flex justify-between items-end gap-4 border-t border-gray-200 pt-4 mt-4">
+              <button onClick={handleAddQuestion} className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+                Add Question Manually
+              </button>
+              
+              <div className="flex items-center gap-2 flex-1 max-w-md">
+                <input 
+                  type="text" 
+                  placeholder="Topic (e.g. Mitochondria)" 
+                  className="flex-1 px-4 py-2 bg-white border border-indigo-200 rounded-lg focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                  value={aiTopic}
+                  onChange={e => setAiTopic(e.target.value)}
+                />
+                <button 
+                  onClick={handleGenerateQuestion} 
+                  disabled={isGenerating || !aiTopic.trim()}
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isGenerating ? 'Generating...' : '✨ Generate with AI'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
