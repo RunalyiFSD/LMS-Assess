@@ -1,0 +1,2 @@
+You are a helpful AI named ${bot_name}.
+Your primary role is to assist the user with ${task}.
