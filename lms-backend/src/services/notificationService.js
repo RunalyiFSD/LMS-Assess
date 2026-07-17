@@ -1,68 +1,89 @@
-const Notification = require('../legacy/models/Notification');
+const notificationRepository = require('../repositories/notificationRepository');
+const userRepository = require('../repositories/userRepository');
 const nodemailer = require('nodemailer');
 
-// Set up standard SMTP configuration transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
-  port: parseInt(process.env.SMTP_PORT || '2525'),
-  auth: {
-    user: process.env.SMTP_USER || 'mock_user',
-    pass: process.env.SMTP_PASS || 'mock_pass',
-  },
-});
+class NotificationService {
+  constructor() {
+    this.transporter = null;
+    this.initEmail();
+  }
 
-/**
- * Creates an in-app notification and dispatches an email alert.
- * @param {string} recipientId - User ID of the recipient
- * @param {string} title - Notification title
- * @param {string} message - Notification text
- * @param {string} type - 'assessment_assigned' | 'result_published' | 'notification'
- * @param {string} recipientEmail - Email address of the recipient
- * @returns {Promise<Object>} The saved notification document
- */
-exports.createNotification = async (recipientId, title, message, type = 'notification', recipientEmail = null) => {
-  try {
-    // 1. Save alert into notifications collection
-    const notification = new Notification({
-      recipient: recipientId,
-      title,
-      message,
-      type,
-    });
-    await notification.save();
-
-    // 2. Dispatch email if email address is provided
-    if (recipientEmail) {
-      const mailOptions = {
-        from: process.env.FROM_EMAIL || 'noreply@lmsassessment.com',
-        to: recipientEmail,
-        subject: `[LMS Assessment] - ${title}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;">
-            <h2 style="color: #4f46e5; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">LMS Assessment Alert</h2>
-            <p style="font-size: 16px; color: #1e293b; font-weight: bold;">${title}</p>
-            <p style="font-size: 14px; color: #475569; line-height: 1.6;">${message}</p>
-            <div style="margin-top: 20px; font-size: 12px; color: #94a3b8; text-align: center;">
-              This is an automated notification. Please do not reply directly to this email.
-            </div>
-          </div>
-        `,
-      };
-
-      // Attempt to send email, log failure instead of breaking request thread
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.warn(`[Mail Dispatch Warning] Failed to send email to ${recipientEmail}: ${error.message}`);
-          console.log(`[Mail Mock Log] Email body: To: ${recipientEmail} | Subject: ${title} | Content: ${message}`);
-        } else {
-          console.log(`[Mail Dispatch Success] Email sent: ${info.messageId}`);
-        }
+  async initEmail() {
+    try {
+      // Create a test account on Ethereal Email for development
+      const testAccount = await nodemailer.createTestAccount();
+      
+      this.transporter = nodemailer.createTransport({
+        host: "smtp.ethereal.email",
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+          user: testAccount.user, // generated ethereal user
+          pass: testAccount.pass, // generated ethereal password
+        },
       });
+      console.log('📧 Ethereal Email initialized for notifications');
+    } catch (err) {
+      console.error('Failed to initialize Ethereal Email', err);
+    }
+  }
+
+  async sendEmail(toEmail, subject, text) {
+    if (!this.transporter) return;
+    try {
+      const info = await this.transporter.sendMail({
+        from: '"LMS Assess" <noreply@lmsassess.com>',
+        to: toEmail,
+        subject: subject,
+        text: text,
+      });
+      console.log('📧 Email sent! Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    } catch (err) {
+      console.error('Email send failed:', err);
+    }
+  }
+
+  async getUserNotifications(userId) {
+    return await notificationRepository.getUserNotifications(userId);
+  }
+
+  async markAsRead(notificationId, userId) {
+    return await notificationRepository.markAsRead(notificationId, userId);
+  }
+
+  async markAllAsRead(userId) {
+    return await notificationRepository.markAllAsRead(userId);
+  }
+
+  /**
+   * Creates an in-app notification and optionally fires off an email.
+   */
+  async createNotification(userId, type, message, link) {
+    // 1. Create In-App Notification
+    const notification = await notificationRepository.createNotification({
+      user_id: userId,
+      type,
+      message,
+      link,
+      is_read: false
+    });
+
+    // 2. Dispatch Email (Fire & Forget)
+    try {
+      const user = await userRepository.findById(userId);
+      if (user && user.email) {
+        let subject = "LMS Notification";
+        if (type === 'assessment_due') subject = "Assessment Due Reminder";
+        if (type === 'grade_published') subject = "New Grade Published";
+        
+        await this.sendEmail(user.email, subject, message + (link ? `\n\nView here: http://localhost:5173${link}` : ''));
+      }
+    } catch (err) {
+      console.error('Failed to dispatch notification email:', err);
     }
 
     return notification;
-  } catch (error) {
-    console.error('Error creating notification:', error);
-    throw error;
   }
-};
+}
+
+module.exports = new NotificationService();
