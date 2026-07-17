@@ -8,6 +8,8 @@ from app.services.memory_manager import MemoryManager
 from app.agents.tutor_agent import TutorAgent
 from app.agents.question_generator_agent import QuestionGeneratorAgent
 from app.agents.evaluation_agent import EvaluationAgent
+from app.agents.career_agent import CareerAgent
+from app.agents.coding_assistant_agent import CodingAssistantAgent
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -65,6 +67,30 @@ async def chat_endpoint(request: ChatRequest):
                 )
             except Exception:
                 ai_message = '{"error": "Invalid evaluator payload"}'
+                
+        elif request.agent_type == "career":
+            import json
+            try:
+                payload = json.loads(request.message)
+                career_agent = CareerAgent(model_manager)
+                ai_message = career_agent.handle_message(
+                    student_profile=payload.get("profile", "No profile provided"),
+                    message=payload.get("question", "")
+                )
+            except Exception:
+                ai_message = "Invalid career payload."
+
+        elif request.agent_type == "coding":
+            import json
+            try:
+                payload = json.loads(request.message)
+                coding_agent = CodingAssistantAgent(model_manager)
+                ai_message = coding_agent.handle_message(
+                    language=payload.get("language", "General Programming"),
+                    message=payload.get("question", "")
+                )
+            except Exception:
+                ai_message = "Invalid coding payload."
                 
         else:
             # Fallback to general conversational agent
