@@ -36,6 +36,22 @@ exports.saveAnswers = async (req, res) => {
   }
 };
 
+exports.getSubmissionDetails = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const { id: submissionId } = req.params;
+    const submission = await submissionRepository.findById(submissionId);
+    
+    if (submission.student_id !== studentId) {
+      return sendError(res, 'Unauthorized', null, HTTP_STATUS.UNAUTHORIZED);
+    }
+    
+    return sendSuccess(res, submission, 'Submission fetched successfully');
+  } catch (error) {
+    return sendError(res, error.message, null, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
 exports.submitFinal = async (req, res) => {
   try {
     const studentId = req.user.id;

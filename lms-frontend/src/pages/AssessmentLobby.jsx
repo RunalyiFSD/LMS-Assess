@@ -3,13 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import api from '../services/api';
+import { assessmentApi } from '../api/assessmentApi';
 import { ClipboardList, ShieldAlert, Clock, Award, Play } from 'lucide-react';
 
 const AssessmentLobby = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [assessment, setAssessment] = useState(null);
+  const [questionsCount, setQuestionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -17,12 +18,17 @@ const AssessmentLobby = () => {
     const fetchAssessmentDetails = async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/assessments/${id}`);
-        if (res.data?.status === 'success') {
-          setAssessment(res.data.data.assessment);
+        const res = await assessmentApi.getById(id);
+        if (res.data?.success) {
+          setAssessment(res.data.data);
+        }
+        
+        const qRes = await assessmentApi.getQuestions(id);
+        if (qRes.data?.success) {
+          setQuestionsCount(qRes.data.data.length);
         }
       } catch (err) {
-        setError(err.message || 'Failed to load assessment specifications');
+        setError(err.response?.data?.message || 'Failed to load assessment specifications');
       } finally {
         setLoading(false);
       }
@@ -32,13 +38,18 @@ const AssessmentLobby = () => {
 
   const handleBeginAttempt = async () => {
     try {
-      const res = await api.post(`/attempts/start/${id}`);
-      if (res.data?.status === 'success') {
-        const attemptId = res.data.data.attempt._id;
-        navigate(`/assessment/${attemptId}`);
+      const res = await assessmentApi.startSubmission(id);
+      if (res.data?.success) {
+        const submissionId = res.data.data.id;
+        navigate(`/assessment/${submissionId}`);
       }
     } catch (err) {
-      alert(err.message || 'Failed to start attempt session');
+      if (err.response?.data?.message === 'You have already submitted this assessment.') {
+        alert('You have an active or completed submission for this assessment.');
+        // If we wanted to, we could find the submission ID and redirect, but let's just go back for now
+      } else {
+        alert(err.response?.data?.message || 'Failed to start attempt session');
+      }
     }
   };
 
@@ -78,7 +89,7 @@ const AssessmentLobby = () => {
           </div>
         </div>
 
-        <Card title={assessment.title} subtitle={`${assessment.subject?.name} (${assessment.subject?.code})`}>
+        <Card title={assessment.title} subtitle={assessment.courses?.title}>
           <div className="space-y-6">
             {/* Meta values */}
             <div className="grid grid-cols-3 gap-4 border-b border-slate-100 pb-4">
@@ -91,13 +102,13 @@ const AssessmentLobby = () => {
               <div className="text-center border-l border-r border-slate-100">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Questions</span>
                 <span className="text-base font-bold text-slate-800 block mt-1">
-                  {assessment.questions?.length} Items
+                  {questionsCount} Items
                 </span>
               </div>
               <div className="text-center">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Passing Threshold</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Max Score</span>
                 <span className="text-base font-bold text-slate-800 flex items-center justify-center gap-1 mt-1">
-                  <Award size={16} className="text-emerald-500" /> {assessment.passingScore} marks
+                  <Award size={16} className="text-emerald-500" /> {assessment.max_score} marks
                 </span>
               </div>
             </div>
@@ -105,8 +116,8 @@ const AssessmentLobby = () => {
             {/* Description */}
             <div>
               <span className="text-xs font-bold text-slate-400 block uppercase mb-1">Overview Description</span>
-              <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200/60">
-                {assessment.description || 'No detailed instructions configured.'}
+              <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200/60 whitespace-pre-wrap">
+                {assessment.instructions || 'No detailed instructions configured.'}
               </p>
             </div>
 
@@ -117,9 +128,7 @@ const AssessmentLobby = () => {
               </div>
               <ul className="list-disc list-inside text-xs text-slate-500 space-y-1.5 leading-relaxed">
                 <li>Once you click "Start Assessment", the countdown timer begins and cannot be paused.</li>
-                <li>Closing the browser tab will NOT pause your timer. You can log back in and resume the test.</li>
-                <li>Auto-save operates every 30 seconds to lock your answers into the cloud.</li>
-                <li>MCQs containing Difficult or Moderate tags have active negative marking configurations.</li>
+                <li>Auto-save operates periodically to lock your answers into the cloud.</li>
                 <li>When the timer reaches 00:00, the system locks and submits your answers automatically.</li>
               </ul>
             </div>
