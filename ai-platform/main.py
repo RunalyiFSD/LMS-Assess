@@ -6,6 +6,7 @@ import os
 load_dotenv()
 
 from app.routers import gateway
+from app.routers import rag
 
 app = FastAPI(
     title="LMS-Assess AI Platform",
@@ -28,6 +29,7 @@ async def health_check():
     return {"status": "ok", "service": "ai-platform"}
 
 app.include_router(gateway.router, prefix="/api/v1/ai", tags=["AI Gateway"])
+app.include_router(rag.router, prefix="/api/v1/ai/rag", tags=["RAG"])
 
 if __name__ == "__main__":
     import uvicorn
