@@ -29,12 +29,18 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-slate-900/40 backdrop-blur-sm transition-all duration-300">
-      <div className={`relative w-full bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden transform scale-100 transition-all ${sizeClasses[size]}`}>
+      <div 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="modal-title"
+        className={`relative w-full bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden transform scale-100 transition-all ${sizeClasses[size]}`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
+          <h3 id="modal-title" className="text-lg font-semibold text-slate-800">{title}</h3>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
           >
             <X size={20} />
