@@ -5,16 +5,16 @@ const Assessment = require('../legacy/models/Assessment');
 const Subject = require('../legacy/models/Subject');
 const AppError = require('../utils/AppError');
 
+const userService = require('../services/userService');
+
 // @desc    Get all users (Admin only)
 // @route   GET /api/users
 // @access  Admin
 exports.getAllUsers = async (req, res, next) => {
   try {
     const { role } = req.query;
-    const filter = {};
-    if (role) filter.role = role;
+    const users = await userService.getAllUsers(role);
 
-    const users = await User.find(filter);
     res.status(200).json({
       status: 'success',
       results: users.length,
@@ -31,25 +31,14 @@ exports.getAllUsers = async (req, res, next) => {
 // @route   POST /api/users
 // @access  Admin
 exports.createUser = async (req, res, next) => {
+  // Normally handled by auth/register for Supabase, but keeping it for compatibility
+  // For Supabase, we would call userRepository.createAuthUser
   try {
-    const { name, email, password, role, college, department, batch, language, experience } = req.body;
+    const { name, email, password, role, college, department, bio } = req.body;
+    const userRepository = require('../repositories/userRepository');
 
-    const emailExists = await User.findOne({ email });
-    if (emailExists) {
-      return next(new AppError('Email address is already in use', 400));
-    }
-
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role,
-      college,
-      department,
-      batch,
-      language,
-      experience,
-    });
+    // Create via Supabase Auth Admin
+    const user = await userRepository.createAuthUser(email, password, name, role);
 
     res.status(201).json({
       status: 'success',
@@ -67,10 +56,7 @@ exports.createUser = async (req, res, next) => {
 // @access  Admin
 exports.deleteUser = async (req, res, next) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) {
-      return next(new AppError('User not found', 404));
-    }
+    await userService.deleteUser(req.params.id);
 
     res.status(200).json({
       status: 'success',
@@ -333,43 +319,24 @@ exports.getUserAnalytics = async (req, res, next) => {
 // @access  Protected
 exports.updateUserProfile = async (req, res, next) => {
   try {
-    const userId = req.user._id;
-    const { name, college, department, batch, bio, profilePicture, language, experience } = req.body;
+    const userId = req.user.id; // Using Supabase UUID
+    const { full_name, college, department, bio, avatar_url } = req.body;
 
-    const updatedUser = await User.findByIdAndUpdate(
+    const updatedUser = await userService.updateUserProfile(
       userId,
       {
-        $set: {
-          name,
-          college,
-          department,
-          batch,
-          bio,
-          profilePicture,
-          language,
-          experience
-        }
-      },
-      { new: true, runValidators: true }
+        full_name,
+        department,
+        bio,
+        avatar_url
+      }
     );
 
     res.status(200).json({
       status: 'success',
       message: 'Profile updated successfully',
       data: {
-        user: {
-          _id: updatedUser._id,
-          name: updatedUser.name,
-          email: updatedUser.email,
-          role: updatedUser.role,
-          college: updatedUser.college,
-          department: updatedUser.department,
-          batch: updatedUser.batch,
-          bio: updatedUser.bio,
-          profilePicture: updatedUser.profilePicture,
-          language: updatedUser.language,
-          experience: updatedUser.experience
-        }
+        user: updatedUser
       }
     });
   } catch (error) {
