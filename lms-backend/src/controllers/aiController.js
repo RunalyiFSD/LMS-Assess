@@ -14,7 +14,7 @@ exports.chatWithAI = async (req, res) => {
     // Construct a unique session ID based on user and context (e.g. course or assessment id)
     const sessionId = `${userId}_${contextId || 'global'}`;
 
-    const responseText = await aiPlatform.sendChat(sessionId, message, agentType);
+    const responseText = await aiPlatform.sendChat(sessionId, message, agentType, contextId);
 
     return sendSuccess(res, { response: responseText }, 'AI response generated successfully');
   } catch (error) {

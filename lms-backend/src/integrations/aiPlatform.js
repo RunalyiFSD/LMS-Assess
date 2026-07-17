@@ -18,14 +18,16 @@ class AIPlatformClient {
    * @param {string} sessionId - Unique session ID (can be user ID + context ID)
    * @param {string} message - User's prompt
    * @param {string} agentType - Type of agent to route to
+   * @param {string} contextId - Associated context ID (e.g., courseId)
    * @returns {Promise<string>} AI response text
    */
-  async sendChat(sessionId, message, agentType = 'general') {
+  async sendChat(sessionId, message, agentType = 'general', contextId = 'global') {
     try {
       const response = await this.client.post('/chat', {
         session_id: sessionId,
         message,
         agent_type: agentType,
+        context_id: contextId
       });
 
       if (response.data && response.data.status === 'success') {
