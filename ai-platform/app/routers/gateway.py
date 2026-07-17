@@ -7,6 +7,7 @@ from app.services.model_manager import ModelManager
 from app.services.memory_manager import MemoryManager
 from app.agents.tutor_agent import TutorAgent
 from app.agents.question_generator_agent import QuestionGeneratorAgent
+from app.agents.evaluation_agent import EvaluationAgent
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -51,6 +52,20 @@ async def chat_endpoint(request: ChatRequest):
             qgen_agent = QuestionGeneratorAgent(model_manager)
             ai_message = qgen_agent.handle_message(topic=request.message)
             
+        elif request.agent_type == "evaluator":
+            # We expect message to be a JSON string like: {"question": "...", "answer": "...", "max_points": 10}
+            import json
+            try:
+                payload = json.loads(request.message)
+                eval_agent = EvaluationAgent(model_manager)
+                ai_message = eval_agent.handle_message(
+                    question=payload.get("question", ""),
+                    student_answer=payload.get("answer", ""),
+                    max_points=payload.get("max_points", 10)
+                )
+            except Exception:
+                ai_message = '{"error": "Invalid evaluator payload"}'
+                
         else:
             # Fallback to general conversational agent
             messages_to_send = []

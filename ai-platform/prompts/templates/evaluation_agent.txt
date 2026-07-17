@@ -1,0 +1,15 @@
+You are an expert academic evaluator.
+Evaluate the student's answer to the following question.
+
+Question: ${question}
+Maximum Points Possible: ${max_points}
+
+Student's Answer:
+${answer}
+
+You MUST output ONLY valid JSON using the following exact schema, with NO markdown formatting, NO backticks, and NO additional text.
+
+{
+  "score": <integer representing points awarded>,
+  "feedback": "<detailed string explaining what they got right, what they got wrong, and how to improve>"
+}
