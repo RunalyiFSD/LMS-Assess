@@ -1,169 +1,71 @@
-const MCQQuestion = require('../legacy/models/MCQQuestion');
-const CodingQuestion = require('../legacy/models/CodingQuestion');
-const TheoryQuestion = require('../legacy/models/TheoryQuestion');
-const AppError = require('../utils/AppError');
+const assessmentService = require('../services/assessmentService');
+const { sendSuccess, sendError } = require('../helpers/apiResponse');
+const HTTP_STATUS = require('../constants/httpStatus');
 
-// Helper to map type string to actual Mongoose model
-const getModelByType = (type) => {
-  if (type === 'mcq') return MCQQuestion;
-  if (type === 'coding') return CodingQuestion;
-  if (type === 'theory') return TheoryQuestion;
-  return null;
-};
-
-// @desc    Add Question to Bank
-// @route   POST /api/questions/:type
-// @access  Instructor, Admin
-exports.createQuestion = async (req, res, next) => {
+exports.getQuestionsByAssessment = async (req, res) => {
   try {
-    const { type } = req.params;
-    const Model = getModelByType(type);
-    if (!Model) {
-      return next(new AppError('Invalid question type parameter. Use [mcq, coding, theory]', 400));
-    }
-
-    const questionData = {
-      ...req.body,
-      createdBy: req.user._id,
-    };
-
-    const question = await Model.create(questionData);
-
-    res.status(201).json({
-      status: 'success',
-      data: {
-        question,
-      },
-    });
+    const { assessmentId } = req.params;
+    const questions = await assessmentService.getQuestions(assessmentId);
+    return sendSuccess(res, questions, 'Questions fetched successfully');
   } catch (error) {
-    next(error);
+    return sendError(res, error.message, null, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
 
-// @desc    Get all questions from the banks (mixed or filtered)
-// @route   GET /api/questions
-// @access  Instructor, Admin
-exports.getAllQuestions = async (req, res, next) => {
+exports.createQuestion = async (req, res) => {
   try {
-    const { subject, difficulty, topic, type } = req.query;
-    let questions = [];
+    const { assessmentId } = req.params;
+    const { type, content, marks, order, options } = req.body;
 
-    // Filter queries
-    const queryObj = {};
-    if (subject) queryObj.subject = subject;
-    if (difficulty) queryObj.difficulty = difficulty;
-    if (topic) queryObj.topic = topic;
-
-    if (type) {
-      const Model = getModelByType(type);
-      if (!Model) {
-        return next(new AppError('Invalid question type filter. Use [mcq, coding, theory]', 400));
-      }
-      questions = await Model.find(queryObj).populate('subject', 'name code').populate('createdBy', 'name');
-    } else {
-      // Return combination of all types if no type requested
-      const mcqs = await MCQQuestion.find(queryObj).populate('subject', 'name code').populate('createdBy', 'name');
-      const coding = await CodingQuestion.find(queryObj).populate('subject', 'name code').populate('createdBy', 'name');
-      const theory = await TheoryQuestion.find(queryObj).populate('subject', 'name code').populate('createdBy', 'name');
-
-      questions = [
-        ...mcqs.map(q => ({ ...q.toObject(), type: 'mcq' })),
-        ...coding.map(q => ({ ...q.toObject(), type: 'coding' })),
-        ...theory.map(q => ({ ...q.toObject(), type: 'theory' }))
-      ];
+    if (!type || !content) {
+      return sendError(res, 'Question type and content are required', null, HTTP_STATUS.BAD_REQUEST);
     }
 
-    res.status(200).json({
-      status: 'success',
-      results: questions.length,
-      data: {
-        questions,
-      },
-    });
+    const question = await assessmentService.addQuestion(
+      assessmentId,
+      { type, content, marks, order },
+      options, // array of {text, is_correct}
+      req.user.id,
+      req.user.role
+    );
+
+    return sendSuccess(res, question, 'Question added successfully', HTTP_STATUS.CREATED);
   } catch (error) {
-    next(error);
+    return sendError(res, error.message, null, HTTP_STATUS.BAD_REQUEST);
   }
 };
 
-// @desc    Get question details
-// @route   GET /api/questions/:type/:id
-// @access  Instructor, Admin
-exports.getQuestionDetails = async (req, res, next) => {
+exports.updateQuestion = async (req, res) => {
   try {
-    const { type, id } = req.params;
-    const Model = getModelByType(type);
-    if (!Model) {
-      return next(new AppError('Invalid question type', 400));
+    const { id } = req.params;
+    const { assessmentId, content, marks, order } = req.body;
+
+    if (!assessmentId) {
+      return sendError(res, 'assessmentId is required in body to verify ownership', null, HTTP_STATUS.BAD_REQUEST);
     }
 
-    const question = await Model.findById(id).populate('subject', 'name code');
-    if (!question) {
-      return next(new AppError('Question not found', 404));
-    }
+    const updated = await assessmentService.updateQuestion(id, assessmentId, {
+      content, marks, order
+    }, req.user.id, req.user.role);
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        question,
-      },
-    });
+    return sendSuccess(res, updated, 'Question updated successfully');
   } catch (error) {
-    next(error);
+    return sendError(res, error.message, null, HTTP_STATUS.BAD_REQUEST);
   }
 };
 
-// @desc    Update Question
-// @route   PUT /api/questions/:type/:id
-// @access  Instructor, Admin
-exports.updateQuestion = async (req, res, next) => {
+exports.deleteQuestion = async (req, res) => {
   try {
-    const { type, id } = req.params;
-    const Model = getModelByType(type);
-    if (!Model) {
-      return next(new AppError('Invalid question type', 400));
+    const { id } = req.params;
+    const { assessmentId } = req.query; // pass via query string
+
+    if (!assessmentId) {
+      return sendError(res, 'assessmentId query parameter is required', null, HTTP_STATUS.BAD_REQUEST);
     }
 
-    const question = await Model.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!question) {
-      return next(new AppError('Question not found', 404));
-    }
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        question,
-      },
-    });
+    await assessmentService.deleteQuestion(id, assessmentId, req.user.id, req.user.role);
+    return sendSuccess(res, null, 'Question deleted successfully');
   } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Delete Question
-// @route   DELETE /api/questions/:type/:id
-// @access  Instructor, Admin
-exports.deleteQuestion = async (req, res, next) => {
-  try {
-    const { type, id } = req.params;
-    const Model = getModelByType(type);
-    if (!Model) {
-      return next(new AppError('Invalid question type', 400));
-    }
-
-    const question = await Model.findByIdAndDelete(id);
-    if (!question) {
-      return next(new AppError('Question not found', 404));
-    }
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Question deleted successfully from bank',
-    });
-  } catch (error) {
-    next(error);
+    return sendError(res, error.message, null, HTTP_STATUS.BAD_REQUEST);
   }
 };

@@ -1,179 +1,72 @@
-const Assessment = require('../legacy/models/Assessment');
-const MCQQuestion = require('../legacy/models/MCQQuestion');
-const CodingQuestion = require('../legacy/models/CodingQuestion');
-const TheoryQuestion = require('../legacy/models/TheoryQuestion');
-const AppError = require('../utils/AppError');
+const assessmentService = require('../services/assessmentService');
+const { sendSuccess, sendError } = require('../helpers/apiResponse');
+const HTTP_STATUS = require('../constants/httpStatus');
 
-// @desc    Create Assessment
-// @route   POST /api/assessments
-// @access  Instructor, Admin
-exports.createAssessment = async (req, res, next) => {
+exports.getAllAssessments = async (req, res) => {
   try {
-    const { title, description, subject, type, duration, passingScore, totalMarks, questions, dueDate, scheduledAt } = req.body;
+    const { course_id, status } = req.query;
+    const filters = {};
+    if (course_id) filters.course_id = course_id;
+    if (status) filters.status = status;
 
-    const assessment = await Assessment.create({
-      title,
-      description,
-      subject,
-      type,
-      duration,
-      passingScore,
-      totalMarks,
-      questions: questions || [],
-      creator: req.user._id,
-      dueDate,
-      scheduledAt,
-    });
-
-    res.status(201).json({
-      status: 'success',
-      data: {
-        assessment,
-      },
-    });
+    const assessments = await assessmentService.getAllAssessments(filters, req.user.id, req.user.role);
+    return sendSuccess(res, assessments, 'Assessments fetched successfully');
   } catch (error) {
-    next(error);
+    return sendError(res, error.message, null, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
 
-// @desc    Get All Assessments
-// @route   GET /api/assessments
-// @access  Protected (Students, Instructors, Admins)
-exports.getAllAssessments = async (req, res, next) => {
+exports.getAssessmentDetails = async (req, res) => {
   try {
-    const { subject, type, isActive, isMock } = req.query;
-    const filter = {};
-
-    if (subject) filter.subject = subject;
-    if (type) filter.type = type;
-
-    // Filter by mock status
-    if (isMock === 'true') {
-      filter.isMock = true;
-    } else {
-      filter.isMock = { $ne: true };
+    const assessment = await assessmentService.getAssessmentById(req.params.id);
+    if (!assessment) {
+      return sendError(res, 'Assessment not found', null, HTTP_STATUS.NOT_FOUND);
     }
+    return sendSuccess(res, assessment, 'Assessment details fetched successfully');
+  } catch (error) {
+    return sendError(res, error.message, null, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+exports.createAssessment = async (req, res) => {
+  try {
+    const teacherId = req.user.id;
+    const { course_id, title, type, duration, status, max_score, instructions } = req.body;
     
-    // Students should only see active assessments unless they are searching completed ones
-    if (req.user.role === 'student') {
-      filter.isActive = true;
-    } else if (isActive !== undefined) {
-      filter.isActive = isActive === 'true';
+    if (!course_id || !title) {
+      return sendError(res, 'Course ID and Title are required', null, HTTP_STATUS.BAD_REQUEST);
     }
 
-    const assessments = await Assessment.find(filter)
-      .populate('subject', 'name code')
-      .populate('creator', 'name email')
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      status: 'success',
-      results: assessments.length,
-      data: {
-        assessments,
-      },
-    });
+    const assessment = await assessmentService.createAssessment({
+      course_id, title, type, duration, status, max_score, instructions
+    }, teacherId, req.user.role);
+    
+    return sendSuccess(res, assessment, 'Assessment created successfully', HTTP_STATUS.CREATED);
   } catch (error) {
-    next(error);
+    return sendError(res, error.message, null, HTTP_STATUS.BAD_REQUEST);
   }
 };
 
-// @desc    Get Assessment Details (Securely sanitized for students)
-// @route   GET /api/assessments/:id
-// @access  Protected
-exports.getAssessmentDetails = async (req, res, next) => {
+exports.updateAssessment = async (req, res) => {
   try {
-    const assessment = await Assessment.findById(req.params.id)
-      .populate('subject', 'name code')
-      .populate('questions.questionId');
-
-    if (!assessment) {
-      return next(new AppError('Assessment not found', 404));
-    }
-
-    // Convert to JSON object for manipulation
-    const assessmentObj = assessment.toObject();
-
-    // Secure answers and testcases from students to prevent cheating
-    if (req.user.role === 'student') {
-      if (!assessmentObj.isActive) {
-        return next(new AppError('This assessment is not active/published yet.', 403));
-      }
-
-      assessmentObj.questions = assessmentObj.questions.map((qRef) => {
-        const question = qRef.questionId;
-        if (!question) return qRef;
-
-        // Strip correct MCQ choices
-        if (qRef.questionModel === 'MCQQuestion') {
-          delete question.correctAnswerIndex;
-        }
-        // Strip hidden coding test cases, only expose public samples
-        else if (qRef.questionModel === 'CodingQuestion') {
-          if (question.testCases) {
-            question.testCases = question.testCases.filter((tc) => tc.isSample === true);
-          }
-        }
-        // Strip suggested theory solutions
-        else if (qRef.questionModel === 'TheoryQuestion') {
-          delete question.suggestedAnswer;
-        }
-
-        return qRef;
-      });
-    }
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        assessment: assessmentObj,
-      },
-    });
+    const { id } = req.params;
+    const { title, type, duration, status, max_score, instructions } = req.body;
+    
+    const updated = await assessmentService.updateAssessment(id, {
+      title, type, duration, status, max_score, instructions
+    }, req.user.id, req.user.role);
+    
+    return sendSuccess(res, updated, 'Assessment updated successfully');
   } catch (error) {
-    next(error);
+    return sendError(res, error.message, null, HTTP_STATUS.BAD_REQUEST);
   }
 };
 
-// @desc    Update Assessment
-// @route   PUT /api/assessments/:id
-// @access  Instructor, Admin
-exports.updateAssessment = async (req, res, next) => {
+exports.deleteAssessment = async (req, res) => {
   try {
-    const assessment = await Assessment.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!assessment) {
-      return next(new AppError('Assessment not found', 404));
-    }
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        assessment,
-      },
-    });
+    await assessmentService.deleteAssessment(req.params.id, req.user.id, req.user.role);
+    return sendSuccess(res, null, 'Assessment deleted successfully');
   } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Delete Assessment
-// @route   DELETE /api/assessments/:id
-// @access  Instructor, Admin
-exports.deleteAssessment = async (req, res, next) => {
-  try {
-    const assessment = await Assessment.findByIdAndDelete(req.params.id);
-    if (!assessment) {
-      return next(new AppError('Assessment not found', 404));
-    }
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Assessment deleted successfully',
-    });
-  } catch (error) {
-    next(error);
+    return sendError(res, error.message, null, HTTP_STATUS.BAD_REQUEST);
   }
 };
