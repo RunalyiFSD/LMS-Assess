@@ -1,22 +1,22 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Pages
-import LandingPage from './pages/LandingPage';
-import Login from './pages/Auth/Login';
-import Register from './pages/Auth/Register';
-import Dashboard from './pages/Dashboard';
-import LeaderboardPage from './pages/LeaderboardPage';
-import PublicProfile from './pages/PublicProfile';
-import AssessmentLobby from './pages/AssessmentLobby';
-import ActiveAssessment from './pages/ActiveAssessment';
-import NotFound from './pages/NotFound';
-import AIChatWindow from './features/ai/AIChatWindow';
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Login = lazy(() => import('./pages/Auth/Login'));
+const Register = lazy(() => import('./pages/Auth/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
+const PublicProfile = lazy(() => import('./pages/PublicProfile'));
+const AssessmentLobby = lazy(() => import('./pages/AssessmentLobby'));
+const ActiveAssessment = lazy(() => import('./pages/ActiveAssessment'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const AIChatWindow = lazy(() => import('./features/ai/AIChatWindow'));
 
 // Course Features
-import CourseList from './features/courses/CourseList';
-import CourseDetail from './features/courses/CourseDetail';
+const CourseList = lazy(() => import('./features/courses/CourseList'));
+const CourseDetail = lazy(() => import('./features/courses/CourseDetail'));
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -47,7 +47,12 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">
+            <span className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></span>
+          </div>
+        }>
+          <Routes>
           {/* Public Routing */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
@@ -112,6 +117,7 @@ function App() {
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
         <AIChatWindow />
+        </Suspense>
       </Router>
     </AuthProvider>
   );
