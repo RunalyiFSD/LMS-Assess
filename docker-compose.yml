@@ -1,35 +1,47 @@
 version: '3.8'
 
 services:
-  frontend:
-    build: 
-      context: ./lms-frontend
-      dockerfile: Dockerfile
-    ports:
-      - "5173:5173"
-    environment:
-      - NODE_ENV=development
-
-  backend:
+  lms-backend:
     build:
       context: ./lms-backend
       dockerfile: Dockerfile
+    image: lms-backend:latest
     ports:
       - "5000:5000"
     environment:
-      - NODE_ENV=development
-    env_file:
-      - ./lms-backend/.env
+      - NODE_ENV=production
+      - PORT=5000
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - AI_PLATFORM_URL=http://ai-platform:8000/api/v1/ai
     depends_on:
       - ai-platform
+    restart: unless-stopped
 
   ai-platform:
     build:
       context: ./ai-platform
       dockerfile: Dockerfile
+    image: ai-platform:latest
     ports:
       - "8000:8000"
     environment:
-      - ENVIRONMENT=development
-    env_file:
-      - ./ai-platform/.env
+      - ENVIRONMENT=production
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    restart: unless-stopped
+
+  lms-frontend:
+    build:
+      context: ./lms-frontend
+      dockerfile: Dockerfile
+    image: lms-frontend:latest
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:5000/api/v1}
+      - VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+    restart: unless-stopped
