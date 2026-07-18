@@ -1,41 +1,58 @@
-# LMS-Assess
+# LMS-Assess v1.0 🎓
 
-A unified, AI-powered Learning Management System (LMS) designed for comprehensive assessment and evaluation.
+Welcome to **LMS-Assess**, a next-generation Learning Management System supercharged with AI.
 
-## Architecture
+LMS-Assess breaks traditional assessment boundaries by dynamically generating course material and interactive quizzes from unstructured documents (PDFs) using Retrieval-Augmented Generation (RAG). It provides real-time performance analytics for students and automated evaluation pipelines for educators.
 
-This repository is a monorepo containing three distinct services:
+## 🚀 Key Features
+- **AI Assessment Builder:** Upload a syllabus or document (PDF) and let Groq AI generate a comprehensive, structured test (MCQs, Theory, Coding).
+- **Automated Grading:** Intelligent grading algorithms instantly evaluate student responses, providing actionable feedback.
+- **RAG-Powered AI Tutor:** Context-aware chat assistants ready to help students understand their mistakes.
+- **Live Dashboards:** Rich, interactive charts and statistics powered by `recharts`.
+- **Role-based Access:** Dedicated workflows for Students, Teachers, and Admins.
 
-1. **`lms-frontend/`**: React/Vite SPA for students, teachers, and admins.
-2. **`lms-backend/`**: Node.js/Express core API handling business logic and database orchestration.
-3. **`ai-platform/`**: FastAPI microservice for heavy AI workloads (grading, generation).
+## 🏗️ Architecture Stack
+This repository is a monorepo consisting of three main microservices:
 
-## Quick Start (Local Development)
+1. **`lms-frontend/`**
+   - **Tech:** React 19, Vite, Tailwind CSS
+   - **Role:** The user interface, Dashboards, Assessment Lobby, and AI Chat UI.
+2. **`lms-backend/`**
+   - **Tech:** Node.js, Express, Supabase (PostgreSQL)
+   - **Role:** Core business logic, authentication (JWT), user management, and Supabase database interactions.
+3. **`ai-platform/`**
+   - **Tech:** Python, FastAPI, LangChain, Groq
+   - **Role:** AI processing engine. Handles PDF ingestion, RAG vector embeddings (ChromaDB), and LLM prompting for quizzes and chat.
 
-### 1. Database Setup
-The project uses Supabase (PostgreSQL). You need a Supabase project and credentials.
-Copy `.env.example` to a new `.env` file at the root, and also inside `lms-backend/` and `lms-frontend/`.
-Fill in the `SUPABASE_URL` and keys.
+## 🛠️ Local Development Setup
+To run the full stack locally for development:
 
-### 2. Run Backend (Port 5000)
-```bash
-cd lms-backend
-npm install
-npm run dev
-```
+1. Setup the Database: Ensure you have a Supabase project created. Run the SQL files found in `lms-backend/src/db/migrations/` in your Supabase SQL editor.
+2. Provide Environment Variables: Copy the `.env.example` templates in both `lms-backend/` and `ai-platform/` to `.env` and fill in your Supabase and Groq keys.
+3. Start the services (in separate terminals):
+   ```bash
+   # Terminal 1: Backend
+   cd lms-backend
+   npm install
+   npm run dev
 
-### 3. Run Frontend (Port 5173)
-```bash
-cd lms-frontend
-npm install
-npm run dev
-```
+   # Terminal 2: AI Platform
+   cd ai-platform
+   python -m venv venv
+   venv\Scripts\activate  # Windows
+   pip install -r requirements.txt
+   uvicorn main:app --reload
 
-### 4. Run AI Platform (Port 8000)
-```bash
-cd ai-platform
-python -m venv venv
-source venv/bin/activate  # venv\Scripts\activate on Windows
-pip install -r requirements.txt
-python main.py
-```
+   # Terminal 3: Frontend
+   cd lms-frontend
+   npm install
+   npm run dev
+   ```
+
+## 🌍 Production Deployment
+LMS-Assess is fully containerized using Docker and is ready for production. 
+
+Please refer to the detailed **[Deployment Runbook](./docs/Deployment_Runbook.md)** (or the provided artifact) for instructions on deploying to AWS, Vercel, Render, or Railway.
+
+---
+*Built with ❤️ for modern education.*
