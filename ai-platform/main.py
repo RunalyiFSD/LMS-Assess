@@ -9,6 +9,7 @@ from app.middleware.request_logging import RequestLoggingMiddleware
 from app.middleware.auth import AuthMiddleware
 from app.api.v1.health_routes import router as health_router
 from app.api.v1.llm_routes import router as llm_router
+from app.api.v1.rag_routes import router as rag_router
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
     # Routes
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(llm_router, prefix="/api/v1")
+    app.include_router(rag_router, prefix="/api/v1")
 
     return app
 
