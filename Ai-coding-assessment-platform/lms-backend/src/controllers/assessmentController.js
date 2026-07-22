@@ -49,10 +49,13 @@ exports.getAllAssessments = async (req, res, next) => {
 
     // Filter by mock status
     if (isMock === 'true') {
-      if (req.user.role !== 'student') {
-        return next(new AppError('Only students are allowed to access mock assessments', 403));
-      }
-      filter.isMock = true;
+      return res.status(200).json({
+        status: 'success',
+        results: 0,
+        data: {
+          assessments: [],
+        },
+      });
     } else {
       filter.isMock = { $ne: true };
     }

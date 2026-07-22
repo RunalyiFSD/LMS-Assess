@@ -12,7 +12,8 @@ import {
 import {
   Award, Play, RotateCcw, ShieldCheck, Calendar, Clock,
   ClipboardList, Database, Network, Terminal, Atom, LayoutGrid, Code,
-  TrendingUp, Target, BarChart2, Activity, BookOpen, CheckCircle
+  TrendingUp, Target, BarChart2, Activity, BookOpen, CheckCircle,
+  Building2, Code2, ChevronRight
 } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
@@ -128,6 +129,7 @@ const StudentDashboardView = () => {
   const [searchMockQuery, setSearchMockQuery] = useState('');
   const [analytics, setAnalytics] = useState(null);
   const [subjectPerformance, setSubjectPerformance] = useState([]);
+  const [selectedMockCategory, setSelectedMockCategory] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -194,16 +196,9 @@ const StudentDashboardView = () => {
           console.warn('Failed to load student profile standing:', err);
         }
       }
-      
-      // 5. Fetch mock assessments
-      try {
-        const mocksRes = await api.get(`/assessments?isMock=true&t=${timestamp}`);
-        if (mocksRes.data?.status === 'success') {
-          setMockAssessments(mocksRes.data.data.assessments || []);
-        }
-      } catch (err) {
-        console.warn('Failed to load mock assessments:', err);
-      }
+
+      // 5. Fetch mock assessments (cleared / removed content)
+      setMockAssessments([]);
 
       setLoading(false);
     };
@@ -304,179 +299,213 @@ const StudentDashboardView = () => {
     );
   }
 
+  const companyMocksList = [
+    { _id: 'cmp_1', title: 'Infosys Placement Mock', company: 'Infosys', reg: '582 Registrations', time: '45 Minutes', obj: 5, prog: 2 },
+    { _id: 'cmp_2', title: 'Uber Engineering Mock', company: 'Uber', reg: '1240 Registrations', time: '45 Minutes', obj: 5, prog: 2 },
+    { _id: 'cmp_3', title: 'LinkedIn Tech Assessment', company: 'LinkedIn', reg: '980 Registrations', time: '45 Minutes', obj: 5, prog: 2 },
+    { _id: 'cmp_4', title: 'MindTree Placement Mock', company: 'MindTree', reg: '450 Registrations', time: '45 Minutes', obj: 5, prog: 2 },
+    { _id: 'cmp_5', title: 'TCS NQT Simulation', company: 'TCS', reg: '3420 Registrations', time: '60 Minutes', obj: 15, prog: 2 },
+    { _id: 'cmp_6', title: 'Amazon SDE Screening', company: 'Amazon', reg: '4120 Registrations', time: '60 Minutes', obj: 5, prog: 2 }
+  ];
+
+  const languageMocksList = [
+    { _id: 'lang_1', title: 'React.js Developer Mock', lang: 'React', reg: '2284 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
+    { _id: 'lang_2', title: 'Java Core & OOPs Mock', lang: 'Java', reg: '6682 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
+    { _id: 'lang_3', title: 'Python Programming Mock', lang: 'Python', reg: '12220 Registrations', time: '30 Minutes', obj: 5, prog: 2 },
+    { _id: 'lang_4', title: 'SQL & Database Design', lang: 'SQL', reg: '16070 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
+    { _id: 'lang_5', title: 'C++ Data Structures Mock', lang: 'C++', reg: '2429 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
+    { _id: 'lang_6', title: 'Node.js & Backend API', lang: 'Node.js', reg: '759 Registrations', time: '30 Minutes', obj: 15, prog: 0 }
+  ];
+
   const renderExploreMocksView = () => {
-    // Registrations and visual badge mapping
-    const getMockDetails = (title) => {
-      const details = {
-        'SDE': { reg: '69092 Registrations', time: '50 Minutes', obj: 5, prog: 2 },
-        'React': { reg: '2284 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Java': { reg: '6682 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'SQL': { reg: '16070 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'AngularJS': { reg: null, time: '30 Minutes', obj: 15, prog: 0 },
-        'Javascript': { reg: '4629 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'C++': { reg: '2429 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'HTML': { reg: '4378 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'OOPs': { reg: '3373 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Data Structures': { reg: '11685 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Python': { reg: '12220 Registrations', time: '30 Minutes', obj: 5, prog: 2 },
-        'Node.js': { reg: '759 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'AWS': { reg: '1243 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Software Testing': { reg: '1817 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'DBMS-': { reg: '1754 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'REST API': { reg: '581 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'C#': { reg: '795 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Java 8': { reg: '1965 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'OS': { reg: '963 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'C': { reg: '2441 Registrations', time: '30 Minutes', obj: 5, prog: 2 },
-        'Networking': { reg: '1519 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Spring Boot': { reg: '957 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Data Science': { reg: '727 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Machine Learning': { reg: '940 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Cloud Computing': { reg: '503 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'CSS': { reg: '1469 Registrations', time: '30 Minutes', obj: 15, prog: 0 },
-        'Android': { reg: null, time: '30 Minutes', obj: 15, prog: 0 },
-        'DSML': { reg: null, time: '30 Minutes', obj: 10, prog: 0, popular: true },
-        'PHP': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'Data Analyst': { reg: null, time: '60 Minutes', obj: 15, prog: 0 },
-        'Agile': { reg: null, time: '60 Minutes', obj: 15, prog: 0 },
-        'Linux': { reg: '596 Registrations', time: '60 Minutes', obj: 15, prog: 0 },
-        'iOS': { reg: null, time: '60 Minutes', obj: 15, prog: 0 },
-        'MySQL': { reg: '745 Registrations', time: '60 Minutes', obj: 15, prog: 0 },
-        'Microservices': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'Kotlin': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'PL/SQL': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'GIT': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'Django': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'Multithreading': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'React Native': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'MongoDB': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'Java Collections': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'Jquery': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'Angular 8': { reg: null, time: '60 Minutes', obj: 5, prog: 2 },
-        'Uber': { reg: null, time: '45 Minutes', obj: 5, prog: 2 },
-        'Linkedin': { reg: null, time: '45 Minutes', obj: 5, prog: 2 },
-        'Infosys': { reg: '582 Registrations', time: '45 Minutes', obj: 5, prog: 2 },
-        'MindTree': { reg: null, time: '45 Minutes', obj: 5, prog: 2 }
-      };
-      return details[title] || { reg: null, time: '45 Minutes', obj: 10, prog: 0 };
-    };
-
-    const getMockIcon = (title) => {
-      const name = title.toLowerCase();
-      if (name.includes('sde') || name.includes('testing') || name.includes('agile') || name.includes('git')) {
-        return <ClipboardList size={22} className="text-blue-600" />;
-      }
-      if (name.includes('react') || name.includes('angular') || name.includes('atom')) {
-        return <Atom size={22} className="text-cyan-600" />;
-      }
-      if (name.includes('python') || name.includes('node') || name.includes('php') || name.includes('django') || name.includes('kotlin') || name.includes('linux') || name.includes('ios')) {
-        return <Terminal size={22} className="text-yellow-600" />;
-      }
-      if (name.includes('sql') || name.includes('dbms') || name.includes('mongo')) {
-        return <Database size={22} className="text-orange-600" />;
-      }
-      if (name.includes('data structure') || name.includes('network') || name.includes('cloud') || name.includes('microservice') || name.includes('api')) {
-        return <Network size={22} className="text-rose-600" />;
-      }
-      if (name.includes('dsml') || name.includes('science') || name.includes('machine') || name.includes('analyst') || name.includes('aws')) {
-        return <Award size={22} className="text-purple-600" />;
-      }
-      return <Code size={22} className="text-slate-600" />;
-    };
-
-    const filteredMocks = mockAssessments.filter(m =>
-      m.title.toLowerCase().includes(searchMockQuery.toLowerCase())
-    );
-
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Explore All Mock Assessments</h1>
-            <p className="text-xs text-slate-500 mt-1">Practice and prepare with our library of mock tests categorized by technologies.</p>
+            <p className="text-xs text-slate-500 mt-1">Practice and prepare with our library of mock tests categorized by companies and technologies.</p>
           </div>
           <Button variant="outline" onClick={() => navigate('/dashboard')}>
             &larr; Back to Dashboard
           </Button>
         </div>
 
-        {/* Search bar */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <input
-            type="text"
-            value={searchMockQuery}
-            onChange={(e) => setSearchMockQuery(e.target.value)}
-            placeholder="Search mock assessments..."
-            className="w-full bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          />
-        </div>
-
-        {/* Grid of mock cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {filteredMocks.map((mock) => {
-            const details = getMockDetails(mock.title);
-            return (
-              <div
-                key={mock._id}
-                className={`relative bg-white rounded-xl shadow-sm border p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 ${
-                  details.popular ? 'border-cyan-400/85 ring-1 ring-cyan-400/20' : 'border-slate-200/80'
-                }`}
-              >
-                {/* Registrations/Popular Badge */}
-                <div className="absolute -top-2.5 right-2 z-10 flex">
-                  {details.popular && (
-                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-full text-[8px] font-extrabold flex items-center gap-1 shadow-sm">
-                      ⭐ Popular
-                    </span>
-                  )}
-                  {details.reg && (
-                    <span className="bg-red-50 text-red-600 border border-red-200/60 px-2 py-0.5 rounded-full text-[8px] font-extrabold flex items-center gap-1 shadow-sm">
-                      🔥 {details.reg}
-                    </span>
-                  )}
+        {selectedMockCategory === null ? (
+          /* Main 2 Cards: Company Mock & Language Mock */
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+            {/* Card 1: Company Mock */}
+            <div
+              onClick={() => setSelectedMockCategory('company')}
+              className="bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/50 rounded-2xl border border-indigo-100 p-7 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+            >
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
+                    <Building2 size={28} />
+                  </div>
+                  <span className="bg-indigo-100 text-indigo-700 font-extrabold text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-200/60 shadow-sm flex items-center gap-1">
+                    🔥 Popular Hiring Drills
+                  </span>
                 </div>
 
-                <div className="space-y-3">
-                  {/* Icon */}
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm bg-slate-50">
-                    {getMockIcon(mock.title)}
-                  </div>
-
-                  {/* Title */}
-                  <div>
-                    <h4 className="font-extrabold text-slate-800 text-sm">{mock.title}</h4>
-                  </div>
-
-                  {/* Specs */}
-                  <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                      <Clock size={12} className="text-slate-400" />
-                      <span>Time: {details.time}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                      <LayoutGrid size={12} className="text-slate-400" />
-                      <span>Objective: {details.obj}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                      <Code size={12} className="text-slate-400" />
-                      <span>Programming: {details.prog}</span>
-                    </div>
-                  </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">Company Mock Assessments</h2>
+                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                    Simulated recruitment exams tailored for top product & IT companies like Infosys, Uber, LinkedIn, MindTree, TCS, and Amazon.
+                  </p>
                 </div>
 
-                {/* Attempt Action */}
-                <div className="border-t border-slate-100 pt-3 mt-4 text-center">
-                  <button
-                    onClick={() => handleStartExam(mock._id)}
-                    className="text-[11px] font-bold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 transition-micro"
-                  >
-                    Attempt Now &rarr;
-                  </button>
+                <div className="space-y-2 pt-2 border-t border-indigo-100/60 text-xs text-slate-600 font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle size={15} className="text-indigo-600 flex-shrink-0" />
+                    <span>Infosys, Uber, LinkedIn, MindTree, TCS & Amazon tests</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Clock size={15} className="text-indigo-600 flex-shrink-0" />
+                    <span>45-60 Mins real exam time constraints</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Code size={15} className="text-indigo-600 flex-shrink-0" />
+                    <span>MCQ Drills & Integrated Coding Sandboxes</span>
+                  </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
+
+              <div className="pt-6">
+                <Button
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-indigo-500/25 transition-all flex items-center justify-center gap-2"
+                  onClick={(e) => { e.stopPropagation(); setSelectedMockCategory('company'); }}
+                >
+                  <span>Explore Company Mocks</span>
+                  <ChevronRight size={16} />
+                </Button>
+              </div>
+            </div>
+
+            {/* Card 2: Language Mock */}
+            <div
+              onClick={() => setSelectedMockCategory('language')}
+              className="bg-gradient-to-br from-cyan-50/80 via-white to-emerald-50/50 rounded-2xl border border-cyan-100 p-7 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+            >
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <div className="w-14 h-14 rounded-2xl bg-cyan-600 text-white flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-105 transition-transform">
+                    <Code2 size={28} />
+                  </div>
+                  <span className="bg-cyan-100 text-cyan-700 font-extrabold text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-cyan-200/60 shadow-sm flex items-center gap-1">
+                    ⭐ Skill Certification
+                  </span>
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">Language & Tech Stack Mock</h2>
+                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                    Master programming languages & core technical frameworks with focused skill quizzes and algorithm tests.
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-cyan-100/60 text-xs text-slate-600 font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle size={15} className="text-cyan-600 flex-shrink-0" />
+                    <span>React, Java, Python, SQL, C++, Data Structures & Node.js</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Clock size={15} className="text-cyan-600 flex-shrink-0" />
+                    <span>30 Mins focused language quizzes</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Award size={15} className="text-cyan-600 flex-shrink-0" />
+                    <span>Instant Performance Analytics & Solver Score</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6">
+                <Button
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-cyan-500/25 transition-all flex items-center justify-center gap-2"
+                  onClick={(e) => { e.stopPropagation(); setSelectedMockCategory('language'); }}
+                >
+                  <span>Explore Language Mocks</span>
+                  <ChevronRight size={16} />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Sub-category detail view */
+          <div className="space-y-6">
+            <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl ${selectedMockCategory === 'company' ? 'bg-indigo-50 text-indigo-600' : 'bg-cyan-50 text-cyan-600'}`}>
+                  {selectedMockCategory === 'company' ? <Building2 size={22} /> : <Code2 size={22} />}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-800 text-base">
+                    {selectedMockCategory === 'company' ? 'Company Mock Assessments' : 'Language & Tech Mock Assessments'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {selectedMockCategory === 'company' ? 'Recruitment simulation tests for top tech firms' : 'Language and stack specific practice drills'}
+                  </p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setSelectedMockCategory(null)}>
+                &larr; Back to Categories
+              </Button>
+            </div>
+
+            {/* List of cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {(selectedMockCategory === 'company' ? companyMocksList : languageMocksList).map((mock) => (
+                <div
+                  key={mock._id}
+                  onClick={() => handleStartExam(mock._id)}
+                  className="bg-white rounded-xl shadow-sm border border-slate-200/80 p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm bg-slate-50 text-brand-600">
+                        {selectedMockCategory === 'company' ? <Building2 size={20} /> : <Code2 size={20} />}
+                      </div>
+                      {mock.reg && (
+                        <span className="bg-red-50 text-red-600 border border-red-200/60 px-2 py-0.5 rounded-full text-[9px] font-extrabold">
+                          🔥 {mock.reg}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="font-extrabold text-slate-800 text-sm">{mock.title}</h4>
+                    </div>
+
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                      <div className="flex items-center gap-2">
+                        <Clock size={12} className="text-slate-400" />
+                        <span>Time: {mock.time}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <LayoutGrid size={12} className="text-slate-400" />
+                        <span>Objective: {mock.obj}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Code size={12} className="text-slate-400" />
+                        <span>Programming: {mock.prog}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-3 mt-4 text-center">
+                    <button
+                      onClick={() => handleStartExam(mock._id)}
+                      className="text-[11px] font-bold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 transition-micro"
+                    >
+                      Attempt Now &rarr;
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -495,82 +524,82 @@ const StudentDashboardView = () => {
             &larr; Back to Dashboard
           </Button>
         </div>
-        
+
         {/* Analytics Charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Score Trend */}
-            {analytics?.scoreTrend?.length > 0 && (
-              <Section title="Score Trend (Last 7 Tests)" icon={<TrendingUp size={16} />}>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={analytics.scoreTrend}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="test" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                      <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                      <Line type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1', strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </Section>
-            )}
+          {/* Score Trend */}
+          {analytics?.scoreTrend?.length > 0 && (
+            <Section title="Score Trend (Last 7 Tests)" icon={<TrendingUp size={16} />}>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analytics.scoreTrend}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="test" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                    <Line type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Section>
+          )}
 
-            {/* Pass/Fail Ratio */}
-            {analytics?.passFailRatio?.length > 0 && (
-              <Section title="Pass / Fail Ratio" icon={<ShieldCheck size={16} />}>
-                <div className="h-48 relative flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={analytics.passFailRatio} cx="50%" cy="50%" innerRadius={50} outerRadius={68} paddingAngle={3} dataKey="value" stroke="none">
-                        {analytics.passFailRatio.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.name === 'Passed' ? PASS_COLORS[0] : PASS_COLORS[1]} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  {/* Legend below */}
-                  <div className="absolute bottom-2 flex gap-4 text-xs font-medium text-slate-600">
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Passed: {analytics.passFailRatio[0]?.value || 0}</div>
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Failed: {analytics.passFailRatio[1]?.value || 0}</div>
-                  </div>
+          {/* Pass/Fail Ratio */}
+          {analytics?.passFailRatio?.length > 0 && (
+            <Section title="Pass / Fail Ratio" icon={<ShieldCheck size={16} />}>
+              <div className="h-48 relative flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={analytics.passFailRatio} cx="50%" cy="50%" innerRadius={50} outerRadius={68} paddingAngle={3} dataKey="value" stroke="none">
+                      {analytics.passFailRatio.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.name === 'Passed' ? PASS_COLORS[0] : PASS_COLORS[1]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Legend below */}
+                <div className="absolute bottom-2 flex gap-4 text-xs font-medium text-slate-600">
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Passed: {analytics.passFailRatio[0]?.value || 0}</div>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Failed: {analytics.passFailRatio[1]?.value || 0}</div>
                 </div>
-              </Section>
-            )}
+              </div>
+            </Section>
+          )}
 
-            {/* Monthly Averages */}
-            {analytics?.monthlyAverages?.length > 0 && (
-              <Section title="Monthly Averages" icon={<BarChart2 size={16} />}>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={analytics.monthlyAverages} barSize={16}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} cursor={{ fill: '#f8fafc' }} />
-                      <Bar dataKey="score" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Section>
-            )}
+          {/* Monthly Averages */}
+          {analytics?.monthlyAverages?.length > 0 && (
+            <Section title="Monthly Averages" icon={<BarChart2 size={16} />}>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analytics.monthlyAverages} barSize={16}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} cursor={{ fill: '#f8fafc' }} />
+                    <Bar dataKey="score" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Section>
+          )}
 
-            {/* Skill Analysis Radar */}
-            {analytics?.skillAnalysis?.length > 0 && (
-              <Section title="Skill Analysis" icon={<Target size={16} />}>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }} cx="50%" cy="50%" outerRadius={95} data={analytics.skillAnalysis}>
-                      <PolarGrid stroke="#e2e8f0" />
-                      <PolarAngleAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
-                      <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: '#94a3b8' }} />
-                      <Radar name="Score" dataKey="score" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
-                      <Tooltip />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Section>
-            )}
+          {/* Skill Analysis Radar */}
+          {analytics?.skillAnalysis?.length > 0 && (
+            <Section title="Skill Analysis" icon={<Target size={16} />}>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }} cx="50%" cy="50%" outerRadius={95} data={analytics.skillAnalysis}>
+                    <PolarGrid stroke="#e2e8f0" />
+                    <PolarAngleAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: '#94a3b8' }} />
+                    <Radar name="Score" dataKey="score" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
+                    <Tooltip />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </Section>
+          )}
         </div>
 
         {/* ── SUBJECT COMPARISON ──────────────────────────────────────────── */}
@@ -643,475 +672,473 @@ const StudentDashboardView = () => {
   return (
     <>
       <div className="space-y-6 print:hidden">
-      {/* Overview stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-tr from-brand-600 to-brand-500 text-white p-5 border-none">
-          <Award size={32} className="opacity-90" />
-          <div className="mt-4">
-            <span className="text-brand-100 text-xs font-medium uppercase tracking-wider">LMS Achievements</span>
-            <h4 className="text-xl font-black mt-1">Practice Regularly</h4>
-            <p className="text-xs text-brand-100 mt-2">Earn Gold and Silver solver badges by scoring 80%+ on coding and MCQ tasks.</p>
-          </div>
-        </Card>
+        {/* Overview stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-gradient-to-tr from-brand-600 to-brand-500 text-white p-5 border-none">
+            <Award size={32} className="opacity-90" />
+            <div className="mt-4">
+              <span className="text-brand-100 text-xs font-medium uppercase tracking-wider">LMS Achievements</span>
+              <h4 className="text-xl font-black mt-1">Practice Regularly</h4>
+              <p className="text-xs text-brand-100 mt-2">Earn Gold and Silver solver badges by scoring 80%+ on coding and MCQ tasks.</p>
+            </div>
+          </Card>
 
-        <Card className="p-5 flex flex-col justify-between">
-          <Calendar className="text-blue-500" size={24} />
-          <div className="mt-4">
-            <span className="text-slate-400 text-[10px] font-bold uppercase">Tests Assigned</span>
-            <p className="text-2xl font-black text-slate-800">{assessments.length} Available</p>
-          </div>
-        </Card>
+          <Card className="p-5 flex flex-col justify-between">
+            <Calendar className="text-blue-500" size={24} />
+            <div className="mt-4">
+              <span className="text-slate-400 text-[10px] font-bold uppercase">Tests Assigned</span>
+              <p className="text-2xl font-black text-slate-800">{assessments.length} Available</p>
+            </div>
+          </Card>
 
-        <Card className="p-5 flex flex-col justify-between">
-          <ShieldCheck className="text-emerald-500" size={24} />
-          <div className="mt-4">
-            <span className="text-slate-400 text-[10px] font-bold uppercase">Tests Submitted</span>
-            <p className="text-2xl font-black text-slate-800">
-              {myAttempts.filter((a) => a.status === 'graded' || a.status === 'submitted').length} Exams
-            </p>
-          </div>
-        </Card>
-      </div>
-
-      {/* Main Grid Layout split into Content & Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column: Assigned Assessments and Submission Status */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Active Assessments list */}
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Assigned Assessments</h2>
-            {assessments.length === 0 ? (
-              <Card className="text-center py-10 text-slate-400 text-sm">
-                No active assessments currently scheduled. Enjoy your break!
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {assessments.map((test) => {
-                  const attempt = getAttemptForAssessment(test._id);
-                  const isStarted = attempt?.status === 'started';
-                  const isLocked = attempt?.status === 'submitted' || attempt?.status === 'graded';
-
-                  return (
-                    <Card
-                      key={test._id}
-                      title={test.title}
-                      subtitle={`${test.subject?.name} (${test.subject?.code})`}
-                      extra={
-                        <span className="inline-block px-2.5 py-1 rounded bg-brand-50 text-brand-600 text-xs font-bold capitalize">
-                          {test.type}
-                        </span>
-                      }
-                      className="hover:scale-[1.01]"
-                    >
-                      <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                        {test.description || 'No detailed instructions configured.'}
-                      </p>
-
-                      <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">
-                        <span className="flex items-center gap-1 font-medium">
-                          <Clock size={14} /> {test.duration} min limits
-                        </span>
-                        <span className="font-semibold text-slate-500">
-                          Total: {test.totalMarks} marks
-                        </span>
-                      </div>
-
-                      <div className="mt-4 pt-2">
-                        {isLocked ? (
-                          <Button variant="secondary" className="w-full" disabled>
-                            Completed & Submitted
-                          </Button>
-                        ) : isStarted ? (
-                          <div className="flex flex-col gap-2">
-                            <Button
-                              variant="primary"
-                              className="w-full bg-amber-500 hover:bg-amber-600 gap-2 font-bold transition-all"
-                              onClick={() => navigate(`/assessment/${attempt._id}`)}
-                            >
-                              <RotateCcw size={16} /> Resume Active Attempt
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 gap-2 font-bold transition-all"
-                              onClick={() => handleDashboardSubmit(attempt._id)}
-                            >
-                              <ShieldCheck size={16} /> Submit Assessment
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button variant="primary" className="w-full gap-2" onClick={() => handleStartExam(test._id)}>
-                            <Play size={16} /> Enter Lobby
-                          </Button>
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-
-
+          <Card className="p-5 flex flex-col justify-between">
+            <ShieldCheck className="text-emerald-500" size={24} />
+            <div className="mt-4">
+              <span className="text-slate-400 text-[10px] font-bold uppercase">Tests Submitted</span>
+              <p className="text-2xl font-black text-slate-800">
+                {myAttempts.filter((a) => a.status === 'graded' || a.status === 'submitted').length} Exams
+              </p>
+            </div>
+          </Card>
         </div>
 
-        {/* Right column: Leaderboard Widget */}
-        <div className="lg:col-span-1">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Rankings</h2>
-          <div className="bg-white border border-slate-200/80 shadow-sm rounded-xl p-5 flex flex-col justify-between">
+        {/* Main Grid Layout split into Content & Sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column: Assigned Assessments and Submission Status */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Active Assessments list */}
             <div>
-              {/* Header Title & Info Icon */}
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-bold text-sky-600 uppercase tracking-widest font-sans">Leaderboard</span>
-                <button
-                  className="text-slate-400 hover:text-slate-600 transition-colors"
-                  title="Rankings are updated dynamically based on total score points."
-                >
-                  <span className="w-4.5 h-4.5 rounded-full border border-slate-300 text-[10px] text-slate-500 font-bold flex items-center justify-center font-mono">
-                    i
-                  </span>
-                </button>
-              </div>
-              <hr className="border-slate-100 mb-4" />
-
-              {/* Top 3 Standings */}
-              <div className="space-y-4">
-                {topThree.slice(0, 3).map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-400 w-6">#{idx + 1}</span>
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-black font-mono text-[9px] flex-shrink-0">
-                        {item.student?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
-                      </div>
-                      <span className="font-bold text-slate-700 truncate">
-                        {item.student?.name}
-                      </span>
-                    </div>
-                    <span className="font-bold text-slate-700 font-mono flex-shrink-0">
-                      {item.totalScore}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <hr className="border-slate-100 my-4" />
-
-              {/* Logged in student's current position */}
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-400 w-14">#{studentRank || '—'}</span>
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-black font-mono text-[9px] flex-shrink-0">
-                    {user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'RS'}
-                  </div>
-                  <span className="font-bold text-slate-700 truncate">{user?.name}</span>
-                </div>
-                <span className="font-bold text-slate-700 font-mono flex-shrink-0">
-                  {studentPoints}
-                </span>
-              </div>
-            </div>
-
-            {/* Bottom Modal Trigger */}
-            <div className="border-t border-slate-100 pt-4 mt-5 text-center">
-              <button
-                onClick={() => setShowFullBoard(true)}
-                className="text-xs font-bold text-sky-600 hover:text-sky-700 hover:underline inline-flex items-center gap-1 transition-colors"
-              >
-                View Leaderboard
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Completed attempts / Scorecards download (Spans Full Width!) */}
-      <div>
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Recent Submission Status</h2>
-        <Card bodyClassName="p-0">
-          {myAttempts.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-sm">You haven't attempted any tests yet.</div>
-          ) : (
-            <div className="overflow-x-auto w-full">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Assessment</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Status</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Time Spent</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Score</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {myAttempts.map((att) => (
-                    <tr key={att._id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">
-                        {att.assessment?.title}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-xs">
-                        <span className={`px-2 py-0.5 rounded font-semibold capitalize ${
-                          att.status === 'graded' ? 'bg-emerald-50 text-accent-success' :
-                          att.status === 'submitted' ? 'bg-amber-50 text-accent-warning' :
-                          'bg-slate-100 text-slate-500'
-                        }`}>
-                          {att.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
-                        {Math.round((att.timeTakenSeconds || 0) / 60)} min
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-700">
-                        {att.status === 'graded' ? `${att.totalMarksObtained} pts` : 'Pending Grade'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-xs">
-                        {att.status === 'graded' ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSelectedScorecard(att)}
-                          >
-                            Download Scorecard
-                          </Button>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Looking to prepare for a specific technology? */}
-      <div className="pt-6">
-        <div className="text-center mb-8">
-          <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
-            Looking to prepare for a specific technology?
-          </h3>
-          <p className="text-xs text-slate-400 mt-1">Refine your skills with mock tests categorized by languages and platforms</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {techTracks.map((track) => (
-            <div
-              key={track.id}
-              className={`relative bg-white rounded-xl shadow-sm border p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 ${
-                track.popular ? 'border-cyan-400/85 ring-1 ring-cyan-400/20' : 'border-slate-200/80'
-              }`}
-            >
-              {/* Badge tags */}
-              <div className="absolute -top-2.5 right-2 z-10 flex">
-                {track.popular && (
-                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-full text-[8px] font-extrabold flex items-center gap-1 shadow-sm">
-                    ⭐ Popular
-                  </span>
-                )}
-                {track.registrations && (
-                  <span className="bg-red-50 text-red-600 border border-red-200/60 px-2 py-0.5 rounded-full text-[8px] font-extrabold flex items-center gap-1 shadow-sm">
-                    🔥 {track.registrations}
-                  </span>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                {/* Icon container */}
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm ${track.iconColor}`}>
-                  {track.icon === 'clipboard' && <ClipboardList size={18} />}
-                  {track.icon === 'database' && <Database size={18} />}
-                  {track.icon === 'network' && <Network size={18} />}
-                  {track.icon === 'terminal' && <Terminal size={18} />}
-                  {track.icon === 'atom' && <Atom size={18} />}
-                </div>
-
-                {/* Title */}
-                <div>
-                  <h4 className="font-extrabold text-slate-800 text-sm">{track.title}</h4>
-                </div>
-
-                {/* Meta Specifications */}
-                <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                    <Clock size={12} className="text-slate-400" />
-                    <span>Time: {track.time}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                    <LayoutGrid size={12} className="text-slate-400" />
-                    <span>Objective: {track.objective}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-500 text-[11px]">
-                    <Code size={12} className="text-slate-400" />
-                    <span>Programming: {track.programming}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom link */}
-              <div className="border-t border-slate-100 pt-3 mt-4 text-center">
-                <button
-                  onClick={() => alert(`Starting preparation track for ${track.title}...`)}
-                  className="text-[11px] font-bold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 transition-micro"
-                >
-                  {track.linkText}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center mt-6">
-          <button
-            onClick={() => navigate('/dashboard?tab=explore_mocks')}
-            className="text-xs font-bold text-brand-600 hover:text-brand-700 hover:underline"
-          >
-            Explore All Mocks
-          </button>
-        </div>
-      </div>
-
-      {/* Full Leaderboard Modal Popup */}
-      {showFullBoard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/65 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-100 animate-in fade-in-50 duration-200">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-black text-slate-800">Global Standings</h3>
-                <p className="text-xs text-slate-400">View real-time rankings across all subjects and exams</p>
-              </div>
-              <button
-                onClick={() => setShowFullBoard(false)}
-                className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-650 flex items-center justify-center font-bold text-sm"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Filters Bar */}
-            <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center gap-3">
-              <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[200px] flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Search by student name..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
-                />
-                <Button type="submit" size="sm">Search</Button>
-              </form>
-
-              <select
-                value={subject}
-                onChange={(e) => { setSubject(e.target.value); setPage(1); }}
-                className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
-              >
-                <option value="">All Subjects</option>
-                {subjects.map((sub) => (
-                  <option key={sub._id} value={sub._id}>
-                    {sub.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={sortBy}
-                onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
-                className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
-              >
-                <option value="score">Sort by Points</option>
-                <option value="percentage">Sort by Avg %</option>
-                <option value="attempts">Sort by Completed</option>
-              </select>
-
-              <Button variant="outline" size="sm" onClick={handleClearFilters}>
-                Clear
-              </Button>
-            </div>
-
-            {/* Modal Content - Table */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {modalLoading ? (
-                <div className="flex justify-center items-center py-16 text-slate-400 gap-2">
-                  <span className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></span>
-                  Loading global rankings...
-                </div>
-              ) : rankings.length === 0 ? (
-                <div className="text-center py-16 text-slate-400 text-sm">No students match your query.</div>
+              <h2 className="text-lg font-bold text-slate-900 mb-4">Assigned Assessments</h2>
+              {assessments.length === 0 ? (
+                <Card className="text-center py-10 text-slate-400 text-sm">
+                  No active assessments currently scheduled. Enjoy your break!
+                </Card>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200 text-xs">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Rank</th>
-                        <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Student Name</th>
-                        <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Points</th>
-                        <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Exams Completed</th>
-                        <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Avg %</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {rankings.map((row) => (
-                        <tr key={row._id} className="hover:bg-slate-50/50">
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-[11px] ${
-                              row.rank === 1 ? 'bg-amber-100 text-amber-800' :
-                              row.rank === 2 ? 'bg-slate-100 text-slate-700' :
-                              row.rank === 3 ? 'bg-orange-100 text-orange-800' :
-                              'text-slate-400'
-                            }`}>
-                              {row.rank}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-700">
-                            {row.student?.name}
-                            <span className="text-[10px] text-slate-400 font-normal ml-1">
-                              ({row.student?.batch || 'Regular'})
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">
-                            {row.totalScore} pts
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-slate-500">
-                            {row.assessmentsCompleted}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-600">
-                            {row.avgPercentage}%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {assessments.map((test) => {
+                    const attempt = getAttemptForAssessment(test._id);
+                    const isStarted = attempt?.status === 'started';
+                    const isLocked = attempt?.status === 'submitted' || attempt?.status === 'graded';
+
+                    return (
+                      <Card
+                        key={test._id}
+                        title={test.title}
+                        subtitle={`${test.subject?.name} (${test.subject?.code})`}
+                        extra={
+                          <span className="inline-block px-2.5 py-1 rounded bg-brand-50 text-brand-600 text-xs font-bold capitalize">
+                            {test.type}
+                          </span>
+                        }
+                        className="hover:scale-[1.01]"
+                      >
+                        <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                          {test.description || 'No detailed instructions configured.'}
+                        </p>
+
+                        <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">
+                          <span className="flex items-center gap-1 font-medium">
+                            <Clock size={14} /> {test.duration} min limits
+                          </span>
+                          <span className="font-semibold text-slate-500">
+                            Total: {test.totalMarks} marks
+                          </span>
+                        </div>
+
+                        <div className="mt-4 pt-2">
+                          {isLocked ? (
+                            <Button variant="secondary" className="w-full" disabled>
+                              Completed & Submitted
+                            </Button>
+                          ) : isStarted ? (
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                variant="primary"
+                                className="w-full bg-amber-500 hover:bg-amber-600 gap-2 font-bold transition-all"
+                                onClick={() => navigate(`/assessment/${attempt._id}`)}
+                              >
+                                <RotateCcw size={16} /> Resume Active Attempt
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 gap-2 font-bold transition-all"
+                                onClick={() => handleDashboardSubmit(attempt._id)}
+                              >
+                                <ShieldCheck size={16} /> Submit Assessment
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button variant="primary" className="w-full gap-2" onClick={() => handleStartExam(test._id)}>
+                              <Play size={16} /> Enter Lobby
+                            </Button>
+                          )}
+                        </div>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            {/* Modal Footer - Pagination */}
-            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50 rounded-b-2xl">
-              <span className="text-slate-500">Page {page} of {totalPages}</span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
+
+
+          </div>
+
+          {/* Right column: Leaderboard Widget */}
+          <div className="lg:col-span-1">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Rankings</h2>
+            <div className="bg-white border border-slate-200/80 shadow-sm rounded-xl p-5 flex flex-col justify-between">
+              <div>
+                {/* Header Title & Info Icon */}
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-bold text-sky-600 uppercase tracking-widest font-sans">Leaderboard</span>
+                  <button
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                    title="Rankings are updated dynamically based on total score points."
+                  >
+                    <span className="w-4.5 h-4.5 rounded-full border border-slate-300 text-[10px] text-slate-500 font-bold flex items-center justify-center font-mono">
+                      i
+                    </span>
+                  </button>
+                </div>
+                <hr className="border-slate-100 mb-4" />
+
+                {/* Top 3 Standings */}
+                <div className="space-y-4">
+                  {topThree.slice(0, 3).map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-400 w-6">#{idx + 1}</span>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-black font-mono text-[9px] flex-shrink-0">
+                          {item.student?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
+                        </div>
+                        <span className="font-bold text-slate-700 truncate">
+                          {item.student?.name}
+                        </span>
+                      </div>
+                      <span className="font-bold text-slate-700 font-mono flex-shrink-0">
+                        {item.totalScore}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <hr className="border-slate-100 my-4" />
+
+                {/* Logged in student's current position */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-400 w-14">#{studentRank || '—'}</span>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-black font-mono text-[9px] flex-shrink-0">
+                      {user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'RS'}
+                    </div>
+                    <span className="font-bold text-slate-700 truncate">{user?.name}</span>
+                  </div>
+                  <span className="font-bold text-slate-700 font-mono flex-shrink-0">
+                    {studentPoints}
+                  </span>
+                </div>
+              </div>
+
+              {/* Bottom Modal Trigger */}
+              <div className="border-t border-slate-100 pt-4 mt-5 text-center">
+                <button
+                  onClick={() => setShowFullBoard(true)}
+                  className="text-xs font-bold text-sky-600 hover:text-sky-700 hover:underline inline-flex items-center gap-1 transition-colors"
                 >
-                  Previous
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Next
-                </Button>
+                  View Leaderboard
+                </button>
               </div>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Completed attempts / Scorecards download (Spans Full Width!) */}
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Recent Submission Status</h2>
+          <Card bodyClassName="p-0">
+            {myAttempts.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-sm">You haven't attempted any tests yet.</div>
+            ) : (
+              <div className="overflow-x-auto w-full">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Assessment</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Status</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Time Spent</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Score</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {myAttempts.map((att) => (
+                      <tr key={att._id} className="hover:bg-slate-50/50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">
+                          {att.assessment?.title}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs">
+                          <span className={`px-2 py-0.5 rounded font-semibold capitalize ${att.status === 'graded' ? 'bg-emerald-50 text-accent-success' :
+                              att.status === 'submitted' ? 'bg-amber-50 text-accent-warning' :
+                                'bg-slate-100 text-slate-500'
+                            }`}>
+                            {att.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
+                          {Math.round((att.timeTakenSeconds || 0) / 60)} min
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-700">
+                          {att.status === 'graded' ? `${att.totalMarksObtained} pts` : 'Pending Grade'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs">
+                          {att.status === 'graded' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedScorecard(att)}
+                            >
+                              Download Scorecard
+                            </Button>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Looking to prepare for a specific technology? */}
+        <div className="pt-6">
+          <div className="text-center mb-8">
+            <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
+              Looking to prepare for a specific technology?
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Refine your skills with mock tests categorized by languages and platforms</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {techTracks.map((track) => (
+              <div
+                key={track.id}
+                onClick={() => navigate('/dashboard?tab=explore_mocks')}
+                className={`relative bg-white rounded-xl shadow-sm border p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer ${track.popular ? 'border-cyan-400/85 ring-1 ring-cyan-400/20' : 'border-slate-200/80'
+                  }`}
+              >
+                {/* Badge tags */}
+                <div className="absolute -top-2.5 right-2 z-10 flex">
+                  {track.popular && (
+                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-full text-[8px] font-extrabold flex items-center gap-1 shadow-sm">
+                      ⭐ Popular
+                    </span>
+                  )}
+                  {track.registrations && (
+                    <span className="bg-red-50 text-red-600 border border-red-200/60 px-2 py-0.5 rounded-full text-[8px] font-extrabold flex items-center gap-1 shadow-sm">
+                      🔥 {track.registrations}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {/* Icon container */}
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm ${track.iconColor}`}>
+                    {track.icon === 'clipboard' && <ClipboardList size={18} />}
+                    {track.icon === 'database' && <Database size={18} />}
+                    {track.icon === 'network' && <Network size={18} />}
+                    {track.icon === 'terminal' && <Terminal size={18} />}
+                    {track.icon === 'atom' && <Atom size={18} />}
+                  </div>
+
+                  {/* Title */}
+                  <div>
+                    <h4 className="font-extrabold text-slate-800 text-sm">{track.title}</h4>
+                  </div>
+
+                  {/* Meta Specifications */}
+                  <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                      <Clock size={12} className="text-slate-400" />
+                      <span>Time: {track.time}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                      <LayoutGrid size={12} className="text-slate-400" />
+                      <span>Objective: {track.objective}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                      <Code size={12} className="text-slate-400" />
+                      <span>Programming: {track.programming}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom link */}
+                <div className="border-t border-slate-100 pt-3 mt-4 text-center">
+                  <button
+                    onClick={() => alert(`Starting preparation track for ${track.title}...`)}
+                    className="text-[11px] font-bold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 transition-micro"
+                  >
+                    {track.linkText}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-6">
+            <button
+              onClick={() => navigate('/dashboard?tab=explore_mocks')}
+              className="text-xs font-bold text-brand-600 hover:text-brand-700 hover:underline"
+            >
+              Explore All Mocks
+            </button>
+          </div>
+        </div>
+
+        {/* Full Leaderboard Modal Popup */}
+        {showFullBoard && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/65 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-100 animate-in fade-in-50 duration-200">
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black text-slate-800">Global Standings</h3>
+                  <p className="text-xs text-slate-400">View real-time rankings across all subjects and exams</p>
+                </div>
+                <button
+                  onClick={() => setShowFullBoard(false)}
+                  className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-650 flex items-center justify-center font-bold text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Filters Bar */}
+              <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center gap-3">
+                <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[200px] flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Search by student name..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  />
+                  <Button type="submit" size="sm">Search</Button>
+                </form>
+
+                <select
+                  value={subject}
+                  onChange={(e) => { setSubject(e.target.value); setPage(1); }}
+                  className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                  <option value="">All Subjects</option>
+                  {subjects.map((sub) => (
+                    <option key={sub._id} value={sub._id}>
+                      {sub.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={sortBy}
+                  onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
+                  className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                  <option value="score">Sort by Points</option>
+                  <option value="percentage">Sort by Avg %</option>
+                  <option value="attempts">Sort by Completed</option>
+                </select>
+
+                <Button variant="outline" size="sm" onClick={handleClearFilters}>
+                  Clear
+                </Button>
+              </div>
+
+              {/* Modal Content - Table */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {modalLoading ? (
+                  <div className="flex justify-center items-center py-16 text-slate-400 gap-2">
+                    <span className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></span>
+                    Loading global rankings...
+                  </div>
+                ) : rankings.length === 0 ? (
+                  <div className="text-center py-16 text-slate-400 text-sm">No students match your query.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200 text-xs">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Rank</th>
+                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Student Name</th>
+                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Points</th>
+                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Exams Completed</th>
+                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Avg %</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {rankings.map((row) => (
+                          <tr key={row._id} className="hover:bg-slate-50/50">
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-[11px] ${row.rank === 1 ? 'bg-amber-100 text-amber-800' :
+                                  row.rank === 2 ? 'bg-slate-100 text-slate-700' :
+                                    row.rank === 3 ? 'bg-orange-100 text-orange-800' :
+                                      'text-slate-400'
+                                }`}>
+                                {row.rank}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-700">
+                              {row.student?.name}
+                              <span className="text-[10px] text-slate-400 font-normal ml-1">
+                                ({row.student?.batch || 'Regular'})
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">
+                              {row.totalScore} pts
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                              {row.assessmentsCompleted}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-600">
+                              {row.avgPercentage}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer - Pagination */}
+              <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50 rounded-b-2xl">
+                <span className="text-slate-500">Page {page} of {totalPages}</span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page <= 1}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Printable Scorecard Modal */}
