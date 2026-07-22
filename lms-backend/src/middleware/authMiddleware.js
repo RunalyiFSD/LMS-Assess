@@ -1,11 +1,11 @@
-const { supabase } = require('../config/supabase');
+const supabase = require('../config/supabase');
 const userRepository = require('../repositories/userRepository');
 const AppError = require('../utils/AppError');
 
 exports.protect = async (req, res, next) => {
   try {
     let token;
-    
+
     // We only use Bearer token now for Supabase integration since frontend manages sessions
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
@@ -24,7 +24,7 @@ exports.protect = async (req, res, next) => {
 
     // Fetch user profile from public.users repository
     const currentUser = await userRepository.findById(authUser.id);
-    
+
     if (!currentUser || !currentUser.is_active) {
       return next(new AppError('The user belonging to this token no longer exists or is disabled.', 401));
     }

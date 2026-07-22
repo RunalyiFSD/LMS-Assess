@@ -101,7 +101,7 @@ const LeaderboardPage = () => {
       header: 'Student Name',
       accessor: (row) => (
         <Link
-          to={`/profile/${row.student._id}`}
+          to={`/profile/${row.student.id}`}
           className="font-bold text-brand-600 hover:text-brand-700 hover:underline flex items-center gap-2"
         >
           {row.student.name}
@@ -124,7 +124,7 @@ const LeaderboardPage = () => {
     {
       header: 'Actions',
       accessor: (row) => (
-        <Button size="sm" variant="outline" onClick={() => navigate(`/profile/${row.student._id}`)} className="gap-1.5 text-xs py-1">
+        <Button size="sm" variant="outline" onClick={() => navigate(`/profile/${row.student.id}`)} className="gap-1.5 text-xs py-1">
           View Profile <ArrowRight size={12} />
         </Button>
       ),
@@ -167,7 +167,7 @@ const LeaderboardPage = () => {
             >
               <option value="">Filter by Subject</option>
               {subjects.map((sub) => (
-                <option key={sub._id} value={sub._id}>
+                <option key={sub.id} value={sub.id}>
                   {sub.name} ({sub.code})
                 </option>
               ))}

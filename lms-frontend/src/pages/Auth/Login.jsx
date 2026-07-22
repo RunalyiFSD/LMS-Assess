@@ -80,7 +80,8 @@ const Login = () => {
 
   const handleOAuthLogin = (provider) => {
     // Redirect direct to backend OAuth routes
-    window.location.href = `http://localhost:5000/api/auth/${provider}`;
+    const baseUrl = import.meta.env.VITE_API_URL.replace('/v1', '');
+    window.location.href = `${baseUrl}/auth/${provider}`;
   };
 
   return (

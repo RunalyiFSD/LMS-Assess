@@ -12,13 +12,13 @@ describe('Auth Endpoints', () => {
     expect(res.body).toHaveProperty('status', 'fail');
   });
 
-  it('should return 401 for invalid credentials', async () => {
+  it('should return 400 for invalid credentials (endpoint disabled)', async () => {
     const res = await request(app)
       .post('/api/v1/auth/login')
       .send({
         email: 'invalid@example.com',
         password: 'wrongpassword'
       });
-    expect(res.statusCode).toEqual(401);
+    expect(res.statusCode).toEqual(400);
   });
 });

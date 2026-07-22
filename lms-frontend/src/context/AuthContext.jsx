@@ -34,8 +34,11 @@ export const AuthProvider = ({ children }) => {
       fetchProfile(session);
     });
 
-    // Listen for auth state changes (login, logout, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Listen for auth state changes (login, logout, token refresh).
+    // INITIAL_SESSION is already handled by getSession() above — skip it
+    // to prevent a duplicate /auth/me call and a second setUser() on every page load.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return;
       fetchProfile(session);
     });
 
@@ -46,6 +49,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      
+      // Await user profile fetch to ensure state is populated BEFORE navigate()
+      // Otherwise, ProtectedRoute will redirect back to /login because user is still null
+      const response = await api.get('/auth/me');
+      if (response.data?.status === 'success') {
+        setUser(response.data.data.user);
+      }
+      
       return data;
     } catch (error) {
       throw new Error(error.message || 'Login failed');

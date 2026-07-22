@@ -1,4 +1,4 @@
-const { supabase } = require('../config/supabase');
+const supabase = require('../config/supabase');
 
 class SubmissionRepository {
   /**
@@ -83,6 +83,20 @@ class SubmissionRepository {
       .select('*, users(full_name)')
       .eq('assessment_id', assessmentId)
       .order('submitted_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  /**
+   * Get all submissions for a student
+   */
+  async findByStudent(studentId) {
+    const { data, error } = await supabase
+      .from('assessment_submissions')
+      .select('*, assessments(title, max_score, type)')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
     return data;

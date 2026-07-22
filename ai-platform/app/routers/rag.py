@@ -10,8 +10,12 @@ from app.services.chromaService import ChromaService
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-chroma_service = ChromaService()
+from fastapi import Depends
+from functools import lru_cache
 
+@lru_cache()
+def get_chroma_service():
+    return ChromaService()
 class QueryRequest(BaseModel):
     course_id: str
     query: str
@@ -36,7 +40,8 @@ def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[st
 async def ingest_document(
     course_id: str = Form(...),
     document_title: str = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    chroma_service: ChromaService = Depends(get_chroma_service)
 ):
     """
     Extracts text from an uploaded PDF, chunks it, and ingests it into ChromaDB.
@@ -70,7 +75,10 @@ async def ingest_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/query", response_model=QueryResponse)
-async def query_documents(request: QueryRequest):
+async def query_documents(
+    request: QueryRequest,
+    chroma_service: ChromaService = Depends(get_chroma_service)
+):
     """
     Queries ChromaDB for semantically similar chunks constrained by course_id.
     """

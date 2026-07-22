@@ -109,7 +109,7 @@ const InstructorDashboardView = () => {
         for (const test of tests) {
           if (test.type === 'theory') {
             try {
-              const res = await api.get(`/attempts/assessment/${test._id}`);
+              const res = await api.get(`/submissions/assessment/${test.id}`);
               if (res.data?.status === 'success') {
                 const list = res.data.data.attempts || [];
                 allAttempts.push(...list.filter(a => a.status === 'submitted'));
@@ -143,7 +143,7 @@ const InstructorDashboardView = () => {
     try {
       await api.put(`/assessments/${id}`, { isActive: !currentVal });
       setAssessments((prev) =>
-        prev.map((t) => (t._id === id ? { ...t, isActive: !currentVal } : t))
+        prev.map((t) => (t.id === id ? { ...t, isActive: !currentVal } : t))
       );
     } catch (err) {
       alert('Failed to toggle status');
@@ -223,13 +223,13 @@ const InstructorDashboardView = () => {
   const handleGradingSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.put(`/attempts/${activeAttempt._id}/grade`, {
+      const res = await api.put(`/submissions/${activeAttempt.id}/grade`, {
         gradedAnswers: theoryGrades
       });
       if (res.data?.status === 'success') {
         setShowGradeModal(false);
         // refresh grade list
-        setAttemptsToGrade((prev) => prev.filter(a => a._id !== activeAttempt._id));
+        setAttemptsToGrade((prev) => prev.filter(a => a.id !== activeAttempt.id));
         fetchDashboardData();
       }
     } catch (err) {
@@ -250,7 +250,7 @@ const InstructorDashboardView = () => {
   const handleOpenMockQuestions = async (mock) => {
     setSelectedMock(mock);
     try {
-      const res = await api.get(`/assessments/${mock._id}`);
+      const res = await api.get(`/assessments/${mock.id}`);
       if (res.data?.status === 'success') {
         const fullAssessment = res.data.data.assessment;
         setTempMockQuestions(fullAssessment.questions || []);
@@ -265,7 +265,7 @@ const InstructorDashboardView = () => {
   const handleMockEditSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.put(`/assessments/${selectedMock._id}`, mockEditForm);
+      const res = await api.put(`/assessments/${selectedMock.id}`, mockEditForm);
       if (res.data?.status === 'success') {
         setShowMockEditModal(false);
         fetchDashboardData();
@@ -277,8 +277,8 @@ const InstructorDashboardView = () => {
 
   const handleAddQuestionToMock = (question) => {
     const alreadyExists = tempMockQuestions.some(q => {
-      const id = q.questionId?._id || q.questionId;
-      return id === question._id;
+      const id = q.questionId?.id || q.questionId;
+      return id === question.id;
     });
     if (alreadyExists) {
       alert('Question is already in this assessment.');
@@ -303,7 +303,7 @@ const InstructorDashboardView = () => {
 
   const handleRemoveQuestionFromMock = (questionId) => {
     setTempMockQuestions(prev => prev.filter(q => {
-      const id = q.questionId?._id || q.questionId;
+      const id = q.questionId?.id || q.questionId;
       return id !== questionId;
     }));
   };
@@ -311,11 +311,11 @@ const InstructorDashboardView = () => {
   const handleMockQuestionsSave = async () => {
     try {
       const questionsPayload = tempMockQuestions.map(q => ({
-        questionId: q.questionId?._id || q.questionId,
+        questionId: q.questionId?.id || q.questionId,
         questionModel: q.questionModel
       }));
 
-      const res = await api.put(`/assessments/${selectedMock._id}`, {
+      const res = await api.put(`/assessments/${selectedMock.id}`, {
         questions: questionsPayload
       });
       if (res.data?.status === 'success') {
@@ -425,13 +425,13 @@ const InstructorDashboardView = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {assessments.map((test) => (
-                    <tr key={test._id} className="hover:bg-slate-50/50">
+                    <tr key={test.id} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">{test.title}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">{test.subject?.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold uppercase text-slate-400">{test.type}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
-                          onClick={() => handleToggleActive(test._id, test.isActive)}
+                          onClick={() => handleToggleActive(test.id, test.isActive)}
                           className={`px-3 py-1 rounded text-xs font-bold transition-micro ${
                             test.isActive ? 'bg-emerald-50 text-accent-success hover:bg-emerald-100' : 'bg-red-50 text-accent-danger hover:bg-red-100'
                           }`}
@@ -440,7 +440,7 @@ const InstructorDashboardView = () => {
                         </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs">
-                        <Button size="sm" variant="outline" onClick={() => navigate(`/leaderboard/${test._id}`)}>
+                        <Button size="sm" variant="outline" onClick={() => navigate(`/leaderboard/${test.id}`)}>
                           View Rankings
                         </Button>
                       </td>
@@ -479,7 +479,7 @@ const InstructorDashboardView = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {questions.map((q) => (
-                    <tr key={q._id} className="hover:bg-slate-50/50">
+                    <tr key={q.id} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 text-sm font-semibold text-slate-700 max-w-sm truncate">
                         {q.question || q.title}
                       </td>
@@ -513,7 +513,7 @@ const InstructorDashboardView = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {attemptsToGrade.map((att) => (
-                    <tr key={att._id} className="hover:bg-slate-50/50">
+                    <tr key={att.id} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">{att.student?.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">{att.assessment?.title}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
@@ -552,7 +552,7 @@ const InstructorDashboardView = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {mockAssessments.map((mock) => (
-                    <tr key={mock._id} className="hover:bg-slate-50/50">
+                    <tr key={mock.id} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">{mock.title}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold uppercase text-slate-400">{mock.type}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">{mock.duration}</td>
@@ -601,7 +601,7 @@ const InstructorDashboardView = () => {
               >
                 <option value="">Choose Subject</option>
                 {subjects.map((sub) => (
-                  <option key={sub._id} value={sub._id}>
+                  <option key={sub.id} value={sub.id}>
                     {sub.name}
                   </option>
                 ))}
@@ -747,7 +747,7 @@ const InstructorDashboardView = () => {
                 >
                   <option value="">Choose Subject</option>
                   {subjects.map((sub) => (
-                    <option key={sub._id} value={sub._id}>
+                    <option key={sub.id} value={sub.id}>
                       {sub.name}
                     </option>
                   ))}
@@ -888,7 +888,7 @@ const InstructorDashboardView = () => {
                 >
                   <option value="">Choose Subject</option>
                   {subjects.map((sub) => (
-                    <option key={sub._id} value={sub._id}>
+                    <option key={sub.id} value={sub.id}>
                       {sub.name}
                     </option>
                   ))}
@@ -962,7 +962,7 @@ const InstructorDashboardView = () => {
                 >
                   <option value="">Choose Subject</option>
                   {subjects.map((sub) => (
-                    <option key={sub._id} value={sub._id}>
+                    <option key={sub.id} value={sub.id}>
                       {sub.name}
                     </option>
                   ))}
@@ -1116,7 +1116,7 @@ const InstructorDashboardView = () => {
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleRemoveQuestionFromMock(questionObj._id || questionObj)}
+                        onClick={() => handleRemoveQuestionFromMock(questionObj.id || questionObj)}
                         className="text-red-500 hover:text-red-750 font-bold transition-colors"
                       >
                         Remove
@@ -1135,7 +1135,7 @@ const InstructorDashboardView = () => {
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Add Questions from Bank</h4>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {questions.map((q) => (
-                <div key={q._id} className="flex items-center justify-between p-3 bg-white border rounded-lg text-xs hover:bg-slate-50/50">
+                <div key={q.id} className="flex items-center justify-between p-3 bg-white border rounded-lg text-xs hover:bg-slate-50/50">
                   <div className="flex-1 min-w-0 pr-4">
                     <span className="font-semibold text-slate-700 block truncate">
                       {q.question || q.title || 'Untitled Question'}

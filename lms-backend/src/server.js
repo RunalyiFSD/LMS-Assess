@@ -3,7 +3,6 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const app = require('./app');
-const connectDB = require('./config/db');
 const supabase = require('./config/supabase');
 
 const PORT = process.env.PORT || 5000;
@@ -15,10 +14,7 @@ if (supabase) {
   console.warn('[Supabase] Client NOT initialized — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env');
 }
 
-// 2. Attempt legacy MongoDB connection (non-fatal during Supabase migration)
-connectDB();
-
-// 3. Start Express server
+// 2. Start Express server
 const server = app.listen(PORT, () => {
   console.log(`[Server] Running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });

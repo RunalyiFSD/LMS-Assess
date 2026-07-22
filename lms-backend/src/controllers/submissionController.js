@@ -93,3 +93,13 @@ exports.gradeSubmission = async (req, res) => {
     return sendError(res, error.message, null, HTTP_STATUS.BAD_REQUEST);
   }
 };
+
+exports.getMySubmissions = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const submissions = await submissionRepository.findByStudent(studentId);
+    return sendSuccess(res, submissions, 'Submissions fetched successfully');
+  } catch (error) {
+    return sendError(res, error.message, null, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};

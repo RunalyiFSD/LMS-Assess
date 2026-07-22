@@ -60,7 +60,7 @@ const AdminDashboardView = () => {
     if (!window.confirm('Are you sure you want to remove this user from the system?')) return;
     try {
       await api.delete(`/users/${id}`);
-      setUsers((prev) => prev.filter((u) => u._id !== id));
+      setUsers((prev) => prev.filter((u) => u.id !== id));
     } catch (err) {
       alert('Deletion failed');
     }
@@ -71,7 +71,7 @@ const AdminDashboardView = () => {
     if (!window.confirm('Are you sure you want to delete this subject? This might affect assessments.')) return;
     try {
       await api.delete(`/subjects/${id}`);
-      setSubjects((prev) => prev.filter((s) => s._id !== id));
+      setSubjects((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
       alert('Deletion failed');
     }
@@ -170,7 +170,7 @@ const AdminDashboardView = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {users.map((u) => (
-                  <tr key={u._id} className="hover:bg-slate-50/50">
+                  <tr key={u.id} className="hover:bg-slate-50/50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">{u.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">{u.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs font-bold capitalize">
@@ -185,7 +185,7 @@ const AdminDashboardView = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">{u.college || '—'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs">
                       <button
-                        onClick={() => handleDeleteUser(u._id)}
+                        onClick={() => handleDeleteUser(u.id)}
                         className="p-1 rounded-lg text-slate-400 hover:text-accent-danger hover:bg-red-50 transition-colors"
                       >
                         <Trash2 size={16} />
@@ -222,13 +222,13 @@ const AdminDashboardView = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {subjects.map((s) => (
-                  <tr key={s._id} className="hover:bg-slate-50/50">
+                  <tr key={s.id} className="hover:bg-slate-50/50">
                     <td className="px-6 py-4 whitespace-nowrap text-xs font-black text-brand-600">{s.code}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">{s.name}</td>
                     <td className="px-6 py-4 text-xs text-slate-400 max-w-xs truncate">{s.description || '—'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs">
                       <button
-                        onClick={() => handleDeleteSubject(s._id)}
+                        onClick={() => handleDeleteSubject(s.id)}
                         className="p-1 rounded-lg text-slate-400 hover:text-accent-danger hover:bg-red-50 transition-colors"
                       >
                         <Trash2 size={16} />

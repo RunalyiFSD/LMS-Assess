@@ -1,74 +1,41 @@
-const Leaderboard = require('../legacy/models/Leaderboard');
-const Attempt = require('../legacy/models/Attempt');
+const supabase = require('../config/supabase');
+const AppError = require('../utils/AppError');
 
 /**
- * Calculates and updates rankings for a specific assessment.
- * @param {string} assessmentId - The ID of the assessment
- * @returns {Promise<Object>} The updated Leaderboard document
+ * Fetches and structures the leaderboard for a specific assessment.
+ *
+ * MIGRATED: Now queries Supabase assessment_submissions table.
+ * Advanced tie-breaking (time-based) and caching are deferred to Sprint 3.
+ *
+ * @param {string} assessmentId - UUID of the assessment
+ * @returns {Promise<Object>} Structured leaderboard object
  */
 exports.recalculateLeaderboard = async (assessmentId) => {
   try {
-    // 1. Fetch all attempts that are submitted or graded for this assessment
-    const attempts = await Attempt.find({
-      assessment: assessmentId,
-      status: { $in: ['submitted', 'graded'] },
-    })
-      .populate('student', 'name email profilePicture')
-      .exec();
+    const { data, error } = await supabase
+      .from('assessment_submissions')
+      .select('student_id, score, submitted_at, users(full_name, email, avatar_url)')
+      .eq('assessment_id', assessmentId)
+      .in('status', ['submitted', 'evaluated'])
+      .order('score', { ascending: false });
 
-    if (attempts.length === 0) {
-      // Create empty leaderboard if no submissions exist yet
-      return await Leaderboard.findOneAndUpdate(
-        { assessment: assessmentId },
-        { rankings: [], updatedAt: new Date() },
-        { upsert: true, new: true }
-      );
+    if (error) {
+      throw new AppError(`Failed to calculate leaderboard: ${error.message}`, 500);
     }
 
-    // 2. Sort attempts with tie-breakers:
-    //    a) Total marks obtained (descending)
-    //    b) Time taken to complete the assessment (ascending)
-    //    c) Submission date/time (ascending)
-    attempts.sort((a, b) => {
-      // Primary: Score (Descending)
-      if (b.totalMarksObtained !== a.totalMarksObtained) {
-        return b.totalMarksObtained - a.totalMarksObtained;
-      }
-      
-      // Secondary: Time Taken (Ascending)
-      if (a.timeTakenSeconds !== b.timeTakenSeconds) {
-        return a.timeTakenSeconds - b.timeTakenSeconds;
-      }
-      
-      // Tertiary: Submission Time (Ascending)
-      const aTime = a.submittedAt ? new Date(a.submittedAt).getTime() : new Date(a.updatedAt).getTime();
-      const bTime = b.submittedAt ? new Date(b.submittedAt).getTime() : new Date(b.updatedAt).getTime();
-      return aTime - bTime;
-    });
+    const rankings = (data || []).map((row, idx) => ({
+      rank: idx + 1,
+      student: row.users || null,
+      student_id: row.student_id,
+      score: row.score || 0,
+      submitted_at: row.submitted_at,
+    }));
 
-    // 3. Create structured ranking list (assigning rank numbers, including handle for equal ranks if desired, but here we do incremental rank)
-    const rankings = attempts.map((attempt, index) => {
-      const subTime = attempt.submittedAt || attempt.updatedAt;
-      return {
-        student: attempt.student._id,
-        score: attempt.totalMarksObtained,
-        timeTakenSeconds: attempt.timeTakenSeconds || 0,
-        submittedAt: subTime,
-        rank: index + 1,
-      };
-    });
-
-    // 4. Update the Leaderboard collection cache
-    const leaderboard = await Leaderboard.findOneAndUpdate(
-      { assessment: assessmentId },
-      {
-        rankings,
-        updatedAt: new Date(),
-      },
-      { upsert: true, new: true }
-    ).populate('rankings.student', 'name email profilePicture college department batch');
-
-    return leaderboard;
+    return {
+      assessment_id: assessmentId,
+      rankings,
+      updated_at: new Date().toISOString(),
+    };
   } catch (error) {
     console.error(`Error recalculating leaderboard for assessment ${assessmentId}:`, error);
     throw error;

@@ -1,7 +1,7 @@
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { v4: uuidv4 } = require('crypto'); // Can also use a simple counter if uuid isn't installed. Let's use simple Math.random() + date to avoid uuid package issues.
+
 
 // Helper to generate unique filenames
 const getTempFileName = (ext) => {
@@ -77,7 +77,7 @@ exports.executeCode = async (code, language, testCases, timeLimit = 2000) => {
       // Execute code inside a Promise with a timeout
       const result = await new Promise((resolve) => {
         // Run script
-        const process = exec(cmd, { timeout: timeLimit }, (error, stdout, stderr) => {
+        const childProcess = exec(cmd, { timeout: timeLimit }, (error, stdout, stderr) => {
           if (error) {
             if (error.killed) {
               resolve({ success: false, output: 'Time Limit Exceeded', error: true });
@@ -91,10 +91,11 @@ exports.executeCode = async (code, language, testCases, timeLimit = 2000) => {
 
         // Write input to stdin of process if inputs exist
         if (testInput) {
-          process.stdin.write(testInput);
-          process.stdin.end();
+          childProcess.stdin.write(testInput);
+          childProcess.stdin.end();
         }
       });
+
 
       if (result.success && result.output.trim() === expectedOut) {
         passedCount++;

@@ -8,6 +8,7 @@ const ROLES = require('../constants/roles');
 router.use(protect);
 
 // Student actions
+router.get('/my-submissions', restrictTo(ROLES.STUDENT), submissionController.getMySubmissions);
 router.get('/:id', restrictTo(ROLES.STUDENT), submissionController.getSubmissionDetails);
 router.post('/start', restrictTo(ROLES.STUDENT), submissionController.startSubmission);
 router.put('/:id/save', restrictTo(ROLES.STUDENT), submissionController.saveAnswers);

@@ -1,5 +1,4 @@
-const supabase = require('../config/supabaseClient');
-
+const supabase = require('../config/supabase');
 class NotificationRepository {
   async getUserNotifications(userId) {
     const { data, error } = await supabase

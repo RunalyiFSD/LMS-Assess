@@ -3,7 +3,7 @@ const notificationService = require('../services/notificationService');
 const AppError = require('../utils/AppError');
 
 // @desc    Register User (Handled by backend to secure role assignment)
-// @route   POST /api/auth/register
+// @route   POST /api/v1/auth/register
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
@@ -13,17 +13,16 @@ exports.register = async (req, res, next) => {
     // By default, it will be 'student' as enforced by the repository and trigger.
     const assignedRole = role || 'student';
 
-    // Create auth user securely
+    // Create auth user securely via Supabase Admin
     const authUser = await userRepository.createAuthUser(email, password, name, assignedRole);
 
-    // Send welcome notification
+    // Send welcome notification (fire-and-forget — errors are non-fatal)
     try {
       await notificationService.createNotification(
         authUser.id,
-        'Welcome to LMS Assessment',
-        `Hello ${name}, your account has been successfully created.`,
         'notification',
-        email
+        `Hello ${name}, your account has been successfully created. Welcome to LMS Assessment.`,
+        null
       );
     } catch (err) {
       console.error('Failed to send welcome notification:', err);
@@ -37,7 +36,7 @@ exports.register = async (req, res, next) => {
       },
     });
   } catch (error) {
-    if (error.message.includes('already registered')) {
+    if (error.message && error.message.includes('already registered')) {
       return next(new AppError('Email address is already registered', 400));
     }
     next(error);
@@ -45,7 +44,7 @@ exports.register = async (req, res, next) => {
 };
 
 // @desc    Get current user details
-// @route   GET /api/auth/me
+// @route   GET /api/v1/auth/me
 // @access  Protected
 exports.getMe = async (req, res, next) => {
   res.status(200).json({
@@ -56,8 +55,9 @@ exports.getMe = async (req, res, next) => {
   });
 };
 
-// Legacy Login/Logout routes are removed.
-// The frontend directly uses Supabase SDK for signInWithPassword and signOut.
+// @desc    Login placeholder — frontend uses Supabase SDK directly
+// @route   POST /api/v1/auth/login
+// @access  Public
 exports.login = (req, res) => {
   res.status(400).json({
     status: 'fail',
@@ -65,9 +65,93 @@ exports.login = (req, res) => {
   });
 };
 
+// @desc    Logout placeholder — frontend uses Supabase SDK directly
+// @route   POST /api/v1/auth/logout
+// @access  Protected
 exports.logout = (req, res) => {
   res.status(400).json({
     status: 'fail',
     message: 'Logout is handled by the client using Supabase SDK. Do not call this endpoint.'
+  });
+};
+
+// ============================================================
+// PLACEHOLDER HANDLERS — Not yet implemented (Sprint 3+)
+// These return 501 Not Implemented so routes remain active
+// and the frontend can handle them gracefully.
+// ============================================================
+
+// @desc    Forgot password — to be implemented via Supabase Auth
+// @route   POST /api/v1/auth/forgot-password
+// @access  Public
+// DEFERRED: Sprint 3 — Will use supabase.auth.resetPasswordForEmail()
+exports.forgotPassword = (req, res) => {
+  res.status(501).json({
+    status: 'error',
+    message: 'Forgot password is not yet implemented. It will use Supabase Auth email reset in Sprint 3.'
+  });
+};
+
+// @desc    Reset password — to be implemented via Supabase Auth
+// @route   POST /api/v1/auth/reset-password/:token
+// @access  Public
+// DEFERRED: Sprint 3 — Will use supabase.auth.updateUser()
+exports.resetPassword = (req, res) => {
+  res.status(501).json({
+    status: 'error',
+    message: 'Reset password is not yet implemented. It will use Supabase Auth token exchange in Sprint 3.'
+  });
+};
+
+// @desc    Google OAuth — to be implemented
+// @route   GET /api/v1/auth/google
+// @access  Public
+// DEFERRED: Sprint 4 — Will use supabase.auth.signInWithOAuth({ provider: 'google' })
+exports.googleLogin = (req, res) => {
+  res.status(501).json({
+    status: 'error',
+    message: 'Google OAuth is not yet implemented. It will use Supabase Auth OAuth in Sprint 4.'
+  });
+};
+
+// @desc    Google OAuth callback — to be implemented
+// @route   GET /api/v1/auth/google/callback
+// @access  Public
+exports.googleCallback = (req, res) => {
+  res.status(501).json({
+    status: 'error',
+    message: 'Google OAuth callback is not yet implemented.'
+  });
+};
+
+// @desc    GitHub OAuth — to be implemented
+// @route   GET /api/v1/auth/github
+// @access  Public
+// DEFERRED: Sprint 4 — Will use supabase.auth.signInWithOAuth({ provider: 'github' })
+exports.githubLogin = (req, res) => {
+  res.status(501).json({
+    status: 'error',
+    message: 'GitHub OAuth is not yet implemented. It will use Supabase Auth OAuth in Sprint 4.'
+  });
+};
+
+// @desc    GitHub OAuth callback — to be implemented
+// @route   GET /api/v1/auth/github/callback
+// @access  Public
+exports.githubCallback = (req, res) => {
+  res.status(501).json({
+    status: 'error',
+    message: 'GitHub OAuth callback is not yet implemented.'
+  });
+};
+
+// @desc    Simulated login — development/testing only
+// @route   GET /api/v1/auth/simulated
+// @access  Public
+// DEFERRED: Sprint 2 — Will use Supabase service role to generate a test token
+exports.simulatedLogin = (req, res) => {
+  res.status(501).json({
+    status: 'error',
+    message: 'Simulated login is not yet implemented for the Supabase auth flow.'
   });
 };

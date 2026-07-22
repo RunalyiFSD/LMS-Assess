@@ -20,9 +20,8 @@ Sentry.init({
   tracesSampleRate: 1.0,
 });
 
-// The request handler must be the first middleware on the app
-app.use(Sentry.Handlers.requestHandler());
-app.use(Sentry.Handlers.tracingHandler());
+// Sentry v8+: request/tracing instrumentation is automatic via Sentry.init().
+// No requestHandler() or tracingHandler() middleware needed.
 
 // HTTP Request Logging
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
@@ -40,15 +39,26 @@ app.use(
   })
 );
 
-// 3. Rate Limiting (apply to auth routes specifically, but general limiter for now)
-const limiter = rateLimit({
+// 3. Rate Limiting
+// Auth routes: strict limit to mitigate credential-stuffing / brute-force attacks
+const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
-  message: 'Too many requests from this IP, please try again after 15 minutes',
+  max: 30,
+  message: 'Too many auth requests from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use('/api', limiter);
+app.use('/api/v1/auth', authLimiter);
+
+// General API: higher ceiling — a single dashboard session makes ~10 requests on load
+// plus the Header notification poll every 20s (~45/15min). 500 provides comfortable headroom.
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', apiLimiter);
 
 // 4. Parsers
 app.use(express.json({ limit: '10mb' }));
@@ -66,19 +76,23 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// 6. API Router Entry point
+// 6. API Router Entry point — all routes accessible under /api/v1/...
 app.use('/api/v1', routes);
-app.use('/api', routes); // Fallback for some routes if they don't have v1
+
 
 // 7. Wildcard Catch-all for undefined routes
 app.all('/*splat', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
-// The error handler must be before any other error middleware and after all controllers
-app.use(Sentry.Handlers.errorHandler());
+// 8. Sentry error capture — must be registered before the custom error handler.
+// setupExpressErrorHandler is the v8+ replacement for Sentry.Handlers.errorHandler().
+// Guard with a DSN check so local dev without a DSN doesn't throw.
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
-// 8. Centralized Global Error Handler
+// 9. Centralized Global Error Handler
 app.use(errorMiddleware);
 
 module.exports = app;

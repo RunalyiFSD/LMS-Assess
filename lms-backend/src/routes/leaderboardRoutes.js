@@ -4,8 +4,6 @@ const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.use(protect);
-
 router.get('/top-five', leaderboardController.getTopFiveStudents);
 router.get('/global', leaderboardController.getGlobalLeaderboard);
 router.get('/:assessmentId', leaderboardController.getAssessmentLeaderboard);

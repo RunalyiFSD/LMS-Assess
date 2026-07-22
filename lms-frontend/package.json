@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@sentry/react": "^10.66.0",
+    "@sentry/tracing": "^7.120.4",
     "@supabase/supabase-js": "^2.110.7",
     "axios": "^1.18.1",
     "lucide-react": "^1.23.0",

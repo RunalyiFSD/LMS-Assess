@@ -115,18 +115,18 @@ const Header = () => {
             <div className="flex items-center gap-3 pl-2 border-l border-[#3D317C]/40">
               <Link to="/dashboard?tab=profile" className="flex items-center gap-3 hover:opacity-85 transition-opacity">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-semibold text-slate-200">{user.name}</p>
+                  <p className="text-sm font-semibold text-slate-200">{user.full_name}</p>
                   <p className="text-xs text-slate-400 capitalize">{user.role}</p>
                 </div>
-                {user.profilePicture ? (
+                {user.avatar_url ? (
                   <img
-                    src={user.profilePicture}
-                    alt={user.name}
+                    src={user.avatar_url}
+                    alt={user.full_name}
                     className="w-9 h-9 rounded-full object-cover border border-slate-700"
                   />
                 ) : (
                   <div className="w-9 h-9 rounded-full bg-[#3D317C] text-slate-200 border border-[#4E3F9B] flex items-center justify-center font-black font-mono text-[10px] tracking-tight">
-                    {user.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
+                    {user.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
                   </div>
                 )}
               </Link>

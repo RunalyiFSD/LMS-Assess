@@ -26,12 +26,10 @@ const Dashboard = () => {
   }, [location]);
 
   const [profileForm, setProfileForm] = useState({
-    name: '',
-    college: '',
+    full_name: '',
     department: '',
-    batch: '',
     bio: '',
-    profilePicture: '',
+    avatar_url: '',
   });
 
   const [updating, setUpdating] = useState(false);
@@ -42,12 +40,10 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       setProfileForm({
-        name: user.name || '',
-        college: user.college || '',
+        full_name: user.full_name || '',
         department: user.department || '',
-        batch: user.batch || '',
         bio: user.bio || '',
-        profilePicture: user.profilePicture || '',
+        avatar_url: user.avatar_url || '',
       });
     }
   }, [user]);
@@ -111,10 +107,10 @@ const Dashboard = () => {
         <div className="flex items-center gap-4 mb-6 border-b border-slate-100 pb-4">
           <div className="relative flex-shrink-0">
             <div className="w-16 h-16 rounded-full bg-slate-800 text-white flex items-center justify-center font-black font-mono text-xl overflow-hidden shadow-sm">
-              {profileForm.profilePicture ? (
-                <img src={profileForm.profilePicture} alt="Avatar Preview" className="w-full h-full object-cover" />
+              {profileForm.avatar_url ? (
+                <img src={profileForm.avatar_url} alt="Avatar Preview" className="w-full h-full object-cover" />
               ) : (
-                user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
+                user?.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
               )}
             </div>
             <label
@@ -135,10 +131,10 @@ const Dashboard = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-800">Edit Account Profile Details</h3>
             <p className="text-xs text-slate-500">Update your avatar, institution details, and bio info.</p>
-            {profileForm.profilePicture && (
+            {profileForm.avatar_url && (
               <button
                 type="button"
-                onClick={() => setProfileForm((prev) => ({ ...prev, profilePicture: '' }))}
+                onClick={() => setProfileForm((prev) => ({ ...prev, avatar_url: '' }))}
                 className="mt-1.5 text-[11px] font-bold text-red-500 hover:text-red-750 transition-colors flex items-center gap-1"
               >
                 Remove Picture
@@ -165,8 +161,8 @@ const Dashboard = () => {
               <input
                 type="text"
                 required
-                value={profileForm.name}
-                onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
+                value={profileForm.full_name}
+                onChange={(e) => setProfileForm((prev) => ({ ...prev, full_name: e.target.value }))}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
               />
             </div>
@@ -248,7 +244,7 @@ const Dashboard = () => {
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight capitalize">
-            Welcome back, {user?.name || 'User'}!
+            Welcome back, {user?.full_name || 'User'}!
           </h1>
           <p className="text-xs text-slate-500 mt-1 capitalize">
             Your analytical {user?.role || 'Student'} workspace hub is ready.

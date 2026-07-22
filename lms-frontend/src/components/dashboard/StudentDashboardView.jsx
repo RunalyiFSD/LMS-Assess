@@ -104,6 +104,7 @@ const StudentDashboardView = () => {
   const [searchMockQuery, setSearchMockQuery] = useState('');
 
   useEffect(() => {
+    if (!user) return; // wait until AuthContext has resolved the session
     const fetchStudentData = async () => {
       setLoading(true);
       const timestamp = Date.now();
@@ -120,10 +121,10 @@ const StudentDashboardView = () => {
 
       // 2. Fetch student's attempt records
       try {
-        const attemptsRes = await api.get(`/attempts/my-attempts?t=${timestamp}`);
+        const attemptsRes = await api.get(`/submissions/my-submissions?t=${timestamp}`);
         console.log('--- FETCH MY ATTEMPTS RESPONSE ---', attemptsRes.data);
         if (attemptsRes.data?.status === 'success') {
-          setMyAttempts(attemptsRes.data.data.attempts || []);
+          setMyAttempts(attemptsRes.data.data.attempts || attemptsRes.data.data || []);
         }
       } catch (err) {
         console.warn('Failed to load attempt records:', err);
@@ -151,7 +152,7 @@ const StudentDashboardView = () => {
       // 4. Fetch student's own standing summary
       if (user) {
         try {
-          const profileRes = await api.get(`/users/profile/${user._id}?t=${timestamp}`);
+          const profileRes = await api.get(`/users/profile/${user.id}?t=${timestamp}`);
           if (profileRes.data?.status === 'success') {
             setStudentRank(profileRes.data.data.summary?.globalRank || 933000);
             setStudentPoints(profileRes.data.data.summary?.totalPoints || 10000);
@@ -239,7 +240,7 @@ const StudentDashboardView = () => {
   };
 
   const getAttemptForAssessment = (assessmentId) => {
-    return myAttempts.find((a) => a.assessment?._id === assessmentId);
+    return myAttempts.find((a) => a.assessment?.id === assessmentId);
   };
 
   const handleDashboardSubmit = async (attemptId) => {
@@ -247,7 +248,7 @@ const StudentDashboardView = () => {
       return;
     }
     try {
-      const res = await api.post(`/attempts/${attemptId}/submit`);
+      const res = await api.post(`/submissions/${attemptId}/submit`);
       if (res.data?.status === 'success') {
         alert('Assessment submitted successfully!');
         setRefreshTrigger((prev) => prev + 1);
@@ -379,7 +380,7 @@ const StudentDashboardView = () => {
             const details = getMockDetails(mock.title);
             return (
               <div
-                key={mock._id}
+                key={mock.id}
                 className={`relative bg-white rounded-xl shadow-sm border p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 ${
                   details.popular ? 'border-cyan-400/85 ring-1 ring-cyan-400/20' : 'border-slate-200/80'
                 }`}
@@ -429,7 +430,7 @@ const StudentDashboardView = () => {
                 {/* Attempt Action */}
                 <div className="border-t border-slate-100 pt-3 mt-4 text-center">
                   <button
-                    onClick={() => handleStartExam(mock._id)}
+                    onClick={() => handleStartExam(mock.id)}
                     className="text-[11px] font-bold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 transition-micro"
                   >
                     Attempt Now &rarr;
@@ -520,13 +521,13 @@ const StudentDashboardView = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {assessments.map((test) => {
-                  const attempt = getAttemptForAssessment(test._id);
+                  const attempt = getAttemptForAssessment(test.id);
                   const isStarted = attempt?.status === 'started';
                   const isLocked = attempt?.status === 'submitted' || attempt?.status === 'graded';
 
                   return (
                     <Card
-                      key={test._id}
+                      key={test.id}
                       title={test.title}
                       subtitle={`${test.subject?.name} (${test.subject?.code})`}
                       extra={
@@ -559,20 +560,20 @@ const StudentDashboardView = () => {
                             <Button
                               variant="primary"
                               className="w-full bg-amber-500 hover:bg-amber-600 gap-2 font-bold transition-all"
-                              onClick={() => navigate(`/assessment/${attempt._id}`)}
+                              onClick={() => navigate(`/assessment/${attempt.id}`)}
                             >
                               <RotateCcw size={16} /> Resume Active Attempt
                             </Button>
                             <Button
                               variant="outline"
                               className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 gap-2 font-bold transition-all"
-                              onClick={() => handleDashboardSubmit(attempt._id)}
+                              onClick={() => handleDashboardSubmit(attempt.id)}
                             >
                               <ShieldCheck size={16} /> Submit Assessment
                             </Button>
                           </div>
                         ) : (
-                          <Button variant="primary" className="w-full gap-2" onClick={() => handleStartExam(test._id)}>
+                          <Button variant="primary" className="w-full gap-2" onClick={() => handleStartExam(test.id)}>
                             <Play size={16} /> Enter Lobby
                           </Button>
                         )}
@@ -675,7 +676,7 @@ const StudentDashboardView = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {myAttempts.map((att) => (
-                    <tr key={att._id} className="hover:bg-slate-50/50">
+                    <tr key={att.id} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">
                         {att.assessment?.title}
                       </td>
@@ -840,7 +841,7 @@ const StudentDashboardView = () => {
               >
                 <option value="">All Subjects</option>
                 {subjects.map((sub) => (
-                  <option key={sub._id} value={sub._id}>
+                  <option key={sub.id} value={sub.id}>
                     {sub.name}
                   </option>
                 ))}
@@ -884,7 +885,7 @@ const StudentDashboardView = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
                       {rankings.map((row) => (
-                        <tr key={row._id} className="hover:bg-slate-50/50">
+                        <tr key={row.id} className="hover:bg-slate-50/50">
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-[11px] ${
                               row.rank === 1 ? 'bg-amber-100 text-amber-800' :
@@ -1050,7 +1051,7 @@ const StudentDashboardView = () => {
 
               {/* Authenticity Certificate Stamp */}
               <div className="pt-6 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                <span>Verification ID: {selectedScorecard._id}</span>
+                <span>Verification ID: {selectedScorecard.id}</span>
                 <span className="italic">Computer Generated Official Transcript. No Signature Required.</span>
               </div>
             </div>
@@ -1062,7 +1063,7 @@ const StudentDashboardView = () => {
                 size="sm"
                 onClick={() => {
                   setSelectedScorecard(null);
-                  navigate(`/assessment/${selectedScorecard._id}`);
+                  navigate(`/assessment/${selectedScorecard.id}`);
                 }}
               >
                 Review Full Answers

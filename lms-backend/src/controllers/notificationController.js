@@ -1,6 +1,6 @@
 const notificationService = require('../services/notificationService');
-const { sendSuccess, sendError } = require('../utils/responseHandlers');
-const HTTP_STATUS = require('../utils/httpStatus');
+const { sendSuccess, sendError } = require('../helpers/apiResponse');
+const HTTP_STATUS = require('../constants/httpStatus');
 
 exports.getNotifications = async (req, res) => {
   try {

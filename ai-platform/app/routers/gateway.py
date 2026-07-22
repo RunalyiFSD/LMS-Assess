@@ -14,9 +14,15 @@ from app.agents.coding_assistant_agent import CodingAssistantAgent
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Singletons for this foundation sprint
-model_manager = ModelManager(provider="groq")
-memory_manager = MemoryManager()
+from functools import lru_cache
+
+@lru_cache()
+def get_model_manager():
+    return ModelManager(provider="groq")
+
+@lru_cache()
+def get_memory_manager():
+    return MemoryManager()
 
 class ChatRequest(BaseModel):
     session_id: str
@@ -30,7 +36,11 @@ class ChatResponse(BaseModel):
     status: str = "success"
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(
+    request: ChatRequest,
+    model_manager: ModelManager = Depends(get_model_manager),
+    memory_manager: MemoryManager = Depends(get_memory_manager)
+):
     """
     Gateway endpoint for AI interactions.
     Routes to the appropriate agent based on agent_type.

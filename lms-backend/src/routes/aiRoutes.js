@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const aiController = require('../controllers/aiController');
-const { protect, restrictTo } = require('../middlewares/authMiddleware');
-const { ROLES } = require('../config/constants');
+const { protect } = require('../middleware/authMiddleware');
+const restrictTo = require('../middleware/roleMiddleware');
+const ROLES = require('../constants/roles');
 const multer = require('multer');
 
 // Configure multer for memory storage

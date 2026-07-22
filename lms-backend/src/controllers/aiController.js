@@ -1,6 +1,7 @@
 const aiPlatform = require('../integrations/aiPlatform');
-const { sendSuccess, sendError } = require('../utils/responseHandlers');
-const HTTP_STATUS = require('../utils/httpStatus');
+const { sendSuccess, sendError } = require('../helpers/apiResponse');
+const HTTP_STATUS = require('../constants/httpStatus');
+
 
 exports.chatWithAI = async (req, res) => {
   try {

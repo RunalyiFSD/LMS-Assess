@@ -11,7 +11,7 @@ class ModelManager:
         if self.provider == "groq":
             api_key = os.getenv("GROQ_API_KEY")
             if not api_key:
-                print("WARNING: GROQ_API_KEY is not set in environment.")
+                raise ValueError("CRITICAL ERROR: GROQ_API_KEY is not set in environment.")
             self.client = Groq(api_key=api_key)
             self.default_model = "llama3-8b-8192"
 

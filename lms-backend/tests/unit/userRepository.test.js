@@ -1,15 +1,13 @@
 const userRepository = require('../../src/repositories/userRepository');
-const { supabase } = require('../../src/config/supabase');
+const supabase = require('../../src/config/supabase');
 const AppError = require('../../src/utils/AppError');
 
 // Mock supabase client
 jest.mock('../../src/config/supabase', () => ({
-  supabase: {
-    from: jest.fn(),
-    auth: {
-      admin: {
-        createUser: jest.fn(),
-      },
+  from: jest.fn(),
+  auth: {
+    admin: {
+      createUser: jest.fn(),
     },
   },
 }));

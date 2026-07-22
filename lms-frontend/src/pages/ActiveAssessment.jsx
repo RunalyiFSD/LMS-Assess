@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTimer } from '../hooks/useTimer';
 import { assessmentApi } from '../api/assessmentApi';
-import apiClient from '../api/client';
+import apiClient from '../services/api';
 import Editor from '@monaco-editor/react';
 import Button from '../components/common/Button';
 import { AlertTriangle, ShieldCheck, Clock, List, ChevronLeft, ChevronRight, Play, Eye, CheckCircle2, XCircle } from 'lucide-react';
