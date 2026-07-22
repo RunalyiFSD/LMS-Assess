@@ -1,57 +1,49 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-import os
-import logging
+import uvicorn
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
+from app.core.config import settings
+from app.core.logging import logger
+from app.middleware.exception_handler import add_exception_handlers
+from app.middleware.request_logging import RequestLoggingMiddleware
+from app.middleware.auth import AuthMiddleware
+from app.api.v1.health_routes import router as health_router
+from app.api.v1.llm_routes import router as llm_router
 
-load_dotenv()
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="LMS-Assess AI Platform",
+        description="AI Platform Core for LMS-Assess project.",
+        version="1.0.0",
+    )
 
-from app.routers import gateway
-from app.routers import rag
+    # Middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(AuthMiddleware)
 
-from contextlib import asynccontextmanager
+    # Exception Handlers
+    add_exception_handlers(app)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup validation
-    try:
-        from app.services.model_manager import ModelManager
-        # Validate Groq API key is present
-        ModelManager(provider="groq")
-        logger.info("AI Platform started successfully. Groq API Key validated.")
-    except Exception as e:
-        logger.error(f"Failed to initialize AI Services: {e}")
-        # Allow app to start so health endpoint works, but log critical failure.
-    yield
-    # Shutdown
-    logger.info("AI Platform shutting down.")
+    # Routes
+    app.include_router(health_router, prefix="/api/v1")
+    app.include_router(llm_router, prefix="/api/v1")
 
-app = FastAPI(
-    title="LMS-Assess AI Platform",
-    description="AI services for question generation and grading.",
-    version="0.1.0",
-    lifespan=lifespan
-)
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[os.getenv("CLIENT_URL", "http://localhost:5173"), "http://localhost:5000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    return app
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "ok", "service": "ai-platform"}
-
-app.include_router(gateway.router, prefix="/api/v1/ai", tags=["AI Gateway"])
-app.include_router(rag.router, prefix="/api/v1/ai/rag", tags=["RAG"])
+app = create_app()
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    logger.info("Starting AI Platform...", extra_info={"host": settings.HOST, "port": settings.PORT})
+    uvicorn.run(
+        "main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=True
+    )
