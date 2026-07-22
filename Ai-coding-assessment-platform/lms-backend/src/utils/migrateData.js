@@ -1,11 +1,22 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const mongoose = require('mongoose');
 const dns = require('dns');
 
 // Use custom DNS servers to resolve MongoDB Atlas SRV records on Windows
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  // fallback
+}
 
-const localUri = 'mongodb://127.0.0.1:27017/lms-assessment';
-const atlasUri = 'mongodb+srv://admin:HxVRy1uNeMP4VdQW@cluster0.xaibubk.mongodb.net/lms-assessment?retryWrites=true&w=majority';
+const localUri = process.env.LOCAL_MONGO_URI || 'mongodb://127.0.0.1:27017/lms-assessment';
+const atlasUri = process.env.MONGO_URI;
+
+if (!atlasUri) {
+  console.error('Error: MONGO_URI is not defined in .env file.');
+  process.exit(1);
+}
 
 async function migrate() {
   console.log('--- STARTING MONGODB DATA MIGRATION ---');
