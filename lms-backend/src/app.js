@@ -5,8 +5,13 @@ const morgan = require('morgan');
 const routes = require('./routes/index');
 const errorMiddleware = require('./middleware/errorMiddleware');
 const AppError = require('./utils/AppError');
+const { globalLimiter } = require('./middleware/rateLimitMiddleware');
+const requestIdMiddleware = require('./middleware/requestIdMiddleware');
 
 const app = express();
+
+// -1. Request ID (attach to all requests first)
+app.use(requestIdMiddleware);
 
 // 0. Request logging
 if (process.env.NODE_ENV === 'development') {
@@ -14,6 +19,10 @@ if (process.env.NODE_ENV === 'development') {
 } else {
   app.use(morgan('combined'));
 }
+
+// 0.1 Global Rate Limiting
+// Apply to all requests under /api to prevent abuse
+app.use('/api', globalLimiter);
 
 // 1. Enable CORS. Allowing credentials ensures the HTTP-only cookie is read by the server
 app.use(

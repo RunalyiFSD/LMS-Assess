@@ -8,10 +8,11 @@ const notificationRoutes = require('./notificationRoutes');
 const leaderboardRoutes = require('./leaderboardRoutes');
 const userRoutes = require('./userRoutes');
 const publicRoutes = require('./publicRoutes');
+const { authLimiter } = require('../middleware/rateLimitMiddleware');
 
 const router = express.Router();
 
-router.use('/auth', authRoutes);
+router.use('/auth', authLimiter, authRoutes);
 router.use('/subjects', subjectRoutes);
 router.use('/questions', questionRoutes);
 router.use('/assessments', assessmentRoutes);
