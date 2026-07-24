@@ -18,7 +18,7 @@ exports.protect = async (req, res, next) => {
     }
 
     // 2. Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_lms_assessment_key_123!');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // 3. Check if user still exists
     const currentUser = await User.findById(decoded.id);

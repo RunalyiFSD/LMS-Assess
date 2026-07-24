@@ -8,7 +8,7 @@ const notificationService = require('../services/notificationService');
 const sendTokenResponse = (user, statusCode, res) => {
   const token = jwt.sign(
     { id: user._id, role: user.role },
-    process.env.JWT_SECRET || 'super_secret_lms_assessment_key_123!',
+    process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 
@@ -164,14 +164,17 @@ exports.forgotPassword = async (req, res, next) => {
 // @access  Public
 exports.resetPassword = async (req, res, next) => {
   try {
-    const { password } = req.body;
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return next(new AppError('Please provide both email and new password', 400));
+    }
     
     // In standard app, verify token against DB hash. Here, for simplicity, we mock check
-    // by fetching the first user or matching body.email if passed. Let's make it robust by finding a student
-    // or instructor and resetting their password directly.
-    const user = await User.findOne({ role: 'student' }); // Find student to test reset
+    // by finding the user matching the provided email.
+    const user = await User.findOne({ email });
     if (!user) {
-      return next(new AppError('No student account exists to reset.', 404));
+      return next(new AppError('No account exists with this email.', 404));
     }
 
     user.password = password;
@@ -298,7 +301,7 @@ exports.googleCallback = async (req, res, next) => {
     // Generate JWT cookie and redirect
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'super_secret_lms_assessment_key_123!',
+      process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
@@ -451,7 +454,7 @@ exports.githubCallback = async (req, res, next) => {
     // Generate JWT cookie and redirect
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'super_secret_lms_assessment_key_123!',
+      process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
@@ -542,7 +545,7 @@ exports.simulatedLogin = async (req, res, next) => {
     // Set JWT Cookie
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'super_secret_lms_assessment_key_123!',
+      process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
