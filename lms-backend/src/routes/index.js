@@ -8,10 +8,12 @@ const notificationRoutes = require('./notificationRoutes');
 const leaderboardRoutes = require('./leaderboardRoutes');
 const userRoutes = require('./userRoutes');
 const publicRoutes = require('./publicRoutes');
+const healthRoutes = require('./healthRoutes');
 const { authLimiter } = require('../middleware/rateLimitMiddleware');
 
 const router = express.Router();
 
+router.use('/health', healthRoutes);
 router.use('/auth', authLimiter, authRoutes);
 router.use('/subjects', subjectRoutes);
 router.use('/questions', questionRoutes);
