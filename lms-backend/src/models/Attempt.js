@@ -63,6 +63,31 @@ const attemptSchema = new mongoose.Schema(
           type: Number, // Coding test case tracking
           default: 0,
         },
+        // --- AI Integration Fields (Phase 2) ---
+        aiFeedback: {
+          type: String,
+          default: null, // Null means AI hasn't graded it
+        },
+        aiMarks: {
+          type: Number,
+          default: null,
+        },
+        aiGraded: {
+          type: Boolean,
+          default: false,
+        },
+        pendingReview: {
+          type: Boolean,
+          default: false, // True if AI was uncertain and flagged it for human instructor
+        },
+        hintUsed: {
+          type: Boolean,
+          default: false,
+        },
+        hintLevel: {
+          type: Number,
+          default: null, // Track how deep into the hint tree the student went
+        },
       },
     ],
     totalMarksObtained: {

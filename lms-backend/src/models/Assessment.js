@@ -72,6 +72,23 @@ const assessmentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // --- AI Integration Fields (Phase 2) ---
+    aiGenerated: {
+      type: Boolean,
+      default: false,
+    },
+    hintEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    hintPenaltyPercent: {
+      type: Number,
+      default: 0,
+    },
+    plagiarismCheckEnabled: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
