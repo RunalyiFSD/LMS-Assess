@@ -16,6 +16,7 @@
 
 const express = require('express');
 const mongoose = require('mongoose');
+const aiConfig = require('../ai/config/aiConfig');
 const router = express.Router();
 
 // @desc    Get API health status
@@ -30,9 +31,9 @@ router.get('/', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     database: isDbConnected ? 'connected' : 'disconnected',
     ai: {
-      enabled: process.env.AI_ENABLED === 'true',
-      configured: false, // Will be updated in Phase 1 when aiConfig is ready
-      provider: null,
+      enabled: aiConfig.enabled,
+      configured: aiConfig.isConfigured,
+      provider: aiConfig.defaultProvider,
     },
   });
 });

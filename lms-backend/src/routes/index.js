@@ -9,10 +9,12 @@ const leaderboardRoutes = require('./leaderboardRoutes');
 const userRoutes = require('./userRoutes');
 const publicRoutes = require('./publicRoutes');
 const healthRoutes = require('./healthRoutes');
+const aiRoutes = require('../ai/routes/aiRoutes');
 const { authLimiter } = require('../middleware/rateLimitMiddleware');
 
 const router = express.Router();
 
+router.use('/v1/ai', aiRoutes);
 router.use('/health', healthRoutes);
 router.use('/auth', authLimiter, authRoutes);
 router.use('/subjects', subjectRoutes);
