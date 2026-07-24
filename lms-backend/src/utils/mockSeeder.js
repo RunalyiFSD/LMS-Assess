@@ -65,6 +65,11 @@ const seedMocks = async () => {
       instructor = await User.findOne({});
     }
 
+    if (!instructor) {
+      console.log('Skipping mock seeding: No users found in database to assign as createdBy');
+      return;
+    }
+
     if (!subject) {
       subject = await Subject.create({
         name: 'Mock Assessments',
