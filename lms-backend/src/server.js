@@ -2,6 +2,11 @@ const dotenv = require('dotenv');
 // Load environment variables before importing files using them
 dotenv.config();
 
+// Validate environment variables immediately after loading them.
+// This must run before any other module is imported.
+const { validateEnv } = require('./config/env');
+validateEnv();
+
 const app = require('./app');
 const connectDB = require('./config/db');
 
