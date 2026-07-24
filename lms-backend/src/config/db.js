@@ -1,14 +1,15 @@
 const mongoose = require('mongoose');
 const seedMocks = require('../utils/mockSeeder');
+const logger = require('../utils/logger');
 
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/lms-assessment');
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    logger.info(`MongoDB Connected: ${conn.connection.host}`);
     // Automatically seed/verify mock assessments on startup
     await seedMocks();
   } catch (error) {
-    console.error(`MongoDB Connection Error: ${error.message}`);
+    logger.error(`MongoDB Connection Error`, error);
     process.exit(1);
   }
 };

@@ -2,13 +2,12 @@ const dotenv = require('dotenv');
 // Load environment variables before importing files using them
 dotenv.config();
 
-// Validate environment variables immediately after loading them.
-// This must run before any other module is imported.
 const { validateEnv } = require('./config/env');
 validateEnv();
 
 const app = require('./app');
 const connectDB = require('./config/db');
+const logger = require('./utils/logger');
 
 // Connect to MongoDB
 connectDB();
@@ -16,13 +15,12 @@ connectDB();
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  logger.info(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
 
 // Handle unhandled promise rejections globally
 process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! Shutting down server...');
-  console.error(err.name, err.message);
+  logger.error('UNHANDLED REJECTION! Shutting down server...', err);
   server.close(() => {
     process.exit(1);
   });
@@ -30,7 +28,6 @@ process.on('unhandledRejection', (err) => {
 
 // Handle uncaught exceptions globally
 process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION! Shutting down server...');
-  console.error(err.name, err.message);
+  logger.error('UNCAUGHT EXCEPTION! Shutting down server...', err);
   process.exit(1);
 });

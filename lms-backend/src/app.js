@@ -1,11 +1,19 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const morgan = require('morgan');
 const routes = require('./routes/index');
 const errorMiddleware = require('./middleware/errorMiddleware');
 const AppError = require('./utils/AppError');
 
 const app = express();
+
+// 0. Request logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined'));
+}
 
 // 1. Enable CORS. Allowing credentials ensures the HTTP-only cookie is read by the server
 app.use(
