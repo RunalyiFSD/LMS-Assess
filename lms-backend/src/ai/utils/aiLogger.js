@@ -1,4 +1,5 @@
 const logger = require('../../utils/logger');
+const AIUsageMetrics = require('../../models/AIUsageMetrics');
 
 /**
  * AI Logger
@@ -36,7 +37,22 @@ class AILogger {
       logger.error(`[AI Usage] [${data.feature}] failure`, logEntry);
     }
 
-    // TODO (Phase 2): Write to AIUsageMetrics MongoDB collection here
+    try {
+      await AIUsageMetrics.create({
+        feature: data.feature,
+        provider: data.provider,
+        model: data.model,
+        tokensIn: data.tokensIn || 0,
+        tokensOut: data.tokensOut || 0,
+        estimatedCostUsd,
+        latencyMs: data.latencyMs,
+        success: data.success,
+        errorDetails: data.error,
+        userId: data.userId,
+      });
+    } catch (err) {
+      logger.error('[AI Usage] Failed to write to MongoDB', err);
+    }
   }
 }
 
