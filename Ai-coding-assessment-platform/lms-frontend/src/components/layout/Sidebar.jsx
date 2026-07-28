@@ -13,7 +13,8 @@ import {
   User,
   TrendingUp,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -27,7 +28,8 @@ const Sidebar = () => {
       { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
       { to: '/schedule', label: 'Assessment Calendar', icon: <Calendar size={18} /> },
       { to: '/messages', label: 'Messages', icon: <MessageSquare size={18} /> },
-      { to: '/dashboard?tab=profile', label: 'Profile Settings', icon: <User size={18} /> }
+      { to: '/dashboard?tab=profile', label: 'Profile Settings', icon: <User size={18} /> },
+      { to: '/dashboard?tab=settings', label: 'Settings', icon: <Settings size={18} /> }
     ];
 
     if (user.role === 'admin') {
@@ -49,7 +51,7 @@ const Sidebar = () => {
     if (user.role === 'student') {
       return [
         ...common,
-        { to: '/dashboard?tab=progress', label: 'Progress', icon: <TrendingUp size={18} /> },
+        { to: '/dashboard?tab=progress', label: 'Progress Analytics', icon: <TrendingUp size={18} /> },
         { to: '/dashboard?tab=explore_mocks', label: 'Explore Mocks', icon: <BookOpen size={18} /> }
       ];
     }
@@ -59,9 +61,11 @@ const Sidebar = () => {
 
   const links = getNavLinks();
 
+  const isCollapsed = Boolean(user?.settings?.appearance?.sidebarCollapse);
+
   return (
-    <aside className="w-64 bg-[#2D2354] text-[#F8FAFC] min-h-[calc(100vh-62px)] flex flex-col justify-between border-r border-[#3D317C]/40">
-      <div className="px-4 py-6">
+    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-[#2D2354] text-[#F8FAFC] min-h-[calc(100vh-62px)] flex flex-col justify-between border-r border-[#3D317C]/40 transition-all duration-300 print:hidden`}>
+      <div className={`${isCollapsed ? 'px-2' : 'px-4'} py-6`}>
         <div className="space-y-1">
           {links.map((link, idx) => {
             // Calculate active state including query parameters to resolve dashboard overlay duplicates
@@ -77,7 +81,8 @@ const Sidebar = () => {
               <Link
                 key={idx}
                 to={link.to}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-300 ease ${isActive
+                title={isCollapsed ? link.label : undefined}
+                className={`flex items-center ${isCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-3'} rounded-lg text-sm font-medium transition-all duration-300 ease ${isActive
                     ? 'text-white shadow-sm'
                     : 'text-[#F8FAFC] hover:bg-[#3D317C] hover:text-[#F8FAFC]'
                   }`}
@@ -88,7 +93,7 @@ const Sidebar = () => {
                 }
               >
                 {link.icon}
-                <span>{link.label}</span>
+                {!isCollapsed && <span>{link.label}</span>}
               </Link>
             );
           })}
@@ -96,12 +101,14 @@ const Sidebar = () => {
       </div>
 
       {/* Footer Role display card */}
-      <div className="p-4 border-t border-[#3D317C]/40 bg-slate-950/20">
-        <div className="flex items-center gap-2">
+      <div className={`${isCollapsed ? 'p-2 text-center' : 'p-4'} border-t border-[#3D317C]/40 bg-slate-950/20`}>
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'}`}>
           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-          <span className="text-xs text-slate-300 font-medium tracking-wide uppercase">
-            {user.role} Session Active
-          </span>
+          {!isCollapsed && (
+            <span className="text-xs text-slate-300 font-medium tracking-wide uppercase">
+              {user.role} Session Active
+            </span>
+          )}
         </div>
       </div>
     </aside>

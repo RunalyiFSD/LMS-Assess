@@ -136,7 +136,7 @@ const MessagesPage = () => {
   const isAdmin = userRoleLower === 'admin';
 
   // Active conversation object
-  const activeConv = conversations.find((c) => c.id === activeConvId) || conversations[0];
+  const activeConv = conversations.find((c) => c.id === activeConvId);
 
   // Auto-scroll to bottom of chat thread when messages change
   const scrollToBottom = () => {
@@ -226,12 +226,7 @@ const MessagesPage = () => {
         });
       });
 
-      // Auto-select first direct instructor contact for student
-      if (userConvs.length > 0 && (isInitial || !activeConvId)) {
-        setActiveConvId(userConvs[0].id);
-      } else if (isInitial && combined.length > 0 && !activeConvId) {
-        setActiveConvId(combined[0].id);
-      }
+      // Keep activeConvId null by default so student can choose contact from list
     } catch (err) {
       console.warn('Failed to load roster:', err.message);
     } finally {
@@ -715,8 +710,16 @@ const MessagesPage = () => {
 
             </div>
           ) : (
-            <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-center p-8 text-slate-400 text-xs font-semibold">
-              {isStudent ? 'Select an instructor to start messaging.' : 'Select a student or instructor to start messaging.'}
+            <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col items-center justify-center p-8 h-full text-center">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mb-4 shadow-sm">
+                <MessageSquare size={32} />
+              </div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight">Select a Contact to Start Messaging</h3>
+              <p className="text-xs text-slate-500 max-w-sm mt-1.5 leading-relaxed font-medium">
+                {isStudent
+                  ? 'Choose an instructor or study group from the list on the left to view your message history and start a conversation.'
+                  : 'Choose a student, instructor, or administration contact from the list on the left to start messaging.'}
+              </p>
             </div>
           )}
 

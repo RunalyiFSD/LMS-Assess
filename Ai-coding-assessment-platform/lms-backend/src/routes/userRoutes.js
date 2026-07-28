@@ -12,6 +12,7 @@ router.get('/directory', userController.getUserDirectory);
 router.get('/profile/:id', userController.getUserProfile);
 router.get('/profile/:id/analytics', userController.getUserAnalytics);
 router.put('/profile', userController.updateUserProfile);
+router.delete('/me', userController.deleteMyAccount);
 
 // Admin-only user management routes
 router.use(authorize('admin'));

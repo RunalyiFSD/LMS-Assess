@@ -61,7 +61,7 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#2D2354] border-b border-[#3D317C]/40 px-6 py-3 flex items-center justify-between">
+    <header className="sticky top-0 z-40 bg-[#2D2354] border-b border-[#3D317C]/40 px-6 py-3 flex items-center justify-between print:hidden">
       {/* Brand Logo */}
       <div className="flex items-center gap-2">
         <span className="w-8 h-8 rounded-lg bg-[#3D317C] border border-[#4E3F9B] flex items-center justify-center text-white font-bold text-base shadow-sm">

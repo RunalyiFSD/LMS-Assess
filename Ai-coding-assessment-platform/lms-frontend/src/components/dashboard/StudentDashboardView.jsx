@@ -1,136 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Card from '../common/Card';
-import Button from '../common/Button';
 import api from '../../services/api';
+import ProgressAnalyticsView from './ProgressAnalyticsView';
+import PerformanceReport from './PerformanceReport';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Legend, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid,
-  PolarAngleAxis, PolarRadiusAxis,
-} from 'recharts';
-import {
-  Award, Play, RotateCcw, ShieldCheck, Calendar, Clock,
-  ClipboardList, Database, Network, Terminal, Atom, LayoutGrid, Code,
-  TrendingUp, Target, BarChart2, Activity, BookOpen, CheckCircle,
-  Building2, Code2, ChevronRight
+  Award,
+  Calendar,
+  ShieldCheck,
+  PieChart as PieChartIcon,
+  ArrowRight,
+  Code,
+  BookOpen,
+  CheckSquare,
+  Clock,
+  Download,
+  MoreVertical,
+  Trophy,
+  ChevronRight,
+  ClipboardList,
+  Database,
+  Network,
+  Terminal,
+  Atom,
+  ChevronDown,
+  LayoutGrid,
+  Building2,
+  Code2,
+  CheckCircle,
+  X,
+  Target,
+  BarChart2,
+  Briefcase,
+  Compass
 } from 'lucide-react';
-
-const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
-const PASS_COLORS = ['#10b981', '#ef4444'];
-
-const Section = ({ title, icon, children, className = '', bodyClassName = 'p-6' }) => (
-  <div className={`bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden ${className}`}>
-    <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
-      <span className="text-brand-600">{icon}</span>
-      <h3 className="font-black text-slate-800 text-sm uppercase tracking-wide">{title}</h3>
-    </div>
-    <div className={bodyClassName}>{children}</div>
-  </div>
-);
-
-const Empty = ({ icon, message }) => (
-  <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-300 h-full">
-    <span className="text-4xl">{icon}</span>
-    <p className="text-sm text-slate-400">{message}</p>
-  </div>
-);
-
-const techTracks = [
-  {
-    id: 'sde',
-    title: 'SDE',
-    registrations: '69091 Registrations',
-    popular: false,
-    icon: 'clipboard',
-    iconColor: 'text-blue-600 bg-blue-50/50 border-blue-100',
-    time: '50 Minutes',
-    objective: 5,
-    programming: 2,
-    linkText: 'Event Ended >'
-  },
-  {
-    id: 'sql',
-    title: 'SQL',
-    registrations: '16069 Registrations',
-    popular: false,
-    icon: 'database',
-    iconColor: 'text-orange-600 bg-orange-50/50 border-orange-100',
-    time: '30 Minutes',
-    objective: 15,
-    programming: 0,
-    linkText: 'Event Ended >'
-  },
-  {
-    id: 'ds',
-    title: 'Data Structures',
-    registrations: '11685 Registrations',
-    popular: false,
-    icon: 'network',
-    iconColor: 'text-rose-600 bg-rose-50/50 border-rose-100',
-    time: '30 Minutes',
-    objective: 15,
-    programming: 0,
-    linkText: 'Event Ended >'
-  },
-  {
-    id: 'python',
-    title: 'Python',
-    registrations: '12218 Registrations',
-    popular: false,
-    icon: 'terminal',
-    iconColor: 'text-yellow-600 bg-yellow-50/50 border-yellow-100',
-    time: '30 Minutes',
-    objective: 5,
-    programming: 2,
-    linkText: 'Event Ended >'
-  },
-  {
-    id: 'dsml',
-    title: 'DSML',
-    popular: true,
-    registrations: null,
-    icon: 'atom',
-    iconColor: 'text-cyan-600 bg-cyan-50/50 border-cyan-100',
-    time: '30 Minutes',
-    objective: 10,
-    programming: 0,
-    linkText: 'Event Ended >'
-  }
-];
 
 const StudentDashboardView = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   const [assessments, setAssessments] = useState([]);
   const [myAttempts, setMyAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  // Widget rankings states
-  const [topThree, setTopThree] = useState([]);
-  const [studentRank, setStudentRank] = useState(933000);
-  const [studentPoints, setStudentPoints] = useState(10000);
-
-  // Modal rankings states
-  const [showFullBoard, setShowFullBoard] = useState(false);
-  const [rankings, setRankings] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [search, setSearch] = useState('');
-  const [subject, setSubject] = useState('');
-  const [sortBy, setSortBy] = useState('score');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [selectedScorecard, setSelectedScorecard] = useState(null);
-  const [viewMode, setViewMode] = useState('default'); // 'default' | 'explore_mocks' | 'progress'
-  const [mockAssessments, setMockAssessments] = useState([]);
-  const [searchMockQuery, setSearchMockQuery] = useState('');
+  const [viewMode, setViewMode] = useState('default');
   const [analytics, setAnalytics] = useState(null);
-  const [subjectPerformance, setSubjectPerformance] = useState([]);
+  const [selectedScorecard, setSelectedScorecard] = useState(null);
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState('This Month');
   const [selectedMockCategory, setSelectedMockCategory] = useState(null);
 
+  // Sync viewMode with URL params
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
@@ -143,169 +62,208 @@ const StudentDashboardView = () => {
     }
   }, [location]);
 
+  // Fetch assessments, attempts, and student profile data
   useEffect(() => {
-    const fetchStudentData = async () => {
+    const fetchDashboardData = async () => {
       setLoading(true);
-      const timestamp = Date.now();
+      const t = Date.now();
 
-      // 1. Fetch active assessments
       try {
-        const assessmentsRes = await api.get(`/assessments?t=${timestamp}`);
-        if (assessmentsRes.data?.status === 'success') {
-          setAssessments(assessmentsRes.data.data.assessments || []);
+        const [assessRes, attemptsRes] = await Promise.all([
+          api.get(`/assessments?t=${t}`).catch(() => ({ data: { data: { assessments: [] } } })),
+          api.get(`/attempts/my-attempts?t=${t}`).catch(() => ({ data: { data: { attempts: [] } } })),
+        ]);
+
+        if (assessRes.data?.status === 'success') {
+          setAssessments(assessRes.data.data.assessments || []);
         }
-      } catch (err) {
-        console.warn('Failed to load assessments:', err);
-      }
 
-      // 2. Fetch student's attempt records
-      try {
-        const attemptsRes = await api.get(`/attempts/my-attempts?t=${timestamp}`);
-        console.log('--- FETCH MY ATTEMPTS RESPONSE ---', attemptsRes.data);
         if (attemptsRes.data?.status === 'success') {
           setMyAttempts(attemptsRes.data.data.attempts || []);
         }
-      } catch (err) {
-        console.warn('Failed to load attempt records:', err);
-      }
 
-      // 3. Fetch top 3 global rankings
-      try {
-        const topRes = await api.get(`/leaderboard/global?limit=3&t=${timestamp}`);
-        if (topRes.data?.status === 'success') {
-          setTopThree(topRes.data.data.rankings || []);
-        }
-      } catch (err) {
-        console.warn('Failed to load leaderboard rankings:', err);
-      }
-
-      // 4. Fetch student's own standing summary and analytics
-      if (user) {
-        try {
-          const profileRes = await api.get(`/users/profile/${user._id}?t=${timestamp}`);
-          if (profileRes.data?.status === 'success') {
-            setStudentRank(profileRes.data.data.summary?.globalRank || 933000);
-            setStudentPoints(profileRes.data.data.summary?.totalPoints || 10000);
-            setSubjectPerformance(profileRes.data.data.subjectPerformance || []);
-          }
-          const analyticsRes = await api.get(`/users/profile/${user._id}/analytics?t=${timestamp}`);
-          if (analyticsRes.data?.status === 'success') {
+        if (user?._id) {
+          const analyticsRes = await api.get(`/users/profile/${user._id}/analytics?t=${t}`).catch(() => null);
+          if (analyticsRes?.data?.status === 'success') {
             setAnalytics(analyticsRes.data.data);
           }
-        } catch (err) {
-          console.warn('Failed to load student profile standing:', err);
-        }
-      }
-
-      // 5. Fetch mock assessments (cleared / removed content)
-      setMockAssessments([]);
-
-      setLoading(false);
-    };
-    fetchStudentData();
-  }, [user, refreshTrigger]);
-
-  // Fetch subjects list for modal filter
-  useEffect(() => {
-    if (!showFullBoard) return;
-    const fetchSubjects = async () => {
-      try {
-        const res = await api.get('/subjects');
-        if (res.data?.status === 'success') {
-          setSubjects(res.data.data.subjects || []);
         }
       } catch (err) {
-        console.warn('Failed to load subjects list');
+        console.warn('Failed to load dashboard metrics:', err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchSubjects();
-  }, [showFullBoard]);
 
-  // Fetch full rankings for modal
-  const fetchRankings = async () => {
-    if (!showFullBoard) return;
-    setModalLoading(true);
-    let fetchedRankings = [];
-    let fetchedTotalPages = 1;
-    try {
-      const params = {
-        page,
-        limit: 8,
-        sortBy,
-      };
-      if (search) params.search = search;
-      if (subject) params.subject = subject;
+    fetchDashboardData();
+  }, [user]);
 
-      const res = await api.get('/leaderboard/global', { params });
-      if (res.data?.status === 'success') {
-        fetchedRankings = res.data.data.rankings || [];
-        fetchedTotalPages = res.data.totalPages || 1;
-      }
-    } catch (err) {
-      console.warn('Failed to load global standings');
-    } finally {
-      setRankings(fetchedRankings);
-      setTotalPages(fetchedTotalPages);
-      setModalLoading(false);
-    }
+  // Mock assessments for "Assigned Assessments" section (matches screenshot 1)
+  const defaultAssignedList = [
+    {
+      id: 'asgn_1',
+      title: 'Midterm Coding Sandbox',
+      type: 'Coding',
+      icon: <Code size={18} className="text-indigo-600" />,
+      boxBg: 'bg-indigo-50 border-indigo-100',
+      borderLeft: 'border-l-4 border-l-indigo-500',
+      dueDate: 'Due in 2 days',
+    },
+    {
+      id: 'asgn_2',
+      title: 'Midterm Theory Paper',
+      type: 'Theory',
+      icon: <BookOpen size={18} className="text-amber-600" />,
+      boxBg: 'bg-amber-50 border-amber-100',
+      borderLeft: 'border-l-4 border-l-amber-500',
+      dueDate: 'Due in 5 days',
+    },
+    {
+      id: 'asgn_3',
+      title: 'Midterm MCQ Quiz',
+      type: 'MCQ',
+      icon: <CheckSquare size={18} className="text-emerald-600" />,
+      boxBg: 'bg-emerald-50 border-emerald-100',
+      borderLeft: 'border-l-4 border-l-emerald-500',
+      dueDate: 'Due in 7 days',
+    },
+  ];
+
+  // Submission Status list (matches screenshot 1)
+  const defaultSubmissions = [
+    {
+      id: 'sub_1',
+      title: 'Midterm Coding Sandbox',
+      category: 'Coding',
+      icon: <Code size={16} className="text-indigo-600" />,
+      status: 'Graded',
+      timeSpent: '45 min',
+      score: '85%',
+      details: '(17/20)',
+    },
+    {
+      id: 'sub_2',
+      title: 'Midterm Theory Paper',
+      category: 'Theory',
+      icon: <BookOpen size={16} className="text-amber-600" />,
+      status: 'Graded',
+      timeSpent: '30 min',
+      score: '60%',
+      details: '(6/10)',
+    },
+    {
+      id: 'sub_3',
+      title: 'Midterm MCQ Quiz',
+      category: 'MCQ',
+      icon: <CheckSquare size={16} className="text-emerald-600" />,
+      status: 'Graded',
+      timeSpent: '20 min',
+      score: '90%',
+      details: '(9/10)',
+    },
+  ];
+
+  // Leaderboard data (Top 5 performers)
+  const leaderboardData = [
+    { rank: 1, name: 'james', score: '15/20', points: 15, badge: '🥇', rankBg: 'bg-amber-400 text-white' },
+    { rank: 2, name: `${user?.name || 'jay'} (You)`, score: '8/20', points: 8, badge: '🥈', isCurrentUser: true, rankBg: 'bg-slate-300 text-slate-700' },
+    { rank: 3, name: 'runalyi', score: '5/20', points: 5, badge: '🥉', rankBg: 'bg-amber-600 text-white' },
+    { rank: 4, name: 'anisha', score: '4/20', points: 4, rankBg: 'bg-slate-800 text-white' },
+    { rank: 5, name: 'siddharth', score: '3/20', points: 3, rankBg: 'bg-slate-800 text-white' },
+  ];
+
+  // Tech Preparation Tracks (matches screenshot 2)
+  const techTracks = [
+    {
+      id: 'sde',
+      title: 'SDE',
+      badge: '🔥 69091 Registrations',
+      badgeType: 'fire',
+      icon: <ClipboardList size={22} className="text-blue-600" />,
+      iconBg: 'bg-blue-50 border-blue-100',
+      time: '50 Minutes',
+      objective: 5,
+      programming: 2,
+    },
+    {
+      id: 'sql',
+      title: 'SQL',
+      badge: '🔥 16059 Registrations',
+      badgeType: 'fire',
+      icon: <Database size={22} className="text-orange-600" />,
+      iconBg: 'bg-orange-50 border-orange-100',
+      time: '30 Minutes',
+      objective: 15,
+      programming: 0,
+    },
+    {
+      id: 'ds',
+      title: 'Data Structures',
+      badge: '🔥 11655 Registrations',
+      badgeType: 'fire',
+      icon: <Network size={22} className="text-rose-600" />,
+      iconBg: 'bg-rose-50 border-rose-100',
+      time: '30 Minutes',
+      objective: 15,
+      programming: 0,
+    },
+    {
+      id: 'python',
+      title: 'Python',
+      badge: '🔥 12218 Registrations',
+      badgeType: 'fire',
+      icon: <Terminal size={22} className="text-amber-600" />,
+      iconBg: 'bg-amber-50 border-amber-100',
+      time: '30 Minutes',
+      objective: 5,
+      programming: 2,
+    },
+    {
+      id: 'dsml',
+      title: 'DSML',
+      badge: '⭐ Popular',
+      badgeType: 'star',
+      icon: <Atom size={22} className="text-cyan-600" />,
+      iconBg: 'bg-cyan-50 border-cyan-100',
+      time: '30 Minutes',
+      objective: 10,
+      programming: 0,
+    },
+  ];
+
+  const handleStartTest = (testId) => {
+    navigate(`/lobby/${testId}`);
   };
 
-  useEffect(() => {
-    fetchRankings();
-  }, [showFullBoard, page, subject, sortBy]);
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    setPage(1);
-    fetchRankings();
-  };
-
-  const handleClearFilters = () => {
-    setSearch('');
-    setSubject('');
-    setSortBy('score');
-    setPage(1);
-  };
-
-  const handleStartExam = (assessmentId) => {
-    navigate(`/lobby/${assessmentId}`);
-  };
-
-  const getAttemptForAssessment = (assessmentId) => {
-    return myAttempts.find((a) => a.assessment?._id === assessmentId);
-  };
-
-  const handleDashboardSubmit = async (attemptId) => {
-    if (!window.confirm('Are you sure you want to submit this assessment? You cannot make any more changes.')) {
-      return;
-    }
-    try {
-      const res = await api.post(`/attempts/${attemptId}/submit`);
-      if (res.data?.status === 'success') {
-        alert('Assessment submitted successfully!');
-        setRefreshTrigger((prev) => prev + 1);
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Failed to submit assessment.');
-    }
+  const handleDownloadReport = (submission) => {
+    setSelectedScorecard({
+      studentName: user?.name || 'Jay',
+      college: user?.college || 'SPPU',
+      department: user?.department || 'CS',
+      assessmentTitle: submission.title,
+      scoreObtained: submission.score === '85%' ? 17 : submission.score === '90%' ? 9 : 6,
+      totalMarks: submission.score === '85%' ? 20 : 10,
+      timeTakenMinutes: parseInt(submission.timeSpent),
+      percentage: parseInt(submission.score),
+      gradedAt: new Date().toLocaleDateString(),
+    });
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12 text-slate-400 gap-2">
-        <span className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></span>
-        Loading dashboard details...
+      <div className="flex justify-center items-center py-16 text-slate-400 gap-2">
+        <span className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+        <span>Loading Student Dashboard...</span>
       </div>
     );
   }
-
   const companyMocksList = [
-    { _id: 'cmp_1', title: 'Infosys Placement Mock', company: 'Infosys', reg: '582 Registrations', time: '45 Minutes', obj: 5, prog: 2 },
-    { _id: 'cmp_2', title: 'Uber Engineering Mock', company: 'Uber', reg: '1240 Registrations', time: '45 Minutes', obj: 5, prog: 2 },
-    { _id: 'cmp_3', title: 'LinkedIn Tech Assessment', company: 'LinkedIn', reg: '980 Registrations', time: '45 Minutes', obj: 5, prog: 2 },
-    { _id: 'cmp_4', title: 'MindTree Placement Mock', company: 'MindTree', reg: '450 Registrations', time: '45 Minutes', obj: 5, prog: 2 },
-    { _id: 'cmp_5', title: 'TCS NQT Simulation', company: 'TCS', reg: '3420 Registrations', time: '60 Minutes', obj: 15, prog: 2 },
-    { _id: 'cmp_6', title: 'Amazon SDE Screening', company: 'Amazon', reg: '4120 Registrations', time: '60 Minutes', obj: 5, prog: 2 }
+    { _id: 'cmp_1', title: 'Infosys Placement Aptitude Mock', company: 'Infosys', reg: '582 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+    { _id: 'cmp_2', title: 'Uber Engineering Aptitude Mock', company: 'Uber', reg: '1240 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+    { _id: 'cmp_3', title: 'LinkedIn Tech Assessment Aptitude', company: 'LinkedIn', reg: '980 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+    { _id: 'cmp_4', title: 'MindTree Placement Aptitude Mock', company: 'MindTree', reg: '450 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+    { _id: 'cmp_5', title: 'TCS NQT Aptitude Simulation', company: 'TCS', reg: '3420 Registrations', time: '60 Minutes', obj: 20, prog: 2 },
+    { _id: 'cmp_6', title: 'Amazon SDE Aptitude Screening', company: 'Amazon', reg: '4120 Registrations', time: '60 Minutes', obj: 15, prog: 2 }
   ];
 
   const languageMocksList = [
@@ -319,186 +277,382 @@ const StudentDashboardView = () => {
 
   const renderExploreMocksView = () => {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto pb-12">
+        {/* Top Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Explore All Mock Assessments</h1>
-            <p className="text-xs text-slate-500 mt-1">Practice and prepare with our library of mock tests categorized by companies and technologies.</p>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Explore Mock Assessments</span>
+              <span className="text-indigo-600 text-lg">✨</span>
+            </h1>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              Choose a category to practice and improve your skills with industry-standard mocks.
+            </p>
           </div>
-          <Button variant="outline" onClick={() => navigate('/dashboard')}>
-            &larr; Back to Dashboard
-          </Button>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-xs font-bold text-slate-600 hover:text-indigo-600 bg-white hover:bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+          >
+            <span>&larr;</span>
+            <span>Back to Dashboard</span>
+          </button>
+        </div>
+
+        {/* Feature Banner Strip (4 Highlights) */}
+        <div className="bg-white rounded-3xl border border-slate-100 p-4 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+          <div className="flex items-center gap-3.5 p-2">
+            <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+              <Target size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900 leading-tight">Practice smart. Get better.</p>
+              <p className="text-[11px] font-medium text-slate-400 mt-0.5">Ace your next interview.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3.5 p-2 pt-4 sm:pt-2">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900 leading-tight">Real exam experience</p>
+              <p className="text-[11px] font-medium text-slate-400 mt-0.5">Industry-standard pattern</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3.5 p-2 pt-4 sm:pt-2">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+              <BarChart2 size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900 leading-tight">Instant performance insights</p>
+              <p className="text-[11px] font-medium text-slate-400 mt-0.5">Track your progress</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3.5 p-2 pt-4 sm:pt-2">
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 text-amber-500 flex items-center justify-center shrink-0">
+              <Trophy size={20} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-900 leading-tight">Industry curated mocks</p>
+              <p className="text-[11px] font-medium text-slate-400 mt-0.5">Top companies & tech stacks</p>
+            </div>
+          </div>
         </div>
 
         {selectedMockCategory === null ? (
-          /* Main 2 Cards: Company Mock & Language Mock */
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
-            {/* Card 1: Company Mock */}
+          /* Main 2 Cards: Company Aptitude & Tech Stack Mocks */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 my-6">
+
+            {/* CARD 1: Company Aptitude Assessments */}
             <div
               onClick={() => setSelectedMockCategory('company')}
-              className="bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/50 rounded-2xl border border-indigo-100 p-7 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+              className="bg-[#F8FAFC]/60 rounded-3xl border border-slate-200/80 p-7 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
             >
               <div className="space-y-5">
+                {/* Top Icon & Badge */}
                 <div className="flex items-center justify-between">
-                  <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
-                    <Building2 size={28} />
+                  <div className="w-12 h-12 rounded-2xl bg-[#4F46E5] text-white flex items-center justify-center shadow-md shadow-indigo-500/25 group-hover:scale-105 transition-transform">
+                    <Building2 size={24} />
                   </div>
-                  <span className="bg-indigo-100 text-indigo-700 font-extrabold text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-200/60 shadow-sm flex items-center gap-1">
-                    🔥 Popular Hiring Drills
+                  <span className="bg-indigo-50 text-indigo-700 font-black text-[10px] uppercase tracking-wider px-3.5 py-1 rounded-full border border-indigo-100 shadow-2xs flex items-center gap-1.5">
+                    <span>🔥</span>
+                    <span>COMPANY APTITUDE</span>
                   </span>
                 </div>
 
+                {/* Title & Subtitle */}
                 <div>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">Company Mock Assessments</h2>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                    Simulated recruitment exams tailored for top product & IT companies like Infosys, Uber, LinkedIn, MindTree, TCS, and Amazon.
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Company Aptitude Assessments</h2>
+                  <p className="text-xs text-slate-500 mt-1.5 font-medium leading-relaxed">
+                    Prepare for placement aptitude tests and screening rounds used by top companies.
                   </p>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-indigo-100/60 text-xs text-slate-600 font-medium">
-                  <div className="flex items-center gap-2.5">
-                    <CheckCircle size={15} className="text-indigo-600 flex-shrink-0" />
-                    <span>Infosys, Uber, LinkedIn, MindTree, TCS & Amazon tests</span>
+                {/* Content Row: Bullets Left + 3D Illustration Right */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center pt-2">
+                  <div className="sm:col-span-8 space-y-2.5 text-xs font-semibold text-slate-600">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-md bg-purple-100/70 text-purple-700 flex items-center justify-center shrink-0">
+                        <CheckSquare size={13} />
+                      </div>
+                      <span>Tests from Infosys, TCS, Wipro, Accenture, Amazon & more</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-md bg-purple-100/70 text-purple-700 flex items-center justify-center shrink-0">
+                        <Clock size={13} />
+                      </div>
+                      <span>45–60 mins real exam time constraints</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-md bg-purple-100/70 text-purple-700 flex items-center justify-center shrink-0">
+                        <Target size={13} />
+                      </div>
+                      <span>Aptitude, Reasoning, Verbal & Quantitative</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-md bg-purple-100/70 text-purple-700 flex items-center justify-center shrink-0">
+                        <Code size={13} />
+                      </div>
+                      <span>Integrated sandbox for coding & problem solving</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <Clock size={15} className="text-indigo-600 flex-shrink-0" />
-                    <span>45-60 Mins real exam time constraints</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <Code size={15} className="text-indigo-600 flex-shrink-0" />
-                    <span>MCQ Drills & Integrated Coding Sandboxes</span>
+
+                  {/* 3D Clipboard & Target Illustration SVG */}
+                  <div className="sm:col-span-4 flex justify-center py-2 sm:py-0">
+                    <div className="w-28 h-28 relative flex items-center justify-center">
+                      <svg className="w-full h-full" viewBox="0 0 120 120" fill="none">
+                        {/* Board */}
+                        <rect x="20" y="25" width="70" height="85" rx="12" fill="#818CF8" fillOpacity="0.2" />
+                        <rect x="25" y="30" width="60" height="75" rx="8" fill="#EEF2FF" stroke="#C7D2FE" strokeWidth="2" />
+                        {/* Lines */}
+                        <rect x="35" y="45" width="40" height="4" rx="2" fill="#818CF8" />
+                        <rect x="35" y="55" width="30" height="4" rx="2" fill="#A5B4FC" />
+                        <rect x="35" y="65" width="35" height="4" rx="2" fill="#A5B4FC" />
+                        {/* Clip top */}
+                        <rect x="42" y="22" width="26" height="12" rx="4" fill="#4F46E5" />
+                        {/* Target Circle Overlay */}
+                        <circle cx="85" cy="80" r="24" fill="#4F46E5" />
+                        <circle cx="85" cy="80" r="17" fill="#EEF2FF" />
+                        <circle cx="85" cy="80" r="10" fill="#4F46E5" />
+                        <circle cx="85" cy="80" r="4" fill="#EEF2FF" />
+                        {/* Arrow */}
+                        <path d="M102 63 L87 78 L93 84 Z" fill="#312E81" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-6">
-                <Button
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-indigo-500/25 transition-all flex items-center justify-center gap-2"
-                  onClick={(e) => { e.stopPropagation(); setSelectedMockCategory('company'); }}
-                >
-                  <span>Explore Company Mocks</span>
-                  <ChevronRight size={16} />
-                </Button>
+                {/* Explore Button */}
+                <div className="pt-3">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedMockCategory('company'); }}
+                    className="w-full bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold py-3.5 rounded-2xl shadow-md hover:shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 text-xs cursor-pointer"
+                  >
+                    <span>Explore Company Aptitude</span>
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+
+                {/* Bottom Company Logos Bar */}
+                <div className="pt-4 border-t border-slate-200/60 flex items-center justify-between gap-2 overflow-x-auto">
+                  <div className="bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-slate-800 font-black text-xs shadow-2xs">
+                    Infosys
+                  </div>
+                  <div className="bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-slate-800 font-black text-xs shadow-2xs flex items-center gap-1">
+                    <span className="text-red-600 font-black">tcs</span>
+                    <span className="text-[9px] text-slate-400 font-semibold">TATA</span>
+                  </div>
+                  <div className="bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-slate-800 font-black text-xs shadow-2xs">
+                    wipro
+                  </div>
+                  <div className="bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-slate-800 font-black text-xs shadow-2xs">
+                    accenture
+                  </div>
+                  <div className="bg-white border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-slate-800 font-black text-xs shadow-2xs">
+                    amazon
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            {/* Card 2: Language Mock */}
+            {/* CARD 2: Language & Tech Stack Mocks */}
             <div
               onClick={() => setSelectedMockCategory('language')}
-              className="bg-gradient-to-br from-cyan-50/80 via-white to-emerald-50/50 rounded-2xl border border-cyan-100 p-7 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+              className="bg-[#F8FAFC]/60 rounded-3xl border border-slate-200/80 p-7 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
             >
               <div className="space-y-5">
+                {/* Top Icon & Badge */}
                 <div className="flex items-center justify-between">
-                  <div className="w-14 h-14 rounded-2xl bg-cyan-600 text-white flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-105 transition-transform">
-                    <Code2 size={28} />
+                  <div className="w-12 h-12 rounded-2xl bg-[#00897B] text-white flex items-center justify-center shadow-md shadow-teal-500/25 group-hover:scale-105 transition-transform">
+                    <Code2 size={24} />
                   </div>
-                  <span className="bg-cyan-100 text-cyan-700 font-extrabold text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-cyan-200/60 shadow-sm flex items-center gap-1">
-                    ⭐ Skill Certification
+                  <span className="bg-teal-50 text-teal-700 font-black text-[10px] uppercase tracking-wider px-3.5 py-1 rounded-full border border-teal-100 shadow-2xs flex items-center gap-1.5">
+                    <span>⭐</span>
+                    <span>TECHNOLOGY MOCKS</span>
                   </span>
                 </div>
 
+                {/* Title & Subtitle */}
                 <div>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">Language & Tech Stack Mock</h2>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                    Master programming languages & core technical frameworks with focused skill quizzes and algorithm tests.
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Language & Tech Stack Mocks</h2>
+                  <p className="text-xs text-slate-500 mt-1.5 font-medium leading-relaxed">
+                    Strengthen your technical skills with language-specific quizzes and coding challenges.
                   </p>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-cyan-100/60 text-xs text-slate-600 font-medium">
-                  <div className="flex items-center gap-2.5">
-                    <CheckCircle size={15} className="text-cyan-600 flex-shrink-0" />
-                    <span>React, Java, Python, SQL, C++, Data Structures & Node.js</span>
+                {/* Content Row: Bullets Left + 3D Laptop Graphic Right */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center pt-2">
+                  <div className="sm:col-span-8 space-y-2.5 text-xs font-semibold text-slate-600">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-md bg-teal-100/70 text-teal-700 flex items-center justify-center shrink-0">
+                        <CheckCircle size={13} />
+                      </div>
+                      <span>Languages: C, C++, Java, Python, JavaScript & more</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-md bg-teal-100/70 text-teal-700 flex items-center justify-center shrink-0">
+                        <Clock size={13} />
+                      </div>
+                      <span>30 mins focused language quizzes</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-md bg-teal-100/70 text-teal-700 flex items-center justify-center shrink-0">
+                        <LayoutGrid size={13} />
+                      </div>
+                      <span>Data Structures, Algorithms & System Design</span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-md bg-teal-100/70 text-teal-700 flex items-center justify-center shrink-0">
+                        <Award size={13} />
+                      </div>
+                      <span>Instant analytics & detailed scorecard</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <Clock size={15} className="text-cyan-600 flex-shrink-0" />
-                    <span>30 Mins focused language quizzes</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <Award size={15} className="text-cyan-600 flex-shrink-0" />
-                    <span>Instant Performance Analytics & Solver Score</span>
+
+                  {/* 3D Laptop & Code Badge Graphic SVG */}
+                  <div className="sm:col-span-4 flex justify-center py-2 sm:py-0">
+                    <div className="w-28 h-28 relative flex items-center justify-center">
+                      <svg className="w-full h-full" viewBox="0 0 120 120" fill="none">
+                        {/* Laptop Base */}
+                        <path d="M15 90 L105 90 C108 90 110 92 108 95 L102 98 C100 100 98 100 95 100 L25 100 C22 100 20 100 18 98 L12 95 C10 92 12 90 15 90 Z" fill="#94A3B8" />
+                        {/* Screen Frame */}
+                        <rect x="25" y="25" width="70" height="65" rx="6" fill="#1E293B" />
+                        <rect x="28" y="28" width="64" height="56" rx="4" fill="#0F172A" />
+                        {/* Code Lines on Screen */}
+                        <rect x="34" y="36" width="30" height="3" rx="1.5" fill="#38BDF8" />
+                        <rect x="34" y="43" width="45" height="3" rx="1.5" fill="#34D399" />
+                        <rect x="38" y="50" width="35" height="3" rx="1.5" fill="#F472B6" />
+                        <rect x="38" y="57" width="25" height="3" rx="1.5" fill="#FBBF24" />
+                        <rect x="34" y="64" width="40" height="3" rx="1.5" fill="#38BDF8" />
+                        {/* Floating Code Badge */}
+                        <rect x="80" y="55" width="28" height="24" rx="6" fill="#00897B" />
+                        <path d="M87 67 L90 64 L87 61 M101 67 L98 64 L101 61" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-6">
-                <Button
-                  className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-cyan-500/25 transition-all flex items-center justify-center gap-2"
-                  onClick={(e) => { e.stopPropagation(); setSelectedMockCategory('language'); }}
-                >
-                  <span>Explore Language Mocks</span>
-                  <ChevronRight size={16} />
-                </Button>
+                {/* Explore Button */}
+                <div className="pt-3">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedMockCategory('language'); }}
+                    className="w-full bg-[#00897B] hover:bg-[#00796B] text-white font-bold py-3.5 rounded-2xl shadow-md hover:shadow-teal-500/25 transition-all flex items-center justify-center gap-2 text-xs cursor-pointer"
+                  >
+                    <span>Explore Technology Mocks</span>
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+
+                {/* Bottom Tech Logos Bar */}
+                <div className="pt-4 border-t border-slate-200/60 flex items-center justify-between gap-2 overflow-x-auto">
+                  <div className="bg-white border border-slate-200/80 w-8 h-8 rounded-xl flex items-center justify-center text-blue-600 font-black text-xs shadow-2xs">
+                    C
+                  </div>
+                  <div className="bg-white border border-slate-200/80 w-8 h-8 rounded-xl flex items-center justify-center text-blue-700 font-black text-xs shadow-2xs">
+                    C++
+                  </div>
+                  <div className="bg-white border border-slate-200/80 w-8 h-8 rounded-xl flex items-center justify-center text-red-600 font-black text-xs shadow-2xs">
+                    ☕
+                  </div>
+                  <div className="bg-white border border-slate-200/80 w-8 h-8 rounded-xl flex items-center justify-center text-amber-500 font-black text-xs shadow-2xs">
+                    🐍
+                  </div>
+                  <div className="bg-white border border-slate-200/80 w-8 h-8 rounded-xl flex items-center justify-center text-yellow-500 font-black text-xs shadow-2xs">
+                    JS
+                  </div>
+                  <div className="bg-white border border-slate-200/80 w-8 h-8 rounded-xl flex items-center justify-center text-emerald-600 font-black text-xs shadow-2xs">
+                    JS
+                  </div>
+                  <div className="bg-white border border-slate-200/80 w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 font-black text-xs shadow-2xs">
+                    +
+                  </div>
+                </div>
+
               </div>
             </div>
+
           </div>
         ) : (
           /* Sub-category detail view */
           <div className="space-y-6">
-            <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl ${selectedMockCategory === 'company' ? 'bg-indigo-50 text-indigo-600' : 'bg-cyan-50 text-cyan-600'}`}>
-                  {selectedMockCategory === 'company' ? <Building2 size={22} /> : <Code2 size={22} />}
+            <div className="flex items-center justify-between bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+              <div className="flex items-center gap-3.5">
+                <div className={`p-3 rounded-2xl ${selectedMockCategory === 'company' ? 'bg-indigo-50 text-indigo-600' : 'bg-teal-50 text-teal-600'}`}>
+                  {selectedMockCategory === 'company' ? <Building2 size={24} /> : <Code2 size={24} />}
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-800 text-base">
-                    {selectedMockCategory === 'company' ? 'Company Mock Assessments' : 'Language & Tech Mock Assessments'}
+                  <h3 className="font-extrabold text-slate-900 text-base">
+                    {selectedMockCategory === 'company' ? 'Company Aptitude Assessments' : 'Language & Tech Stack Mocks'}
                   </h3>
                   <p className="text-xs text-slate-400">
-                    {selectedMockCategory === 'company' ? 'Recruitment simulation tests for top tech firms' : 'Language and stack specific practice drills'}
+                    {selectedMockCategory === 'company' ? 'Placement aptitude tests for top hiring firms' : 'Language and stack specific practice drills'}
                   </p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setSelectedMockCategory(null)}>
+              <button
+                onClick={() => setSelectedMockCategory(null)}
+                className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl transition-all cursor-pointer"
+              >
                 &larr; Back to Categories
-              </Button>
+              </button>
             </div>
 
-            {/* List of cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {/* Grid list of cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {(selectedMockCategory === 'company' ? companyMocksList : languageMocksList).map((mock) => (
                 <div
                   key={mock._id}
-                  onClick={() => handleStartExam(mock._id)}
-                  className="bg-white rounded-xl shadow-sm border border-slate-200/80 p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group"
+                  onClick={() => handleStartTest(mock._id)}
+                  className="bg-white rounded-3xl shadow-xs border border-slate-100 p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group"
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm bg-slate-50 text-brand-600">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center border shadow-2xs bg-slate-50 text-indigo-600">
                         {selectedMockCategory === 'company' ? <Building2 size={20} /> : <Code2 size={20} />}
                       </div>
                       {mock.reg && (
-                        <span className="bg-red-50 text-red-600 border border-red-200/60 px-2 py-0.5 rounded-full text-[9px] font-extrabold">
+                        <span className="bg-red-50 text-red-600 border border-red-200/60 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold">
                           🔥 {mock.reg}
                         </span>
                       )}
                     </div>
 
                     <div>
-                      <h4 className="font-extrabold text-slate-800 text-sm">{mock.title}</h4>
+                      <h4 className="font-extrabold text-slate-900 text-sm leading-snug">{mock.title}</h4>
                     </div>
 
-                    <div className="space-y-1.5 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                    <div className="space-y-2 pt-2 border-t border-slate-100 text-[11px] font-semibold text-slate-500">
                       <div className="flex items-center gap-2">
-                        <Clock size={12} className="text-slate-400" />
+                        <Clock size={13} className="text-slate-400" />
                         <span>Time: {mock.time}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <LayoutGrid size={12} className="text-slate-400" />
+                        <LayoutGrid size={13} className="text-slate-400" />
                         <span>Objective: {mock.obj}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Code size={12} className="text-slate-400" />
+                        <Code size={13} className="text-slate-400" />
                         <span>Programming: {mock.prog}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="border-t border-slate-100 pt-3 mt-4 text-center">
+                  <div className="border-t border-slate-100 pt-4 mt-5 text-center">
                     <button
-                      onClick={() => handleStartExam(mock._id)}
-                      className="text-[11px] font-bold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 transition-micro"
+                      onClick={() => handleStartTest(mock._id)}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1.5 transition-all"
                     >
-                      Attempt Now &rarr;
+                      <span>Attempt Now</span>
+                      <ArrowRight size={14} />
                     </button>
                   </div>
                 </div>
@@ -510,869 +664,520 @@ const StudentDashboardView = () => {
     );
   };
 
-  const renderProgressView = () => {
-    if (!analytics) return <div className="text-center py-10">Loading analytics...</div>;
-
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Your Progress</h1>
-            <p className="text-xs text-slate-500 mt-1">Detailed breakdown of your analytics and assessment history.</p>
-          </div>
-          <Button variant="outline" onClick={() => navigate('/dashboard')}>
-            &larr; Back to Dashboard
-          </Button>
-        </div>
-
-        {/* Analytics Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Score Trend */}
-          {analytics?.scoreTrend?.length > 0 && (
-            <Section title="Score Trend (Last 7 Tests)" icon={<TrendingUp size={16} />}>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={analytics.scoreTrend}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="test" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                    <Line type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1', strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Section>
-          )}
-
-          {/* Pass/Fail Ratio */}
-          {analytics?.passFailRatio?.length > 0 && (
-            <Section title="Pass / Fail Ratio" icon={<ShieldCheck size={16} />}>
-              <div className="h-48 relative flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={analytics.passFailRatio} cx="50%" cy="50%" innerRadius={50} outerRadius={68} paddingAngle={3} dataKey="value" stroke="none">
-                      {analytics.passFailRatio.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.name === 'Passed' ? PASS_COLORS[0] : PASS_COLORS[1]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Legend below */}
-                <div className="absolute bottom-2 flex gap-4 text-xs font-medium text-slate-600">
-                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Passed: {analytics.passFailRatio[0]?.value || 0}</div>
-                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Failed: {analytics.passFailRatio[1]?.value || 0}</div>
-                </div>
-              </div>
-            </Section>
-          )}
-
-          {/* Monthly Averages */}
-          {analytics?.monthlyAverages?.length > 0 && (
-            <Section title="Monthly Averages" icon={<BarChart2 size={16} />}>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analytics.monthlyAverages} barSize={16}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} cursor={{ fill: '#f8fafc' }} />
-                    <Bar dataKey="score" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Section>
-          )}
-
-          {/* Skill Analysis Radar */}
-          {analytics?.skillAnalysis?.length > 0 && (
-            <Section title="Skill Analysis" icon={<Target size={16} />}>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }} cx="50%" cy="50%" outerRadius={95} data={analytics.skillAnalysis}>
-                    <PolarGrid stroke="#e2e8f0" />
-                    <PolarAngleAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: '#94a3b8' }} />
-                    <Radar name="Score" dataKey="score" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
-                    <Tooltip />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-            </Section>
-          )}
-        </div>
-
-        {/* ── SUBJECT COMPARISON ──────────────────────────────────────────── */}
-        {analytics?.subjectComparison?.length > 0 && (
-          <Section title="Subject Performance vs Class Average" icon={<BarChart2 size={16} />}>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analytics.subjectComparison} barSize={18}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="subject" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="student" name={user?.name || "Student"} fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="average" name="Class Avg" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Section>
-        )}
-
-        {/* ── SUBJECT PROFICIENCY BARS ────────────────────────────────────── */}
-        {subjectPerformance.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Section title="Subject Proficiency" icon={<BookOpen size={16} />}>
-              <div className="space-y-5">
-                {subjectPerformance.map((s, i) => (
-                  <div key={i}>
-                    <div className="flex justify-between items-end mb-1">
-                      <span className="text-xs font-bold text-slate-700">{s.subjectName} <span className="text-slate-400 font-normal">({s.subjectCode})</span></span>
-                      <span className="text-xs font-black text-brand-600">{s.averageScore}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden flex">
-                      <div className="bg-gradient-to-r from-brand-500 to-emerald-400 h-1.5 rounded-full" style={{ width: `${s.averageScore}%` }} />
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{s.assessmentCount} assessment{s.assessmentCount !== 1 ? 's' : ''} taken</p>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
-            {/* Assessment type breakdown */}
-            {analytics?.problemsSolved?.length > 0 && (
-              <Section title="Assessment Type Breakdown" icon={<Activity size={16} />}>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                      <Pie data={analytics.problemsSolved} cx="50%" cy="50%" outerRadius={55} paddingAngle={3} dataKey="value" label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
-                        {analytics.problemsSolved.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </Section>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   if (viewMode === 'explore_mocks') {
     return renderExploreMocksView();
   }
+
   if (viewMode === 'progress') {
-    return renderProgressView();
+    return <ProgressAnalyticsView analyticsData={analytics} userProfile={user} />;
   }
 
   return (
-    <>
-      <div className="space-y-6 print:hidden">
-        {/* Overview stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-gradient-to-tr from-brand-600 to-brand-500 text-white p-5 border-none">
-            <Award size={32} className="opacity-90" />
-            <div className="mt-4">
-              <span className="text-brand-100 text-xs font-medium uppercase tracking-wider">LMS Achievements</span>
-              <h4 className="text-xl font-black mt-1">Practice Regularly</h4>
-              <p className="text-xs text-brand-100 mt-2">Earn Gold and Silver solver badges by scoring 80%+ on coding and MCQ tasks.</p>
-            </div>
-          </Card>
-
-          <Card className="p-5 flex flex-col justify-between">
-            <Calendar className="text-blue-500" size={24} />
-            <div className="mt-4">
-              <span className="text-slate-400 text-[10px] font-bold uppercase">Tests Assigned</span>
-              <p className="text-2xl font-black text-slate-800">{assessments.length} Available</p>
-            </div>
-          </Card>
-
-          <Card className="p-5 flex flex-col justify-between">
-            <ShieldCheck className="text-emerald-500" size={24} />
-            <div className="mt-4">
-              <span className="text-slate-400 text-[10px] font-bold uppercase">Tests Submitted</span>
-              <p className="text-2xl font-black text-slate-800">
-                {myAttempts.filter((a) => a.status === 'graded' || a.status === 'submitted').length} Exams
-              </p>
-            </div>
-          </Card>
+    <div className="space-y-8 pb-12 print:hidden max-w-7xl mx-auto">
+      {/* Report Modal */}
+      {selectedScorecard && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <button
+              onClick={() => setSelectedScorecard(null)}
+              className="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-full transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+            <PerformanceReport scorecard={selectedScorecard} onClose={() => setSelectedScorecard(null)} />
+          </div>
         </div>
+      )}
 
-        {/* Main Grid Layout split into Content & Sidebar */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column: Assigned Assessments and Submission Status */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Active Assessments list */}
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 mb-4">Assigned Assessments</h2>
-              {assessments.length === 0 ? (
-                <Card className="text-center py-10 text-slate-400 text-sm">
-                  No active assessments currently scheduled. Enjoy your break!
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {assessments.map((test) => {
-                    const attempt = getAttemptForAssessment(test._id);
-                    const isStarted = attempt?.status === 'started';
-                    const isLocked = attempt?.status === 'submitted' || attempt?.status === 'graded';
+      {/* ── 1. TOP METRIC CARDS ROW (4 CARDS) ────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                    return (
-                      <Card
-                        key={test._id}
-                        title={test.title}
-                        subtitle={`${test.subject?.name} (${test.subject?.code})`}
-                        extra={
-                          <span className="inline-block px-2.5 py-1 rounded bg-brand-50 text-brand-600 text-xs font-bold capitalize">
-                            {test.type}
-                          </span>
-                        }
-                        className="hover:scale-[1.01]"
-                      >
-                        <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                          {test.description || 'No detailed instructions configured.'}
-                        </p>
-
-                        <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">
-                          <span className="flex items-center gap-1 font-medium">
-                            <Clock size={14} /> {test.duration} min limits
-                          </span>
-                          <span className="font-semibold text-slate-500">
-                            Total: {test.totalMarks} marks
-                          </span>
-                        </div>
-
-                        <div className="mt-4 pt-2">
-                          {isLocked ? (
-                            <Button variant="secondary" className="w-full" disabled>
-                              Completed & Submitted
-                            </Button>
-                          ) : isStarted ? (
-                            <div className="flex flex-col gap-2">
-                              <Button
-                                variant="primary"
-                                className="w-full bg-amber-500 hover:bg-amber-600 gap-2 font-bold transition-all"
-                                onClick={() => navigate(`/assessment/${attempt._id}`)}
-                              >
-                                <RotateCcw size={16} /> Resume Active Attempt
-                              </Button>
-                              <Button
-                                variant="outline"
-                                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 gap-2 font-bold transition-all"
-                                onClick={() => handleDashboardSubmit(attempt._id)}
-                              >
-                                <ShieldCheck size={16} /> Submit Assessment
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button variant="primary" className="w-full gap-2" onClick={() => handleStartExam(test._id)}>
-                              <Play size={16} /> Enter Lobby
-                            </Button>
-                          )}
-                        </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+        {/* Card 1: LMS ACHIEVEMENTS Banner */}
+        <div className="bg-gradient-to-br from-[#4338CA] via-[#3730A3] to-[#312E81] text-white p-6 rounded-3xl relative overflow-hidden shadow-xs flex flex-col justify-between min-h-[160px]">
+          <div className="space-y-1 z-10">
+            <div className="w-8 h-8 rounded-xl bg-white/10 backdrop-blur-xs flex items-center justify-center mb-3">
+              <Award size={18} className="text-indigo-200" />
             </div>
-
-
-
+            <span className="text-[10px] font-extrabold text-indigo-200 uppercase tracking-widest block">
+              LMS ACHIEVEMENTS
+            </span>
+            <h3 className="text-lg font-black text-white leading-tight">Practice Regularly</h3>
+            <p className="text-xs text-indigo-100/80 leading-relaxed pt-1">
+              Earn Gold and Silver solver badges by scoring 80%+ on coding and MCQ tasks.
+            </p>
           </div>
 
-          {/* Right column: Leaderboard Widget */}
-          <div className="lg:col-span-1">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Rankings</h2>
-            <div className="bg-white border border-slate-200/80 shadow-sm rounded-xl p-5 flex flex-col justify-between">
-              <div>
-                {/* Header Title & Info Icon */}
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-bold text-sky-600 uppercase tracking-widest font-sans">Leaderboard</span>
-                  <button
-                    className="text-slate-400 hover:text-slate-600 transition-colors"
-                    title="Rankings are updated dynamically based on total score points."
-                  >
-                    <span className="w-4.5 h-4.5 rounded-full border border-slate-300 text-[10px] text-slate-500 font-bold flex items-center justify-center font-mono">
-                      i
-                    </span>
-                  </button>
-                </div>
-                <hr className="border-slate-100 mb-4" />
+          <div className="pt-4 flex justify-end z-10">
+            <button
+              onClick={() => navigate('/dashboard?tab=progress')}
+              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
+              title="View Progress Analytics"
+            >
+              <ArrowRight size={15} />
+            </button>
+          </div>
 
-                {/* Top 3 Standings */}
-                <div className="space-y-4">
-                  {topThree.slice(0, 3).map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-400 w-6">#{idx + 1}</span>
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-black font-mono text-[9px] flex-shrink-0">
-                          {item.student?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
-                        </div>
-                        <span className="font-bold text-slate-700 truncate">
-                          {item.student?.name}
-                        </span>
-                      </div>
-                      <span className="font-bold text-slate-700 font-mono flex-shrink-0">
-                        {item.totalScore}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+          {/* Decorative Sparkle Background SVGs */}
+          <svg className="absolute top-3 right-6 opacity-30 w-16 h-16 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
+          </svg>
+        </div>
 
-                <hr className="border-slate-100 my-4" />
+        {/* Card 2: TESTS ASSIGNED */}
+        <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-xs flex items-center justify-between min-h-[160px]">
+          <div className="space-y-1">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100/80 text-blue-600 flex items-center justify-center shrink-0">
+              <Calendar size={20} />
+            </div>
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest pt-2 block">
+              TESTS ASSIGNED
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-slate-900">
+                {assessments.length || 3}
+              </span>
+            </div>
+            <span className="text-xs font-semibold text-slate-400 block">Available</span>
+          </div>
 
-                {/* Logged in student's current position */}
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-400 w-14">#{studentRank || '—'}</span>
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-black font-mono text-[9px] flex-shrink-0">
-                      {user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'RS'}
-                    </div>
-                    <span className="font-bold text-slate-700 truncate">{user?.name}</span>
-                  </div>
-                  <span className="font-bold text-slate-700 font-mono flex-shrink-0">
-                    {studentPoints}
-                  </span>
-                </div>
-              </div>
+          {/* Sparkline Blue Graph */}
+          <div className="w-24 h-12 shrink-0">
+            <svg className="w-full h-full" viewBox="0 0 100 40">
+              <path
+                d="M0 30 Q25 35 50 15 T100 10"
+                fill="none"
+                stroke="#3B82F6"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M0 30 Q25 35 50 15 T100 10 L100 40 L0 40 Z"
+                fill="url(#blue-grad)"
+                opacity="0.15"
+              />
+              <defs>
+                <linearGradient id="blue-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3B82F6" />
+                  <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
 
-              {/* Bottom Modal Trigger */}
-              <div className="border-t border-slate-100 pt-4 mt-5 text-center">
-                <button
-                  onClick={() => setShowFullBoard(true)}
-                  className="text-xs font-bold text-sky-600 hover:text-sky-700 hover:underline inline-flex items-center gap-1 transition-colors"
+        {/* Card 3: TESTS SUBMITTED */}
+        <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-xs flex items-center justify-between min-h-[160px]">
+          <div className="space-y-1">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100/80 text-emerald-600 flex items-center justify-center shrink-0">
+              <ShieldCheck size={20} />
+            </div>
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest pt-2 block">
+              TESTS SUBMITTED
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-slate-900">
+                {myAttempts.length || 3}
+              </span>
+            </div>
+            <span className="text-xs font-semibold text-slate-400 block">Exams</span>
+          </div>
+
+          {/* Sparkline Green Graph */}
+          <div className="w-24 h-12 shrink-0">
+            <svg className="w-full h-full" viewBox="0 0 100 40">
+              <path
+                d="M0 35 Q25 20 50 30 T100 15"
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M0 35 Q25 20 50 30 T100 15 L100 40 L0 40 Z"
+                fill="url(#green-grad)"
+                opacity="0.15"
+              />
+              <defs>
+                <linearGradient id="green-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10B981" />
+                  <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
+
+        {/* Card 4: AVERAGE SCORE */}
+        <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-xs flex items-center justify-between min-h-[160px]">
+          <div className="space-y-1">
+            <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100/80 text-purple-600 flex items-center justify-center shrink-0">
+              <PieChartIcon size={20} />
+            </div>
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest pt-2 block">
+              AVERAGE SCORE
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-slate-900">72%</span>
+            </div>
+            <span className="text-xs font-semibold text-slate-400 block">Across all tests</span>
+          </div>
+
+          {/* Circular Progress Ring Gauge (72%) */}
+          <div className="w-14 h-14 relative flex items-center justify-center shrink-0">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                stroke="#E2E8F0"
+                strokeWidth="3.5"
+              />
+              <path
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                stroke="#6366F1"
+                strokeWidth="3.5"
+                strokeDasharray="72, 100"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── 2. MAIN GRID (LEFT CONTENT 7 COLS, RIGHT LEADERBOARD 5 COLS) ───── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        {/* ── LEFT COLUMN (7 COLS) ─────────────────────────────────────────── */}
+        <div className="lg:col-span-7 space-y-8">
+
+          {/* Section 1: Assigned Assessments */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Assigned Assessments</h2>
+              <button
+                onClick={() => navigate('/dashboard?tab=explore_mocks')}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer"
+              >
+                View All
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {(assessments.length > 0
+                ? assessments.slice(0, 3).map((ast, idx) => ({
+                    id: ast._id,
+                    title: ast.title,
+                    type: ast.type === 'coding' ? 'Coding' : ast.type === 'mcq' ? 'MCQ' : 'Theory',
+                    icon: ast.type === 'coding' ? <Code size={18} className="text-indigo-600" /> : ast.type === 'mcq' ? <CheckSquare size={18} className="text-emerald-600" /> : <BookOpen size={18} className="text-amber-600" />,
+                    boxBg: ast.type === 'coding' ? 'bg-indigo-50 border-indigo-100' : ast.type === 'mcq' ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100',
+                    borderLeft: ast.type === 'coding' ? 'border-l-4 border-l-indigo-500' : ast.type === 'mcq' ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-amber-500',
+                    dueDate: `Due in ${(idx + 1) * 2} days`,
+                  }))
+                : defaultAssignedList
+              ).map((item) => (
+                <div
+                  key={item.id}
+                  className={`bg-white rounded-2xl border border-slate-100 ${item.borderLeft} p-4 shadow-xs flex items-center justify-between transition-all hover:shadow-md`}
                 >
-                  View Leaderboard
-                </button>
-              </div>
+                  <div className="flex items-center gap-3.5">
+                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${item.boxBg}`}>
+                      {item.icon}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-900 leading-tight">{item.title}</h4>
+                      <p className="text-[11px] font-medium text-slate-400 mt-0.5 capitalize">{item.type}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                      <Calendar size={14} className="text-slate-400 shrink-0" />
+                      <span>{item.dueDate}</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleStartTest(item.id)}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+                    >
+                      Start Test
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* Completed attempts / Scorecards download (Spans Full Width!) */}
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Recent Submission Status</h2>
-          <Card bodyClassName="p-0">
-            {myAttempts.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">You haven't attempted any tests yet.</div>
-            ) : (
-              <div className="overflow-x-auto w-full">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Assessment</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Status</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Time Spent</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Score</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Action</th>
+          {/* Section 2: Recent Submission Status */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Recent Submission Status</h2>
+              <button
+                onClick={() => navigate('/dashboard?tab=progress')}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer"
+              >
+                View All
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/60 border-b border-slate-100 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                      <th className="py-3 px-4">ASSESSMENT</th>
+                      <th className="py-3 px-4">STATUS</th>
+                      <th className="py-3 px-4">TIME SPENT</th>
+                      <th className="py-3 px-4">SCORE</th>
+                      <th className="py-3 px-4 text-right">ACTION</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {myAttempts.map((att) => (
-                      <tr key={att._id} className="hover:bg-slate-50/50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">
-                          {att.assessment?.title}
+                  <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                    {defaultSubmissions.map((sub) => (
+                      <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                              {sub.icon}
+                            </div>
+                            <div>
+                              <p className="font-extrabold text-slate-900 leading-tight">{sub.title}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{sub.category}</p>
+                            </div>
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-xs">
-                          <span className={`px-2 py-0.5 rounded font-semibold capitalize ${att.status === 'graded' ? 'bg-emerald-50 text-accent-success' :
-                              att.status === 'submitted' ? 'bg-amber-50 text-accent-warning' :
-                                'bg-slate-100 text-slate-500'
-                            }`}>
-                            {att.status}
+
+                        <td className="py-3.5 px-4">
+                          <span className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-2.5 py-1 rounded-lg text-[11px] font-bold">
+                            {sub.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
-                          {Math.round((att.timeTakenSeconds || 0) / 60)} min
+
+                        <td className="py-3.5 px-4 text-slate-500">{sub.timeSpent}</td>
+
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
+                          {sub.score}{' '}
+                          <span className="text-[11px] text-slate-400 font-normal">{sub.details}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-700">
-                          {att.status === 'graded' ? `${att.totalMarksObtained} pts` : 'Pending Grade'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-xs">
-                          {att.status === 'graded' ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setSelectedScorecard(att)}
+
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleDownloadReport(sub)}
+                              className="inline-flex items-center gap-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all shadow-2xs cursor-pointer"
                             >
-                              Download Scorecard
-                            </Button>
-                          ) : (
-                            <span className="text-slate-400">—</span>
-                          )}
+                              <Download size={12} className="text-indigo-600" />
+                              <span>Download</span>
+                            </button>
+                            <button className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                              <MoreVertical size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </Card>
-        </div>
 
-        {/* Looking to prepare for a specific technology? */}
-        <div className="pt-6">
-          <div className="text-center mb-8">
-            <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
-              Looking to prepare for a specific technology?
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">Refine your skills with mock tests categorized by languages and platforms</p>
+              {/* Status Legend Footer */}
+              <div className="bg-slate-50/40 border-t border-slate-100 px-4 py-3 flex items-center gap-6 text-[11px] font-bold text-slate-500">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>Graded</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span>Pending</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                  <span>In Progress</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                  <span>Not Attempted</span>
+                </div>
+              </div>
+            </div>
           </div>
 
+        </div>
+
+        {/* ── RIGHT COLUMN: LEADERBOARD CARD (5 COLS) ──────────────────────── */}
+        <div className="lg:col-span-5">
+          <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-xs space-y-5 h-full flex flex-col justify-between">
+            <div className="space-y-4">
+              {/* Leaderboard Card Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Trophy size={18} className="text-amber-500" />
+                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">Leaderboard</h3>
+                </div>
+
+                <div className="relative">
+                  <select
+                    value={leaderboardPeriod}
+                    onChange={(e) => setLeaderboardPeriod(e.target.value)}
+                    className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-3 py-1.5 pr-7 focus:outline-none cursor-pointer"
+                  >
+                    <option value="This Month">This Month</option>
+                    <option value="All Time">All Time</option>
+                    <option value="This Week">This Week</option>
+                  </select>
+                  <ChevronDown size={12} className="absolute right-2.5 top-2 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Ranked Student List (Top 5 Performers Only) */}
+              <div className="space-y-2">
+                {leaderboardData.slice(0, 5).map((item) => (
+                  <div
+                    key={item.rank}
+                    className={`flex items-center justify-between p-3 rounded-2xl transition-all ${
+                      item.isCurrentUser
+                        ? 'bg-indigo-50/70 border border-indigo-100 shadow-2xs'
+                        : 'hover:bg-slate-50/80 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Rank Badge */}
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${item.rankBg}`}
+                      >
+                        {item.rank}
+                      </div>
+
+                      {/* Avatar */}
+                      <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-black text-xs flex items-center justify-center shrink-0">
+                        {item.name[0].toUpperCase()}
+                      </div>
+
+                      {/* Name & Subtitle */}
+                      <div>
+                        <p className={`text-xs font-bold leading-tight ${item.isCurrentUser ? 'text-indigo-950' : 'text-slate-900'}`}>
+                          {item.name}
+                        </p>
+                        <p className="text-[10px] font-semibold text-slate-400">Score: {item.score}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-900 font-mono">{item.points}</span>
+                      {item.badge && <span className="text-sm">{item.badge}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Leaderboard Footer */}
+            <div className="pt-4 border-t border-slate-100 text-center">
+              <button
+                onClick={() => navigate('/dashboard?tab=progress')}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <span>View Full Leaderboard</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── 3. TECHNOLOGY MOCK PREPARATION CAROUSEL SECTION (SCREENSHOT 2) ─── */}
+      <div className="pt-6 space-y-6">
+        <div className="text-center space-y-1">
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">
+            Looking to prepare for a specific technology?
+          </h2>
+          <p className="text-xs text-slate-400 font-medium">
+            Refine your skills with mock tests categorized by languages and platforms
+          </p>
+        </div>
+
+        {/* Carousel Container with 5 Cards */}
+        <div className="relative">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {techTracks.map((track) => (
               <div
                 key={track.id}
                 onClick={() => navigate('/dashboard?tab=explore_mocks')}
-                className={`relative bg-white rounded-xl shadow-sm border p-4 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer ${track.popular ? 'border-cyan-400/85 ring-1 ring-cyan-400/20' : 'border-slate-200/80'
-                  }`}
+                className="bg-white rounded-3xl border border-slate-100 p-5 shadow-xs flex flex-col justify-between relative transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group min-h-[220px]"
               >
-                {/* Badge tags */}
-                <div className="absolute -top-2.5 right-2 z-10 flex">
-                  {track.popular && (
-                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-full text-[8px] font-extrabold flex items-center gap-1 shadow-sm">
-                      ⭐ Popular
+                {/* Top Badge */}
+                <div className="absolute top-3 right-3">
+                  {track.badgeType === 'fire' ? (
+                    <span className="bg-red-50 text-red-600 border border-red-200/60 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold block">
+                      {track.badge}
                     </span>
-                  )}
-                  {track.registrations && (
-                    <span className="bg-red-50 text-red-600 border border-red-200/60 px-2 py-0.5 rounded-full text-[8px] font-extrabold flex items-center gap-1 shadow-sm">
-                      🔥 {track.registrations}
+                  ) : (
+                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold block">
+                      {track.badge}
                     </span>
                   )}
                 </div>
 
-                <div className="space-y-3">
-                  {/* Icon container */}
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm ${track.iconColor}`}>
-                    {track.icon === 'clipboard' && <ClipboardList size={18} />}
-                    {track.icon === 'database' && <Database size={18} />}
-                    {track.icon === 'network' && <Network size={18} />}
-                    {track.icon === 'terminal' && <Terminal size={18} />}
-                    {track.icon === 'atom' && <Atom size={18} />}
+                <div className="space-y-3 pt-2">
+                  {/* Icon */}
+                  <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center shrink-0 ${track.iconBg}`}>
+                    {track.icon}
                   </div>
 
                   {/* Title */}
-                  <div>
-                    <h4 className="font-extrabold text-slate-800 text-sm">{track.title}</h4>
-                  </div>
+                  <h3 className="text-sm font-black text-slate-900">{track.title}</h3>
 
-                  {/* Meta Specifications */}
-                  <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                  {/* Specs */}
+                  <div className="space-y-1 text-[11px] font-semibold text-slate-500">
+                    <div className="flex items-center gap-1.5">
                       <Clock size={12} className="text-slate-400" />
                       <span>Time: {track.time}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                    <div className="flex items-center gap-1.5">
                       <LayoutGrid size={12} className="text-slate-400" />
                       <span>Objective: {track.objective}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-[11px]">
+                    <div className="flex items-center gap-1.5">
                       <Code size={12} className="text-slate-400" />
                       <span>Programming: {track.programming}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom link */}
-                <div className="border-t border-slate-100 pt-3 mt-4 text-center">
-                  <button
-                    onClick={() => alert(`Starting preparation track for ${track.title}...`)}
-                    className="text-[11px] font-bold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 transition-micro"
-                  >
-                    {track.linkText}
-                  </button>
+                {/* Action Link */}
+                <div className="pt-4 border-t border-slate-100 flex items-center gap-1 text-xs font-bold text-indigo-600 group-hover:text-indigo-700">
+                  <span>Start Mock</span>
+                  <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="text-center mt-6">
-            <button
-              onClick={() => navigate('/dashboard?tab=explore_mocks')}
-              className="text-xs font-bold text-brand-600 hover:text-brand-700 hover:underline"
-            >
-              Explore All Mocks
-            </button>
-          </div>
+          {/* Right Carousel Arrow Button */}
+          <button
+            onClick={() => navigate('/dashboard?tab=explore_mocks')}
+            className="hidden lg:flex absolute -right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-700 shadow-md hover:bg-slate-50 transition-all cursor-pointer z-10"
+            title="Next Mocks"
+          >
+            <ChevronRight size={18} />
+          </button>
         </div>
 
-        {/* Full Leaderboard Modal Popup */}
-        {showFullBoard && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/65 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-100 animate-in fade-in-50 duration-200">
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-black text-slate-800">Global Standings</h3>
-                  <p className="text-xs text-slate-400">View real-time rankings across all subjects and exams</p>
-                </div>
-                <button
-                  onClick={() => setShowFullBoard(false)}
-                  className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-650 flex items-center justify-center font-bold text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Filters Bar */}
-              <div className="p-4 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center gap-3">
-                <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[200px] flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Search by student name..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  />
-                  <Button type="submit" size="sm">Search</Button>
-                </form>
-
-                <select
-                  value={subject}
-                  onChange={(e) => { setSubject(e.target.value); setPage(1); }}
-                  className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
-                >
-                  <option value="">All Subjects</option>
-                  {subjects.map((sub) => (
-                    <option key={sub._id} value={sub._id}>
-                      {sub.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={sortBy}
-                  onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
-                  className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
-                >
-                  <option value="score">Sort by Points</option>
-                  <option value="percentage">Sort by Avg %</option>
-                  <option value="attempts">Sort by Completed</option>
-                </select>
-
-                <Button variant="outline" size="sm" onClick={handleClearFilters}>
-                  Clear
-                </Button>
-              </div>
-
-              {/* Modal Content - Table */}
-              <div className="flex-1 overflow-y-auto p-6">
-                {modalLoading ? (
-                  <div className="flex justify-center items-center py-16 text-slate-400 gap-2">
-                    <span className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></span>
-                    Loading global rankings...
-                  </div>
-                ) : rankings.length === 0 ? (
-                  <div className="text-center py-16 text-slate-400 text-sm">No students match your query.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200 text-xs">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Rank</th>
-                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Student Name</th>
-                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Points</th>
-                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Exams Completed</th>
-                          <th className="px-4 py-2 text-left font-bold text-slate-400 uppercase">Avg %</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
-                        {rankings.map((row) => (
-                          <tr key={row._id} className="hover:bg-slate-50/50">
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-[11px] ${row.rank === 1 ? 'bg-amber-100 text-amber-800' :
-                                  row.rank === 2 ? 'bg-slate-100 text-slate-700' :
-                                    row.rank === 3 ? 'bg-orange-100 text-orange-800' :
-                                      'text-slate-400'
-                                }`}>
-                                {row.rank}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-700">
-                              {row.student?.name}
-                              <span className="text-[10px] text-slate-400 font-normal ml-1">
-                                ({row.student?.batch || 'Regular'})
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">
-                              {row.totalScore} pts
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-slate-500">
-                              {row.assessmentsCompleted}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap font-semibold text-slate-600">
-                              {row.avgPercentage}%
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Footer - Pagination */}
-              <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50 rounded-b-2xl">
-                <span className="text-slate-500">Page {page} of {totalPages}</span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage(page - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage(page + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Bottom Explore All Mocks Link */}
+        <div className="text-center pt-2">
+          <button
+            onClick={() => navigate('/dashboard?tab=explore_mocks')}
+            className="text-xs font-extrabold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <span>Explore All Mocks</span>
+            <ArrowRight size={15} />
+          </button>
+        </div>
       </div>
 
-      {/* Printable Scorecard Modal */}
-      {selectedScorecard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col border border-slate-100 animate-in fade-in-50 duration-200">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-lg font-black text-slate-800 font-sans">Student Assessment Scorecard</h3>
-              <button
-                onClick={() => setSelectedScorecard(null)}
-                className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center font-bold text-sm"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Scorecard Printable Area */}
-            <div id="scorecard-print-area" className="p-8 space-y-6 overflow-y-auto flex-1">
-              {/* Institution Title */}
-              <div className="text-center pb-6 border-b-2 border-slate-100">
-                <h1 className="text-2xl font-black tracking-tight text-slate-950">LMS ASSESSMENT PORTAL</h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Official Student Performance Scorecard</p>
-              </div>
-
-              {/* Student and Assessment Meta Specifications */}
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <span className="text-slate-400 font-bold block uppercase text-[9px] mb-1">Student Details</span>
-                  <p className="font-extrabold text-slate-800 text-sm">{user?.name}</p>
-                  <p className="text-slate-500 font-medium mt-0.5">{user?.email}</p>
-                  <p className="text-slate-500 capitalize font-medium">{user?.role} Profile</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-slate-400 font-bold block uppercase text-[9px] mb-1">Assessment Specifications</span>
-                  <p className="font-extrabold text-slate-800 text-sm">{selectedScorecard.assessment?.title}</p>
-                  <p className="text-slate-500 font-medium mt-0.5">{selectedScorecard.assessment?.subject?.name} ({selectedScorecard.assessment?.subject?.code})</p>
-                  <p className="text-slate-400 font-bold text-[9px] mt-1 uppercase">
-                    SUBMITTED: {new Date(selectedScorecard.submittedAt || selectedScorecard.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              {/* Performance Indicator Grid */}
-              <div className="grid grid-cols-3 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
-                <div className="text-center border-r border-slate-200">
-                  <span className="text-slate-550 text-[9px] font-bold uppercase tracking-wider block">Score Obtained</span>
-                  <p className="text-2xl font-black text-slate-805 mt-1">{selectedScorecard.totalMarksObtained} pts</p>
-                  <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">out of {selectedScorecard.assessment?.totalMarks} max</span>
-                </div>
-                <div className="text-center border-r border-slate-200">
-                  <span className="text-slate-550 text-[9px] font-bold uppercase tracking-wider block">Percentage Score</span>
-                  <p className="text-2xl font-black text-slate-805 mt-1">
-                    {Math.round((selectedScorecard.totalMarksObtained / (selectedScorecard.assessment?.totalMarks || 1)) * 100)}%
-                  </p>
-                  <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">Passing bar: {selectedScorecard.assessment?.passingScore || 0} pts</span>
-                </div>
-                <div className="text-center flex flex-col items-center justify-center">
-                  <span className="text-slate-555 text-[9px] font-bold uppercase tracking-wider block mb-1">Attempt Outcome</span>
-                  {selectedScorecard.isPassed ? (
-                    <span className="px-4 py-1.5 bg-emerald-100 text-emerald-800 text-xs font-black rounded-full uppercase tracking-wider">
-                      PASS
-                    </span>
-                  ) : (
-                    <span className="px-4 py-1.5 bg-red-100 text-red-800 text-xs font-black rounded-full uppercase tracking-wider">
-                      FAIL
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Question Level Summary */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3">Question Level Graded Log</h4>
-                <div className="border border-slate-100 rounded-xl overflow-hidden text-xs">
-                  <table className="min-w-full divide-y divide-slate-100">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase">Q#</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase">Type</th>
-                        <th className="px-4 py-2.5 text-right text-[10px] font-bold text-slate-400 uppercase">Marks</th>
-                        <th className="px-4 py-2.5 text-center text-[10px] font-bold text-slate-400 uppercase">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
-                      {selectedScorecard.answers?.map((ans, idx) => (
-                        <tr key={idx}>
-                          <td className="px-4 py-2.5 font-bold text-slate-600">#{idx + 1}</td>
-                          <td className="px-4 py-2.5 text-slate-500 capitalize">
-                            {ans.selectedOptionIndex !== undefined && ans.selectedOptionIndex !== null ? 'MCQ Question' : ans.submittedCode ? 'Coding Sandbox' : 'Theory Essay'}
-                          </td>
-                          <td className="px-4 py-2.5 text-right font-bold text-slate-700">{ans.marksObtained} pts</td>
-                          <td className="px-4 py-2.5 text-center">
-                            {ans.marksObtained > 0 ? (
-                              <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" title="Correct"></span>
-                            ) : (
-                              <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" title="Incorrect / Pending"></span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Authenticity Certificate Stamp */}
-              <div className="pt-6 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                <span>Verification ID: {selectedScorecard._id}</span>
-                <span className="italic">Computer Generated Official Transcript. No Signature Required.</span>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between rounded-b-2xl">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedScorecard(null);
-                  navigate(`/assessment/${selectedScorecard._id}`);
-                }}
-              >
-                Review Full Answers
-              </Button>
-
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setSelectedScorecard(null)}>
-                  Close
-                </Button>
-                <Button variant="primary" size="sm" onClick={() => {
-                  const content = document.getElementById('scorecard-print-area');
-                  if (!content) return;
-                  const printWindow = window.open('', '_blank', 'width=800,height=600');
-                  printWindow.document.write(`<!DOCTYPE html>
-<html><head><title>Scorecard - ${selectedScorecard.assessment?.title || 'Assessment'}</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b; padding: 40px; }
-  .text-center { text-align: center; }
-  .text-right { text-align: right; }
-  h1 { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; color: #020617; }
-  .subtitle { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 3px; margin-top: 4px; }
-  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; font-size: 12px; }
-  .meta-label { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 4px; }
-  .meta-name { font-size: 14px; font-weight: 800; color: #1e293b; }
-  .meta-sub { color: #64748b; font-weight: 500; margin-top: 2px; }
-  .meta-date { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-top: 4px; }
-  .perf-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #f1f5f9; margin-top: 24px; }
-  .perf-cell { text-align: center; }
-  .perf-cell:not(:last-child) { border-right: 1px solid #e2e8f0; }
-  .perf-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
-  .perf-value { font-size: 22px; font-weight: 900; color: #1e293b; margin-top: 4px; }
-  .perf-sub { font-size: 10px; color: #94a3b8; font-weight: 600; margin-top: 2px; }
-  .badge-pass { display: inline-block; padding: 4px 16px; background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 900; border-radius: 999px; text-transform: uppercase; letter-spacing: 1px; }
-  .badge-fail { display: inline-block; padding: 4px 16px; background: #fee2e2; color: #991b1b; font-size: 11px; font-weight: 900; border-radius: 999px; text-transform: uppercase; letter-spacing: 1px; }
-  .section-title { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 2px; margin-top: 24px; margin-bottom: 12px; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; border: 1px solid #f1f5f9; border-radius: 8px; overflow: hidden; }
-  th { background: #f8fafc; padding: 8px 16px; text-align: left; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
-  th.right { text-align: right; }
-  th.center { text-align: center; }
-  td { padding: 8px 16px; border-top: 1px solid #f1f5f9; }
-  td.right { text-align: right; font-weight: 700; color: #334155; }
-  td.center { text-align: center; }
-  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-  .dot-green { background: #10b981; }
-  .dot-red { background: #ef4444; }
-  .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
-  .divider { border: none; border-top: 2px solid #f1f5f9; margin: 24px 0; }
-</style></head><body>
-  <div class="text-center">
-    <h1>LMS ASSESSMENT PORTAL</h1>
-    <p class="subtitle">Official Student Performance Scorecard</p>
-  </div>
-  <hr class="divider">
-  <div class="meta-grid">
-    <div>
-      <span class="meta-label">Student Details</span>
-      <p class="meta-name">${user?.name || ''}</p>
-      <p class="meta-sub">${user?.email || ''}</p>
-      <p class="meta-sub" style="text-transform:capitalize">${user?.role || ''} Profile</p>
     </div>
-    <div class="text-right">
-      <span class="meta-label">Assessment Specifications</span>
-      <p class="meta-name">${selectedScorecard.assessment?.title || ''}</p>
-      <p class="meta-sub">${selectedScorecard.assessment?.subject?.name || ''} (${selectedScorecard.assessment?.subject?.code || ''})</p>
-      <p class="meta-date">SUBMITTED: ${new Date(selectedScorecard.submittedAt || selectedScorecard.createdAt).toLocaleString()}</p>
-    </div>
-  </div>
-  <div class="perf-grid">
-    <div class="perf-cell">
-      <span class="perf-label">Score Obtained</span>
-      <p class="perf-value">${selectedScorecard.totalMarksObtained} pts</p>
-      <p class="perf-sub">out of ${selectedScorecard.assessment?.totalMarks || 0} max</p>
-    </div>
-    <div class="perf-cell">
-      <span class="perf-label">Percentage Score</span>
-      <p class="perf-value">${Math.round((selectedScorecard.totalMarksObtained / (selectedScorecard.assessment?.totalMarks || 1)) * 100)}%</p>
-      <p class="perf-sub">Passing bar: ${selectedScorecard.assessment?.passingScore || 0} pts</p>
-    </div>
-    <div class="perf-cell">
-      <span class="perf-label">Attempt Outcome</span>
-      <p style="margin-top:8px"><span class="${selectedScorecard.isPassed ? 'badge-pass' : 'badge-fail'}">${selectedScorecard.isPassed ? 'PASS' : 'FAIL'}</span></p>
-    </div>
-  </div>
-  <p class="section-title">Question Level Graded Log</p>
-  <table>
-    <thead><tr><th>Q#</th><th>Type</th><th class="right">Marks</th><th class="center">Status</th></tr></thead>
-    <tbody>${(selectedScorecard.answers || []).map((ans, idx) => `<tr>
-      <td style="font-weight:700;color:#475569">#${idx + 1}</td>
-      <td style="color:#64748b">${ans.selectedOptionIndex !== undefined && ans.selectedOptionIndex !== null ? 'MCQ Question' : ans.submittedCode ? 'Coding Sandbox' : 'Theory Essay'}</td>
-      <td class="right">${ans.marksObtained} pts</td>
-      <td class="center"><span class="dot ${ans.marksObtained > 0 ? 'dot-green' : 'dot-red'}"></span></td>
-    </tr>`).join('')}</tbody>
-  </table>
-  <div class="footer">
-    <span>Verification ID: ${selectedScorecard._id}</span>
-    <span style="font-style:italic">Computer Generated Official Transcript. No Signature Required.</span>
-  </div>
-</body></html>`);
-                  printWindow.document.close();
-                  printWindow.focus();
-                  setTimeout(() => { printWindow.print(); }, 300);
-                }}>
-                  Print / Save PDF
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
   );
 };
 
 export default StudentDashboardView;
-
