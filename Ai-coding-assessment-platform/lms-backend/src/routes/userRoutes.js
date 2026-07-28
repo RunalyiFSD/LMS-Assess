@@ -7,7 +7,8 @@ const router = express.Router();
 
 router.use(protect);
 
-// Student profile pages (accessible to all authenticated users for viewing public profiles)
+// Student profile pages & user directory for messaging
+router.get('/directory', userController.getUserDirectory);
 router.get('/profile/:id', userController.getUserProfile);
 router.get('/profile/:id/analytics', userController.getUserAnalytics);
 router.put('/profile', userController.updateUserProfile);

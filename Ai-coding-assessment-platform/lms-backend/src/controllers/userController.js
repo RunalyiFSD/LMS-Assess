@@ -381,3 +381,37 @@ exports.updateUserProfile = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Get user directory (students & instructors) for messaging
+// @route   GET /api/users/directory
+// @access  Protected
+exports.getUserDirectory = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const userRole = req.user.role;
+
+    const filter = { _id: { $ne: userId } };
+
+    // Role-based messaging visibility rules:
+    // - Students can ONLY see and interact with Instructors
+    // - Instructors & Admins can interact with Students, Instructors, and Admins
+    if (userRole === 'student') {
+      filter.role = 'instructor';
+    }
+
+    const users = await User.find(filter)
+      .select('name email role profilePicture college department batch')
+      .sort({ role: 1, name: 1 });
+
+    res.status(200).json({
+      status: 'success',
+      results: users.length,
+      data: {
+        users,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -83,13 +83,22 @@ exports.login = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return next(new AppError('Please provide an email and password', 400));
+      return next(new AppError('Please provide an email or username and password', 400));
     }
 
-    // Find user and select password explicitly
-    const user = await User.findOne({ email }).select('+password');
+    const trimmed = email.trim();
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Find user by email or name (case-insensitive) and select password explicitly
+    const user = await User.findOne({
+      $or: [
+        { email: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+        { name: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+      ],
+    }).select('+password');
+
     if (!user || !(await user.comparePassword(password))) {
-      return next(new AppError('Incorrect email or password', 401));
+      return next(new AppError('Incorrect email/username or password', 401));
     }
 
     sendTokenResponse(user, 200, res);

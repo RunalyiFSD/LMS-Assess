@@ -11,7 +11,9 @@ import {
   Trophy,
   History,
   User,
-  TrendingUp
+  TrendingUp,
+  Calendar,
+  MessageSquare
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -23,6 +25,8 @@ const Sidebar = () => {
   const getNavLinks = () => {
     const common = [
       { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+      { to: '/schedule', label: 'Assessment Calendar', icon: <Calendar size={18} /> },
+      { to: '/messages', label: 'Messages', icon: <MessageSquare size={18} /> },
       { to: '/dashboard?tab=profile', label: 'Profile Settings', icon: <User size={18} /> }
     ];
 

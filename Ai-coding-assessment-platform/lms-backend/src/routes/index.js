@@ -8,6 +8,7 @@ const notificationRoutes = require('./notificationRoutes');
 const leaderboardRoutes = require('./leaderboardRoutes');
 const userRoutes = require('./userRoutes');
 const publicRoutes = require('./publicRoutes');
+const messageRoutes = require('./messageRoutes');
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ router.use('/attempts', attemptRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/users', userRoutes);
+router.use('/messages', messageRoutes);
 router.use('/public', publicRoutes); // No auth — safe public data only
 
 module.exports = router;
