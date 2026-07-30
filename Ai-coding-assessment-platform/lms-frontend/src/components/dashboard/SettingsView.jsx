@@ -59,7 +59,7 @@ const SettingsView = () => {
   const [appearance, setAppearance] = useState({
     mode: 'Light',
     themeColor: 'purple',
-    fontSize: 14,
+    fontSize: 16,
     sidebarCollapse: false,
     highContrast: false,
   });
@@ -156,10 +156,8 @@ const SettingsView = () => {
       applyAppTheme(appearance.themeColor);
     }
 
-    // Font size scaling
-    if (appearance.fontSize) {
-      document.documentElement.style.fontSize = `${appearance.fontSize}px`;
-    }
+    // Ensure root font size remains standard and consistent across the application
+    document.documentElement.style.fontSize = '';
   }, [appearance]);
 
   const showToast = (msg) => {

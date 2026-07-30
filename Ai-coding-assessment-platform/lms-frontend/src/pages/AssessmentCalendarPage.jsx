@@ -548,12 +548,13 @@ const AssessmentCalendarPage = () => {
                 
                 {/* Left Controls: Today & Month Navigator */}
                 <div className="flex items-center gap-3">
-                  <Button
+                  <button
+                    type="button"
                     onClick={handleToday}
-                    className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold px-4 py-2 rounded-xl"
+                    className="bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-extrabold px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer"
                   >
                     Today
-                  </Button>
+                  </button>
 
                   <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/80 rounded-xl p-1">
                     <button

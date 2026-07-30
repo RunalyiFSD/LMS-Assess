@@ -5,21 +5,134 @@ const Assessment = require('../models/Assessment');
 const Subject = require('../models/Subject');
 const AppError = require('../utils/AppError');
 
-// @desc    Get all users (Admin only)
+// @desc    Get all users with search and filter options (Admin only)
 // @route   GET /api/users
 // @access  Admin
 exports.getAllUsers = async (req, res, next) => {
   try {
-    const { role } = req.query;
+    const { role, search, department, batch } = req.query;
     const filter = {};
-    if (role) filter.role = role;
 
-    const users = await User.find(filter);
+    if (role && role !== 'all') {
+      filter.role = role;
+    }
+    if (department) {
+      filter.department = { $regex: department, $options: 'i' };
+    }
+    if (batch) {
+      filter.batch = { $regex: batch, $options: 'i' };
+    }
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { college: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const users = await User.find(filter).sort({ createdAt: -1 });
+
     res.status(200).json({
       status: 'success',
       results: users.length,
       data: {
         users,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get single user details by ID for Admin
+// @route   GET /api/users/:id
+// @access  Admin
+exports.getUserByIdAdmin = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    let stats = {};
+    if (user.role === 'student') {
+      const attempts = await Attempt.find({ student: user._id });
+      const results = await Result.find({ student: user._id });
+
+      const completedCount = attempts.filter((a) => a.status === 'graded').length;
+      const passCount = results.filter((r) => r.status === 'pass').length;
+      const avgPercentage = results.length > 0
+        ? Math.round((results.reduce((acc, r) => acc + (r.percentage || 0), 0) / results.length) * 100) / 100
+        : 0;
+
+      stats = {
+        totalAttempts: attempts.length,
+        completedAttempts: completedCount,
+        passCount,
+        avgPercentage,
+        resultsCount: results.length,
+      };
+    } else if (user.role === 'instructor') {
+      const createdAssessmentsCount = await Assessment.countDocuments({ createdBy: user._id });
+      stats = {
+        createdAssessmentsCount,
+      };
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user,
+        stats,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update user details by Admin
+// @route   PUT /api/users/:id
+// @access  Admin
+exports.updateUserByAdmin = async (req, res, next) => {
+  try {
+    const { name, email, password, role, college, department, batch, bio, language, experience } = req.body;
+    
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    // Email duplication check if email is changed
+    if (email && email.toLowerCase() !== user.email.toLowerCase()) {
+      const emailExists = await User.findOne({ email: email.toLowerCase() });
+      if (emailExists) {
+        return next(new AppError('Email address is already in use by another user', 400));
+      }
+      user.email = email;
+    }
+
+    if (name !== undefined) user.name = name;
+    if (role !== undefined) user.role = role;
+    if (college !== undefined) user.college = college;
+    if (department !== undefined) user.department = department;
+    if (batch !== undefined) user.batch = batch;
+    if (bio !== undefined) user.bio = bio;
+    if (language !== undefined) user.language = language;
+    if (experience !== undefined) user.experience = experience;
+
+    // Only update password if non-empty string provided
+    if (password && password.trim() !== '') {
+      user.password = password;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'User account updated successfully',
+      data: {
+        user,
       },
     });
   } catch (error) {

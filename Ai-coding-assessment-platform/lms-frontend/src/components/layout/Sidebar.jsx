@@ -14,7 +14,13 @@ import {
   TrendingUp,
   Calendar,
   MessageSquare,
-  Settings
+  Settings,
+  Building2,
+  Layers,
+  ClipboardList,
+  BarChart3,
+  FileText,
+  Headphones
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -24,21 +30,28 @@ const Sidebar = () => {
 
   // Define navigation items based on User roles
   const getNavLinks = () => {
+    if (user.role === 'admin') {
+      return [
+        { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+        { to: '/admin/users', label: 'Students & Instructors', icon: <Users size={18} /> },
+        { to: '/admin/departments', label: 'Departments', icon: <Building2 size={18} /> },
+        { to: '/admin/batches', label: 'Batches', icon: <Layers size={18} /> },
+        { to: '/admin/assessments', label: 'Tests & Assessments', icon: <ClipboardList size={18} /> },
+        { to: '/admin/analytics', label: 'Reports & Analytics', icon: <BarChart3 size={18} /> },
+        { to: '/admin/logs', label: 'Activity Logs', icon: <FileText size={18} /> },
+        { to: '/admin/support', label: 'Support', icon: <Headphones size={18} /> },
+        { to: '/dashboard?tab=profile', label: 'Profile', icon: <User size={18} /> },
+        { to: '/dashboard?tab=settings', label: 'Account & App Settings', icon: <Settings size={18} /> }
+      ];
+    }
+
     const common = [
       { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
       { to: '/schedule', label: 'Assessment Calendar', icon: <Calendar size={18} /> },
       { to: '/messages', label: 'Messages', icon: <MessageSquare size={18} /> },
-      { to: '/dashboard?tab=profile', label: 'Profile Settings', icon: <User size={18} /> },
+      { to: '/dashboard?tab=profile', label: 'Profile', icon: <User size={18} /> },
       { to: '/dashboard?tab=settings', label: 'Settings', icon: <Settings size={18} /> }
     ];
-
-    if (user.role === 'admin') {
-      return [
-        ...common,
-        { to: '/admin/users', label: 'Students & Instructors', icon: <Users size={18} /> },
-        { to: '/admin/subjects', label: 'Subjects', icon: <BookOpen size={18} /> }
-      ];
-    }
 
     if (user.role === 'instructor') {
       return [

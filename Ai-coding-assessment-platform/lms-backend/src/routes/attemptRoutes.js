@@ -14,6 +14,7 @@ router.put('/:id/auto-save', authorize('student'), attemptController.autoSaveAtt
 router.post('/:id/submit', authorize('student'), attemptController.submitAssessment);
 router.post('/:id/run-code', authorize('student'), attemptController.runCode);
 
+router.get('/all-submissions', authorize('admin', 'instructor'), attemptController.getAllSubmissions);
 router.get('/assessment/:assessmentId', authorize('admin', 'instructor'), attemptController.getAssessmentAttempts);
 router.put('/:id/grade', authorize('admin', 'instructor'), attemptController.gradeTheoryAttempt);
 

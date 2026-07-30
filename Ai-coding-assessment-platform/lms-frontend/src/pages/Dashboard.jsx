@@ -648,93 +648,95 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Card 3: Webcam Video Bio */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shrink-0">
-                <Video size={20} />
+          {/* Card 3: Webcam Video Bio (Students Only) */}
+          {user?.role === 'student' && (
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-xs space-y-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                  <Video size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">Webcam Video Bio</h3>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5">Record a short video to introduce yourself.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">Webcam Video Bio</h3>
-                <p className="text-xs text-slate-400 font-medium mt-0.5">Record a short video to introduce yourself.</p>
-              </div>
-            </div>
 
-            <div className="border border-slate-200/80 bg-slate-50/50 rounded-2xl p-8 text-center flex flex-col items-center justify-center min-h-44 relative overflow-hidden">
-              {videoPreview ? (
-                <video src={videoPreview} controls className="w-full h-44 object-cover rounded-xl" />
-              ) : profileForm.videoBioUrl ? (
-                <video src={profileForm.videoBioUrl} controls className="w-full h-44 object-cover rounded-xl" />
-              ) : (
-                <div className="flex flex-col items-center justify-center">
-                  <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center mb-2 shadow-2xs">
-                    <Video size={20} />
+              <div className="border border-slate-200/80 bg-slate-50/50 rounded-2xl p-8 text-center flex flex-col items-center justify-center min-h-44 relative overflow-hidden">
+                {videoPreview ? (
+                  <video src={videoPreview} controls className="w-full h-44 object-cover rounded-xl" />
+                ) : profileForm.videoBioUrl ? (
+                  <video src={profileForm.videoBioUrl} controls className="w-full h-44 object-cover rounded-xl" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center mb-2 shadow-2xs">
+                      <Video size={20} />
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-700">No Video Recorded</h4>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">Record a 5-10 second video introducing yourself.</p>
                   </div>
-                  <h4 className="text-xs font-bold text-slate-700">No Video Recorded</h4>
-                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Record a 5-10 second video introducing yourself.</p>
-                </div>
-              )}
+                )}
 
-              {isRecording && (
-                <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10">
-                  <video ref={videoRef} autoPlay muted className="w-full h-full object-cover" />
-                  <span className="absolute top-3 right-3 bg-red-600/85 text-white font-extrabold text-xs px-2.5 py-1 rounded-full animate-pulse flex items-center gap-1.5 shadow-sm">
-                    ● Recording {recordingTime}s
-                  </span>
-                </div>
-              )}
-            </div>
+                {isRecording && (
+                  <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-10">
+                    <video ref={videoRef} autoPlay muted className="w-full h-full object-cover" />
+                    <span className="absolute top-3 right-3 bg-red-600/85 text-white font-extrabold text-xs px-2.5 py-1 rounded-full animate-pulse flex items-center gap-1.5 shadow-sm">
+                      ● Recording {recordingTime}s
+                    </span>
+                  </div>
+                )}
+              </div>
 
-            {/* Buttons */}
-            <div className="flex items-center gap-3">
-              {!isRecording ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={startRecording}
-                    className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold px-4 py-2.5 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-red-500 inline-block animate-pulse"></span>
-                    <span>Record Video</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById('browse-video-input').click()}
-                    className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold px-4 py-2.5 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer"
-                  >
-                    <Upload size={14} className="text-slate-500" />
-                    <span>Upload Video</span>
-                  </button>
-                  <input
-                    type="file"
-                    id="browse-video-input"
-                    accept="video/*"
-                    onChange={handleBrowseVideo}
-                    className="hidden"
-                  />
-
-                  {(videoPreview || profileForm.videoBioUrl) && (
+              {/* Buttons */}
+              <div className="flex items-center gap-3">
+                {!isRecording ? (
+                  <>
                     <button
                       type="button"
-                      onClick={removeVideo}
-                      className="flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 ml-auto"
+                      onClick={startRecording}
+                      className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold px-4 py-2.5 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer"
                     >
-                      <Trash size={14} /> Remove
+                      <span className="w-2 h-2 rounded-full bg-red-500 inline-block animate-pulse"></span>
+                      <span>Record Video</span>
                     </button>
-                  )}
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={stopRecording}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm cursor-pointer"
-                >
-                  Stop Recording
-                </button>
-              )}
+
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('browse-video-input').click()}
+                      className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold px-4 py-2.5 rounded-xl shadow-2xs transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Upload size={14} className="text-slate-500" />
+                      <span>Upload Video</span>
+                    </button>
+                    <input
+                      type="file"
+                      id="browse-video-input"
+                      accept="video/*"
+                      onChange={handleBrowseVideo}
+                      className="hidden"
+                    />
+
+                    {(videoPreview || profileForm.videoBioUrl) && (
+                      <button
+                        type="button"
+                        onClick={removeVideo}
+                        className="flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 ml-auto"
+                      >
+                        <Trash size={14} /> Remove
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={stopRecording}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm cursor-pointer"
+                  >
+                    Stop Recording
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Bottom Save Action Button */}
           <button
@@ -945,48 +947,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Elegant glassmorphic tabs row */}
-      <div className="flex gap-4 border-b border-slate-200 mb-6 print:hidden">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`pb-3 text-sm font-bold transition-all relative ${
-            activeTab === 'dashboard'
-              ? 'text-brand-600'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Dashboard Workspace
-          {activeTab === 'dashboard' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-full"></span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`pb-3 text-sm font-bold transition-all relative ${
-            activeTab === 'profile'
-              ? 'text-brand-600'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Edit Profile Settings
-          {activeTab === 'profile' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-full"></span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`pb-3 text-sm font-bold transition-all relative ${
-            activeTab === 'settings'
-              ? 'text-brand-600'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          Account & App Settings
-          {activeTab === 'settings' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-full"></span>
-          )}
-        </button>
-      </div>
+      {/* Tab content view rendering */}
 
       <div className="mt-4">
         {activeTab === 'dashboard' ? (

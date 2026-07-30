@@ -21,6 +21,10 @@ router
   .get(userController.getAllUsers)
   .post(userController.createUser);
 
-router.route('/:id').delete(userController.deleteUser);
+router
+  .route('/:id')
+  .get(userController.getUserByIdAdmin)
+  .put(userController.updateUserByAdmin)
+  .delete(userController.deleteUser);
 
 module.exports = router;

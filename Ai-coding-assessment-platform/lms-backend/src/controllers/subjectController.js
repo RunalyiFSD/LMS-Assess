@@ -6,7 +6,70 @@ const AppError = require('../utils/AppError');
 // @access  Protected
 exports.getAllSubjects = async (req, res, next) => {
   try {
-    const subjects = await Subject.find().populate('createdBy', 'name email');
+    let subjects = await Subject.find().populate('createdBy', 'name email');
+
+    // Auto-seed default course subjects if collection is empty
+    if (subjects.length === 0) {
+      const User = require('../models/User');
+      const creator = (await User.findOne({ role: { $in: ['admin', 'instructor'] } })) || (await User.findOne());
+
+      if (creator) {
+        const defaultSubjects = [
+          {
+            name: 'Data Structures & Algorithms',
+            code: 'CS-102',
+            description: 'Binary trees, execution runtime constraints, sorting, search algorithms, and stack operations.',
+            createdBy: creator._id,
+          },
+          {
+            name: 'Database Management Systems',
+            code: 'CS-103',
+            description: 'SQL queries, relational calculus, MongoDB schemas, aggregation pipelines, and indexing.',
+            createdBy: creator._id,
+          },
+          {
+            name: 'Object-Oriented Programming',
+            code: 'CS-101',
+            description: 'Classes, polymorphism, inheritance, encapsulation, Java and C++ design patterns.',
+            createdBy: creator._id,
+          },
+          {
+            name: 'Web Technologies & MERN Stack',
+            code: 'IT-201',
+            description: 'React.js frontend state management, Node.js REST APIs, Express middleware, and MongoDB document design.',
+            createdBy: creator._id,
+          },
+          {
+            name: 'Operating Systems & System Programming',
+            code: 'CS-204',
+            description: 'Process scheduling, thread synchronization, memory management, virtual memory, and POSIX system calls.',
+            createdBy: creator._id,
+          },
+          {
+            name: 'Computer Networks & Security',
+            code: 'IT-205',
+            description: 'TCP/IP protocol stack, socket programming, OSI model, HTTP/HTTPS security, and routing algorithms.',
+            createdBy: creator._id,
+          },
+          {
+            name: 'Artificial Intelligence & Machine Learning',
+            code: 'SE-301',
+            description: 'Neural networks, supervised learning, model evaluation, Python machine learning frameworks.',
+            createdBy: creator._id,
+          },
+          {
+            name: 'Software Engineering & System Architecture',
+            code: 'CS-305',
+            description: 'Agile methodologies, UML diagrams, microservices architecture, CI/CD pipelines, and software testing.',
+            createdBy: creator._id,
+          },
+        ];
+
+        await Subject.insertMany(defaultSubjects);
+        subjects = await Subject.find().populate('createdBy', 'name email');
+      }
+    }
+
     res.status(200).json({
       status: 'success',
       results: subjects.length,
