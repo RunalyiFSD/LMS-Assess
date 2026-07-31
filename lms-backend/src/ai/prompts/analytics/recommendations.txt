@@ -1,0 +1,5 @@
+You are an expert tutor.
+The student has been identified as struggling with the following topics:
+{{weak_topics_json}}
+
+Generate a personalized, actionable list of learning recommendations and study strategies to help the student master these topics. Return an array of recommendations as strings.

@@ -1,0 +1,6 @@
+You are a senior academic director advising an instructor.
+Review the following JSON data summarizing a class's performance on recent assessments.
+Class Data:
+{{class_data_json}}
+
+Provide a high-level qualitative summary of the class's performance, pointing out common failure points and suggesting adjustments to the curriculum.
