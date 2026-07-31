@@ -1,6 +1,9 @@
 const express = require('express');
 const { protect, restrictTo } = require('../../middleware/authMiddleware');
 const { aiLimiter } = require('../../middleware/rateLimitMiddleware');
+const GenerationController = require('../controllers/generationController');
+const EvaluationController = require('../controllers/evaluationController');
+const AnalyticsController = require('../controllers/analyticsController');
 
 const router = express.Router();
 
@@ -19,13 +22,22 @@ const notImplemented = (req, res) => {
 };
 
 // ---------------------------------------------------------
+// System & Health Endpoints
+// ---------------------------------------------------------
+
+// @desc    Get AI service health and config status
+// @route   GET /api/v1/ai/health
+// @access  Public
+router.get('/health', GenerationController.healthCheck);
+
+// ---------------------------------------------------------
 // Generation Endpoints (Instructor/Admin)
 // ---------------------------------------------------------
 
 // @desc    Generate questions (MCQ, Coding, Theory) based on a topic
 // @route   POST /api/v1/ai/generate/questions
 // @access  Private (Instructor, Admin)
-router.post('/generate/questions', protect, restrictTo('instructor', 'admin'), aiLimiter, notImplemented);
+router.post('/generate/questions', protect, restrictTo('instructor', 'admin'), aiLimiter, GenerationController.generateQuestions);
 
 // @desc    Generate an entire assessment structure based on a syllabus
 // @route   POST /api/v1/ai/generate/assessment
@@ -40,12 +52,17 @@ router.post('/generate/assessment', protect, restrictTo('instructor', 'admin'), 
 // @desc    Evaluate a theory answer
 // @route   POST /api/v1/ai/evaluate/theory
 // @access  Private
-router.post('/evaluate/theory', protect, aiLimiter, notImplemented);
+router.post('/evaluate/theory', protect, aiLimiter, EvaluationController.evaluateTheory);
 
-// @desc    Get an AI code review for a specific coding attempt
-// @route   GET /api/v1/ai/review/code/:attemptId/:questionId
+// @desc    Evaluate a coding answer
+// @route   POST /api/v1/ai/evaluate/coding
 // @access  Private
-router.get('/review/code/:attemptId/:questionId', protect, aiLimiter, notImplemented);
+router.post('/evaluate/coding', protect, aiLimiter, EvaluationController.evaluateCoding);
+
+// @desc    Evaluate an MCQ answer
+// @route   POST /api/v1/ai/evaluate/mcq
+// @access  Private
+router.post('/evaluate/mcq', protect, aiLimiter, EvaluationController.evaluateMCQ);
 
 
 // ---------------------------------------------------------
@@ -68,24 +85,25 @@ router.post('/tutor/chat', protect, restrictTo('student'), aiLimiter, notImpleme
 router.get('/tutor/history/:sessionId', protect, restrictTo('student'), notImplemented);
 
 
-// ---------------------------------------------------------
-// Analytics & Insights Endpoints
-// ---------------------------------------------------------
-
-// @desc    Generate or fetch a personalized learning path
-// @route   GET /api/v1/ai/learning-path/:studentId
-// @access  Private
-router.get('/learning-path/:studentId', protect, notImplemented);
-
-// @desc    Generate insights for an assessment (e.g., common failing points)
-// @route   GET /api/v1/ai/insights/assessment/:assessmentId
+// @desc    Analyze student evaluations for weak areas
+// @route   POST /api/v1/ai/assess/weak-topics
 // @access  Private (Instructor, Admin)
-router.get('/insights/assessment/:assessmentId', protect, restrictTo('instructor', 'admin'), notImplemented);
+router.post('/assess/weak-topics', protect, restrictTo('instructor', 'admin'), AnalyticsController.analyzeWeakTopics);
 
-// @desc    Check assessment submissions for plagiarism/AI-generation
-// @route   POST /api/v1/ai/plagiarism/check/:assessmentId
+// @desc    Generate personalized learning paths
+// @route   POST /api/v1/ai/assess/recommendations
 // @access  Private (Instructor, Admin)
-router.post('/plagiarism/check/:assessmentId', protect, restrictTo('instructor', 'admin'), notImplemented);
+router.post('/assess/recommendations', protect, restrictTo('instructor', 'admin'), AnalyticsController.generateRecommendations);
+
+// @desc    Aggregate student performance metrics
+// @route   POST /api/v1/ai/analytics/student
+// @access  Private (Instructor, Admin)
+router.post('/analytics/student', protect, restrictTo('instructor', 'admin'), AnalyticsController.getStudentMetrics);
+
+// @desc    Aggregate AI accuracy and override metrics
+// @route   POST /api/v1/ai/analytics/instructor
+// @access  Private (Instructor, Admin)
+router.post('/analytics/instructor', protect, restrictTo('instructor', 'admin'), AnalyticsController.getInstructorMetrics);
 
 
 // ---------------------------------------------------------

@@ -16,11 +16,12 @@
 
 const rateLimit = require('express-rate-limit');
 const logger = require('../utils/logger');
+const isDev = process.env.NODE_ENV === 'development';
 
-// Global API limiter: 200 requests per 15 minutes per IP
+// Global API limiter: 200 requests per 15 minutes per IP (10x in dev)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: isDev ? 2000 : 200,
   message: {
     status: 'error',
     message: 'Too many requests from this IP, please try again after 15 minutes.',
@@ -33,10 +34,10 @@ const globalLimiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
-// Auth limiter: 20 requests per 15 minutes per IP
+// Auth limiter: 20 requests per 15 minutes per IP (10x in dev)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: isDev ? 200 : 20,
   message: {
     status: 'error',
     message: 'Too many login attempts from this IP, please try again after 15 minutes.',
@@ -50,10 +51,10 @@ const authLimiter = rateLimit({
 });
 
 // AI endpoints limiter (ready for Phase 1/2 integration)
-// 30 requests per hour per user/IP
+// 30 requests per hour per user/IP (10x in dev)
 const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 30,
+  max: isDev ? 300 : 30,
   message: {
     status: 'error',
     message: 'AI request limit reached. Please try again later.',

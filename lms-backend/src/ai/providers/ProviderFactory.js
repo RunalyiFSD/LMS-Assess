@@ -2,6 +2,7 @@ const PROVIDERS = require('../constants/providers');
 const GeminiProvider = require('./GeminiProvider');
 const OpenAIProvider = require('./OpenAIProvider');
 const GroqProvider = require('./GroqProvider');
+const MockProvider = require('./MockProvider');
 const aiConfig = require('../config/aiConfig');
 
 /**
@@ -26,6 +27,8 @@ class ProviderFactory {
         return new OpenAIProvider(aiConfig);
       case PROVIDERS.GROQ:
         return new GroqProvider(aiConfig);
+      case PROVIDERS.MOCK:
+        return new MockProvider(aiConfig);
       default:
         throw new Error(`Unsupported AI provider: ${providerName}`);
     }

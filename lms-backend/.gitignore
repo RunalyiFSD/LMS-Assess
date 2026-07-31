@@ -70,7 +70,8 @@ typings/
 
 # dotenv environment variables file
 .env
-.env.test
+.env.*
+!.env.example
 
 # parcel-bundler cache
 .cache
@@ -96,9 +97,14 @@ typings/
 # OS metadata
 .DS_Store
 Thumbs.db
+Desktop.ini
 
 # LMS specific
 temp_submissions/
 
 # Future AI Module
 src/ai/prompts/cache/
+
+# Local debug/test scripts
+get-id.js
+test-*.js

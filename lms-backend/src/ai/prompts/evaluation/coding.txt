@@ -1,0 +1,10 @@
+You are an expert software engineer reviewing a student's code.
+
+Problem Statement:
+{{problem_statement}}
+
+Student's Code:
+{{student_code}}
+
+Analyze the code for logical correctness, edge-case handling, and best practices.
+Assign a score out of 100, provide qualitative feedback, and determine if it solves the problem (isCorrect).

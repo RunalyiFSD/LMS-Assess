@@ -78,10 +78,10 @@ const validateEnv = () => {
 
   // 5. AI configuration validation (optional — only if AI_ENABLED=true)
   if (process.env.AI_ENABLED === 'true') {
-    if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
       errors.push(
         'AI_ENABLED=true but no LLM API key is set. ' +
-        'Set OPENAI_API_KEY or ANTHROPIC_API_KEY in your .env file.'
+        'Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY or GEMINI_API_KEY in your .env file.'
       );
     }
   }

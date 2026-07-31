@@ -5,7 +5,7 @@ import Button from '../common/Button';
 import Table from '../common/Table';
 import Modal from '../common/Modal';
 import api from '../../services/api';
-import { Plus, Edit3, Trash2, HelpCircle, FileText, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit3, Trash2, HelpCircle, FileText, CheckCircle2, Sparkles } from 'lucide-react';
 
 const InstructorDashboardView = () => {
   const navigate = useNavigate();
@@ -539,9 +539,14 @@ const InstructorDashboardView = () => {
         <Card
           title="Question Bank"
           extra={
-            <Button size="sm" onClick={() => setShowQuestionModal(true)} className="gap-1">
-              <Plus size={16} /> Add New Question
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => navigate('/instructor/ai-generation')} className="gap-1 bg-indigo-600 hover:bg-indigo-700 text-white border-transparent">
+                <Sparkles size={16} /> AI Generator
+              </Button>
+              <Button size="sm" onClick={() => setShowQuestionModal(true)} className="gap-1">
+                <Plus size={16} /> Add New Question
+              </Button>
+            </div>
           }
           bodyClassName="p-0"
         >
@@ -586,15 +591,17 @@ const InstructorDashboardView = () => {
                   ))}
                 </tbody>
               </table>
-              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-center items-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setVisibleCount((prev) => prev + 5)}
-                >
-                  View More Questions
-                </Button>
-              </div>
+              {questions.length > visibleCount && (
+                <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-center items-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVisibleCount((prev) => prev + 5)}
+                  >
+                    View More Questions ({questions.length - visibleCount} remaining)
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </Card>

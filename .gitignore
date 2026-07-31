@@ -1,0 +1,70 @@
+# ======================
+# Node
+# ======================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ======================
+# Environment
+# ======================
+.env
+.env.*
+!.env.example
+
+# ======================
+# Build / Output
+# ======================
+dist/
+build/
+coverage/
+*.lcov
+.nyc_output/
+
+# ======================
+# Logs
+# ======================
+logs/
+*.log
+
+# ======================
+# IDE / Editor
+# ======================
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ======================
+# OS
+# ======================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# ======================
+# Temporary files
+# ======================
+*.tmp
+*.temp
+temp_submissions/
+
+# ======================
+# LMS specific
+# ======================
+src/ai/prompts/cache/

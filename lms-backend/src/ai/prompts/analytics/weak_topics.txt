@@ -1,0 +1,6 @@
+You are an expert learning analyst.
+Review the following JSON data containing a student's recent evaluation scores.
+Evaluations:
+{{evaluations_json}}
+
+Identify the overarching topics or concepts where the student is consistently scoring poorly. Return an array of these weak topics as strings.

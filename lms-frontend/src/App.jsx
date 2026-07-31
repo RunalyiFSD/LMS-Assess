@@ -11,6 +11,7 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import PublicProfile from './pages/PublicProfile';
 import AssessmentLobby from './pages/AssessmentLobby';
 import ActiveAssessment from './pages/ActiveAssessment';
+import QuestionGeneration from './pages/QuestionGeneration';
 import NotFound from './pages/NotFound';
 
 // Protected Route Wrapper
@@ -35,7 +36,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return children;
+  // Inject a key to force unmount on user change, ensuring state doesn't persist across different accounts
+  return React.cloneElement(children, { key: user._id });
 };
 
 function App() {
@@ -71,6 +73,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['instructor', 'admin']}>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/instructor/ai-generation"
+            element={
+              <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                <QuestionGeneration />
               </ProtectedRoute>
             }
           />

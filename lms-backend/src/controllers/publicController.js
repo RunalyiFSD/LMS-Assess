@@ -129,7 +129,6 @@ exports.getPublicLeaderboard = async (req, res, next) => {
       student: {
         _id: record.studentInfo._id,
         name: record.studentInfo.name,
-        email: record.studentInfo.email,
         profilePicture: record.studentInfo.profilePicture,
         college: record.studentInfo.college,
         department: record.studentInfo.department,

@@ -15,16 +15,15 @@ const Header = () => {
 
   const handleConfirmLogout = async () => {
     setShowConfirmModal(false);
-    navigate('/', { replace: true });
-    setTimeout(async () => {
-      await logout();
-    }, 100);
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   // Fetch notifications
   useEffect(() => {
     if (!user) return;
     const fetchNotifications = async () => {
+      if (document.visibilityState !== 'visible') return;
       try {
         const response = await api.get('/notifications');
         if (response.data?.status === 'success') {
@@ -37,7 +36,7 @@ const Header = () => {
       }
     };
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 20000); // refresh every 20s
+    const interval = setInterval(fetchNotifications, 120000); // refresh every 120s
     return () => clearInterval(interval);
   }, [user]);
 
