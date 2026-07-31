@@ -11,7 +11,7 @@ try {
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/lms-assessment');
+    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://admin:V5321ibC8RQDOZri@cluster0.xaibubk.mongodb.net/lms-assessment?retryWrites=true&w=majority');
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     // Seed mocks disabled
     // await seedMocks();

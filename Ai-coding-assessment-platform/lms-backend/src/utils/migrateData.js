@@ -49,8 +49,12 @@ async function migrate() {
     if (docs.length > 0) {
       let insertedCount = 0;
       for (const doc of docs) {
-        await atlasCollection.replaceOne({ _id: doc._id }, doc, { upsert: true });
-        insertedCount++;
+        try {
+          await atlasCollection.replaceOne({ _id: doc._id }, doc, { upsert: true });
+          insertedCount++;
+        } catch (err) {
+          console.warn(`Skipping duplicate/invalid doc ${doc._id} in "${colName}": ${err.message}`);
+        }
       }
       console.log(`Migrated ${insertedCount} document(s) to Atlas collection "${colName}".`);
     } else {
