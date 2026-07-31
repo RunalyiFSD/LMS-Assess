@@ -320,6 +320,34 @@ exports.getAssessmentAttempts = async (req, res, next) => {
   }
 };
 
+// @desc    Get all student attempts for instructor/admin grading roster
+// @route   GET /api/attempts/all-submissions
+// @access  Instructor, Admin
+exports.getAllSubmissions = async (req, res, next) => {
+  try {
+    const attempts = await Attempt.find()
+      .populate('student', 'name email profilePicture college department batch rollNo')
+      .populate({
+        path: 'assessment',
+        populate: [
+          { path: 'subject', select: 'name code' },
+          { path: 'questions.questionId' }
+        ]
+      })
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json({
+      status: 'success',
+      results: attempts.length,
+      data: {
+        attempts,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Manual Grading for Theory Questions
 // @route   PUT /api/attempts/:id/grade
 // @access  Instructor, Admin

@@ -382,7 +382,7 @@ const LandingPage = () => {
                 Create Free Account <ArrowRight size={18} />
               </Button>
               <Button size="lg" variant="outline" onClick={() => navigate('/login')}>
-                Student Login
+                Login
               </Button>
             </div>
           </div>

@@ -49,10 +49,13 @@ exports.getAllAssessments = async (req, res, next) => {
 
     // Filter by mock status
     if (isMock === 'true') {
-      if (req.user.role !== 'student') {
-        return next(new AppError('Only students are allowed to access mock assessments', 403));
-      }
-      filter.isMock = true;
+      return res.status(200).json({
+        status: 'success',
+        results: 0,
+        data: {
+          assessments: [],
+        },
+      });
     } else {
       filter.isMock = { $ne: true };
     }
@@ -184,3 +187,104 @@ exports.deleteAssessment = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Get Calendar Scheduled Assessments
+// @route   GET /api/assessments/calendar
+// @access  Protected
+exports.getCalendarEvents = async (req, res, next) => {
+  try {
+    const filter = {};
+    if (req.user.role === 'student') {
+      filter.isActive = true;
+    }
+
+    const assessments = await Assessment.find(filter)
+      .populate('subject', 'name code')
+      .populate('creator', 'name email')
+      .sort({ scheduledAt: 1, createdAt: -1 });
+
+    const now = new Date();
+    const events = assessments.map((ast) => {
+      const startTime = ast.scheduledAt ? new Date(ast.scheduledAt) : new Date(ast.createdAt);
+      let endTime = ast.dueDate ? new Date(ast.dueDate) : new Date(startTime.getTime() + (ast.duration || 60) * 60000);
+
+      let status = 'upcoming';
+      if (now >= startTime && now <= endTime) {
+        status = 'active';
+      } else if (now > endTime) {
+        status = 'closed';
+      }
+
+      // Map category tag (Quiz, Test, Assignment, Exam)
+      let category = 'Assignment';
+      const titleLower = (ast.title || '').toLowerCase();
+      if (titleLower.includes('quiz')) category = 'Quiz';
+      else if (titleLower.includes('exam') || titleLower.includes('final') || titleLower.includes('midterm')) category = 'Exam';
+      else if (titleLower.includes('test')) category = 'Test';
+      else if (ast.type === 'coding') category = 'Test';
+      else if (ast.type === 'mcq') category = 'Quiz';
+
+      return {
+        id: ast._id,
+        title: ast.title,
+        description: ast.description,
+        subject: ast.subject,
+        type: ast.type,
+        category,
+        duration: ast.duration,
+        totalMarks: ast.totalMarks,
+        passingScore: ast.passingScore,
+        startTime,
+        endTime,
+        status,
+        isActive: ast.isActive,
+        creator: ast.creator,
+      };
+    });
+
+    res.status(200).json({
+      status: 'success',
+      results: events.length,
+      data: {
+        events,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create Calendar Scheduled Event
+// @route   POST /api/assessments/calendar
+// @access  Instructor, Admin
+exports.createCalendarEvent = async (req, res, next) => {
+  try {
+    const { title, description, subject, type, duration, passingScore, totalMarks, scheduledAt, dueDate, category } = req.body;
+
+    const finalTitle = category ? `${title}` : title;
+
+    const assessment = await Assessment.create({
+      title: finalTitle,
+      description: description || '',
+      subject,
+      type: type || 'mcq',
+      duration: duration || 60,
+      passingScore: passingScore || 40,
+      totalMarks: totalMarks || 100,
+      creator: req.user._id,
+      isActive: true,
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : new Date(),
+      dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + (duration || 60) * 60000),
+    });
+
+    res.status(201).json({
+      status: 'success',
+      data: {
+        assessment,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

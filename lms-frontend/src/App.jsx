@@ -13,6 +13,18 @@ import AssessmentLobby from './pages/AssessmentLobby';
 import ActiveAssessment from './pages/ActiveAssessment';
 import QuestionGeneration from './pages/QuestionGeneration';
 import NotFound from './pages/NotFound';
+import FuturePage from './pages/FuturePage';
+import AssessmentCalendarPage from './pages/AssessmentCalendarPage';
+import MessagesPage from './pages/MessagesPage';
+import NotificationsPage from './pages/NotificationsPage';
+import StudentsInstructorsPage from './pages/StudentsInstructorsPage';
+import DepartmentsPage from './pages/DepartmentsPage';
+import BatchesPage from './pages/BatchesPage';
+import AdminAssessmentsPage from './pages/AdminAssessmentsPage';
+import ReportsAnalyticsPage from './pages/ReportsAnalyticsPage';
+import AdminSettingsPage from './pages/AdminSettingsPage';
+import ActivityLogsPage from './pages/ActivityLogsPage';
+import SupportPage from './pages/SupportPage';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -61,6 +73,86 @@ function App() {
             }
           />
           <Route
+            path="/schedule"
+            element={
+              <ProtectedRoute>
+                <AssessmentCalendarPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <MessagesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <StudentsInstructorsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/departments"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DepartmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/batches"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <BatchesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/assessments"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminAssessmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ReportsAnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/logs"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ActivityLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/support"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <SupportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/instructor/questions"
             element={
               <ProtectedRoute allowedRoles={['instructor', 'admin']}>
@@ -105,9 +197,12 @@ function App() {
             }
           />
 
-          {/* Catch-all Fallback */}
-          <Route path="/404" element={<NotFound />} />
-          <Route path="*" element={<Navigate to="/404" replace />} />
+          {/* Catch-all Fallback and Future Feature Routes */}
+          <Route path="/company-mock" element={<ProtectedRoute><FuturePage routeKey="company-mock" /></ProtectedRoute>} />
+          <Route path="/language-mock" element={<ProtectedRoute><FuturePage routeKey="language-mock" /></ProtectedRoute>} />
+          <Route path="/future/:routeKey" element={<ProtectedRoute><FuturePage /></ProtectedRoute>} />
+          <Route path="/404" element={<FuturePage />} />
+          <Route path="*" element={<FuturePage />} />
         </Routes>
       </Router>
     </AuthProvider>

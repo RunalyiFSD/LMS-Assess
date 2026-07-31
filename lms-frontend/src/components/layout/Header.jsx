@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Bell, LogOut, User as UserIcon, X } from 'lucide-react';
+import { Bell, LogOut, User as UserIcon, X, MessageSquare } from 'lucide-react';
 import api from '../../services/api';
 import Button from '../common/Button';
 
@@ -11,6 +11,7 @@ const Header = () => {
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasUnreadMsg, setHasUnreadMsg] = useState(true); // default active indicator
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const handleConfirmLogout = async () => {
@@ -19,10 +20,10 @@ const Header = () => {
     navigate('/login', { replace: true });
   };
 
-  // Fetch notifications
+  // Fetch notifications and unread messages status
   useEffect(() => {
     if (!user) return;
-    const fetchNotifications = async () => {
+    const fetchNotificationsAndMessages = async () => {
       if (document.visibilityState !== 'visible') return;
       try {
         const response = await api.get('/notifications');
@@ -31,12 +32,18 @@ const Header = () => {
           setNotifications(list);
           setUnreadCount(list.filter((n) => !n.isRead).length);
         }
+
+        const msgRes = await api.get('/messages/conversations');
+        if (msgRes.data?.status === 'success' && msgRes.data?.data?.conversations) {
+          const totalUnread = msgRes.data.data.conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+          setHasUnreadMsg(totalUnread > 0);
+        }
       } catch (err) {
-        console.warn('Failed to fetch notifications');
+        console.warn('Failed to fetch header badges');
       }
     };
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 120000); // refresh every 120s
+    fetchNotificationsAndMessages();
+    const interval = setInterval(fetchNotificationsAndMessages, 15000); // refresh every 15s
     return () => clearInterval(interval);
   }, [user]);
 
@@ -53,7 +60,7 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#2D2354] border-b border-[#3D317C]/40 px-6 py-3 flex items-center justify-between">
+    <header className="sticky top-0 z-40 bg-[#2D2354] border-b border-[#3D317C]/40 px-6 py-3 flex items-center justify-between print:hidden">
       {/* Brand Logo */}
       <div className="flex items-center gap-2">
         <span className="w-8 h-8 rounded-lg bg-[#3D317C] border border-[#4E3F9B] flex items-center justify-center text-white font-bold text-base shadow-sm">
@@ -63,7 +70,22 @@ const Header = () => {
       </div>
 
       {/* User Actions & Alerts */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Messages Icon Button with Green Dot indicator */}
+        <button
+          onClick={() => {
+            setHasUnreadMsg(false);
+            navigate('/messages');
+          }}
+          title="Messages"
+          className="p-2 rounded-lg hover:bg-[#3D317C] text-slate-400 hover:text-slate-200 relative transition-colors"
+        >
+          <MessageSquare size={20} />
+          {hasUnreadMsg && (
+            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#2D2354] animate-pulse"></span>
+          )}
+        </button>
+
         {/* Notifications Tray */}
         <div className="relative">
           <button
@@ -92,11 +114,11 @@ const Header = () => {
                   <X size={14} />
                 </button>
               </div>
-              <div className="max-h-60 overflow-y-auto">
+              <div>
                 {notifications.length === 0 ? (
                   <div className="px-4 py-6 text-center text-xs text-slate-400">No notifications yet.</div>
                 ) : (
-                  notifications.map((notif) => (
+                  notifications.slice(0, 4).map((notif) => (
                     <div
                       key={notif._id}
                       onClick={() => handleMarkAsRead(notif._id)}
@@ -112,6 +134,20 @@ const Header = () => {
                     </div>
                   ))
                 )}
+              </div>
+
+              {/* View All Notifications Footer Link */}
+              <div className="p-2.5 bg-slate-50 border-t border-slate-100 text-center">
+                <button
+                  onClick={() => {
+                    setShowNotif(false);
+                    navigate('/notifications');
+                  }}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition-all flex items-center justify-center gap-1.5 w-full py-1"
+                >
+                  <span>View All Notifications ({notifications.length})</span>
+                  <span className="text-sm">→</span>
+                </button>
               </div>
             </div>
           )}

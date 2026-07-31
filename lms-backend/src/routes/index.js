@@ -11,6 +11,9 @@ const publicRoutes = require('./publicRoutes');
 const healthRoutes = require('./healthRoutes');
 const aiRoutes = require('../ai/routes/aiRoutes');
 const { authLimiter } = require('../middleware/rateLimitMiddleware');
+const messageRoutes = require('./messageRoutes');
+const departmentRoutes = require('./departmentRoutes');
+const batchRoutes = require('./batchRoutes');
 
 const router = express.Router();
 
@@ -24,6 +27,9 @@ router.use('/attempts', attemptRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/users', userRoutes);
+router.use('/messages', messageRoutes);
+router.use('/departments', departmentRoutes);
+router.use('/batches', batchRoutes);
 router.use('/public', publicRoutes); // No auth — safe public data only
 
 module.exports = router;

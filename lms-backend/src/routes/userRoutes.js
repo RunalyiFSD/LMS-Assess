@@ -7,10 +7,12 @@ const router = express.Router();
 
 router.use(protect);
 
-// Student profile pages (accessible to all authenticated users for viewing public profiles)
+// Student profile pages & user directory for messaging
+router.get('/directory', userController.getUserDirectory);
 router.get('/profile/:id', userController.getUserProfile);
 router.get('/profile/:id/analytics', userController.getUserAnalytics);
 router.put('/profile', userController.updateUserProfile);
+router.delete('/me', userController.deleteMyAccount);
 
 // Admin-only user management routes
 router.use(authorize('admin'));
@@ -19,6 +21,10 @@ router
   .get(userController.getAllUsers)
   .post(userController.createUser);
 
-router.route('/:id').delete(userController.deleteUser);
+router
+  .route('/:id')
+  .get(userController.getUserByIdAdmin)
+  .put(userController.updateUserByAdmin)
+  .delete(userController.deleteUser);
 
 module.exports = router;
