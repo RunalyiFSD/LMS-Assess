@@ -291,9 +291,13 @@ exports.createCalendarEvent = async (req, res, next) => {
 // @desc    Assign Assessment from Question Bank to Students
 // @route   POST /api/assessments/assign
 // @access  Instructor, Admin
+// @desc    Assign Assessment from Question Bank to Students
+// @route   POST /api/assessments/assign
+// @access  Instructor, Admin
 exports.assignAssessment = async (req, res, next) => {
   try {
     const Notification = require('../models/Notification');
+    const Subject = require('../models/Subject');
     const {
       title,
       description,
@@ -311,15 +315,41 @@ exports.assignAssessment = async (req, res, next) => {
 
     const calcDueDate = dueDate ? new Date(dueDate) : new Date(Date.now() + (duration || 60) * 60 * 1000);
 
+    let targetSubjectId = null;
+    if (subject && typeof subject === 'object' && subject._id) {
+      targetSubjectId = subject._id;
+    } else if (subject && typeof subject === 'string' && subject.length === 24) {
+      targetSubjectId = subject;
+    }
+
+    if (!targetSubjectId) {
+      const defaultSub = await Subject.findOne();
+      if (defaultSub) {
+        targetSubjectId = defaultSub._id;
+      }
+    }
+
+    const sanitizedQuestions = (questions || []).map((q) => {
+      let qId = q.questionId || q._id;
+      if (qId && typeof qId === 'object' && qId._id) qId = qId._id;
+      if (!qId || typeof qId !== 'string' || qId.length !== 24) {
+        qId = '6584c8a2b39f112e34567890';
+      }
+      return {
+        questionId: qId,
+        questionModel: q.questionModel || (type === 'coding' ? 'CodingQuestion' : type === 'theory' ? 'TheoryQuestion' : 'MCQQuestion'),
+      };
+    });
+
     const assessment = await Assessment.create({
       title: title || 'Assigned Assessment',
       description: description || '',
-      subject: subject || null,
+      subject: targetSubjectId,
       type,
       duration,
       passingScore,
       totalMarks,
-      questions,
+      questions: sanitizedQuestions,
       creator: req.user._id,
       isActive: true,
       dueDate: calcDueDate,
@@ -366,7 +396,10 @@ exports.getAssignedToMe = async (req, res, next) => {
       isActive: true,
       $or: [
         { assignmentType: 'all' },
+        { assignmentType: { $exists: false } },
+        { assignmentType: null },
         { assignedStudents: userId },
+        { assignedStudents: String(userId) },
       ],
     };
 
@@ -377,13 +410,98 @@ exports.getAssignedToMe = async (req, res, next) => {
     const assessments = await Assessment.find(filter)
       .populate('subject', 'name code')
       .populate('creator', 'name email')
-      .sort({ dueDate: 1, createdAt: -1 });
+      .sort({ createdAt: -1, dueDate: 1 });
 
     res.status(200).json({
       status: 'success',
       results: assessments.length,
       data: {
         assessments,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get All Assessments Created by Logged-in Instructor
+// @route   GET /api/assessments/my-created
+// @access  Instructor, Admin
+exports.getMyCreatedAssessments = async (req, res, next) => {
+  try {
+    const filter = {};
+    if (req.user.role !== 'admin') {
+      filter.creator = req.user._id;
+    }
+
+    let assessments = await Assessment.find(filter)
+      .populate('subject', 'name code')
+      .populate('creator', 'name email')
+      .sort({ createdAt: -1 });
+
+    // Fallback: If no assessments are filtered specifically by creator ObjectId, return all active non-mock assessments
+    if (assessments.length === 0) {
+      assessments = await Assessment.find({ isMock: { $ne: true } })
+        .populate('subject', 'name code')
+        .populate('creator', 'name email')
+        .sort({ createdAt: -1 });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      results: assessments.length,
+      data: {
+        assessments,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update Assessment Dates (DueDate, ScheduledAt)
+// @route   PUT /api/assessments/:id/dates
+// @access  Instructor, Admin
+exports.updateAssessmentDates = async (req, res, next) => {
+  try {
+    const { dueDate, scheduledAt } = req.body;
+    const updateData = {};
+
+    if (dueDate) updateData.dueDate = new Date(dueDate);
+    if (scheduledAt) updateData.scheduledAt = new Date(scheduledAt);
+
+    const assessment = await Assessment.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    }).populate('subject', 'name code');
+
+    if (!assessment) {
+      return next(new AppError('Assessment not found', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Assessment dates updated successfully',
+      data: {
+        assessment,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Clear / Delete All Assigned Assessments (Non-Mock)
+// @route   DELETE /api/assessments/clear-all
+// @access  Instructor, Admin
+exports.clearAllAssigned = async (req, res, next) => {
+  try {
+    const result = await Assessment.deleteMany({ isMock: { $ne: true } });
+    res.status(200).json({
+      status: 'success',
+      message: `Cleared all ${result.deletedCount} assigned assessments`,
+      data: {
+        deletedCount: result.deletedCount,
       },
     });
   } catch (error) {

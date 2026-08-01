@@ -31,6 +31,7 @@ import {
   Send,
   Award,
   Users,
+  Calendar,
 } from 'lucide-react';
 
 const InstructorDashboardView = () => {
@@ -38,10 +39,11 @@ const InstructorDashboardView = () => {
   const location = useLocation();
 
   const [assessments, setAssessments] = useState([]);
+  const [myCreatedAssessments, setMyCreatedAssessments] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('assessments'); // 'assessments' | 'grade'
+  const [activeTab, setActiveTab] = useState('assessments'); // 'assessments' | 'my_created' | 'grade'
 
   // Question Bank Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +52,16 @@ const InstructorDashboardView = () => {
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedQuestions, setSelectedQuestions] = useState([]);
+
+  // Created Assessments Search & Filter state
+  const [createdSearchQuery, setCreatedSearchQuery] = useState('');
+  const [createdSubjectFilter, setCreatedSubjectFilter] = useState('');
+
+  // Edit Date Modal State
+  const [showEditDateModal, setShowEditDateModal] = useState(false);
+  const [editingAssessmentForDate, setEditingAssessmentForDate] = useState(null);
+  const [editDueDate, setEditDueDate] = useState('');
+  const [submittingDateUpdate, setSubmittingDateUpdate] = useState(false);
 
   // Grade Submissions Search & Filter state
   const [gradeSearch, setGradeSearch] = useState('');
@@ -179,21 +191,27 @@ const InstructorDashboardView = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const subRes = await api.get('/subjects');
-      if (subRes.data?.status === 'success') {
+      const [subRes, testRes, qRes, createdRes] = await Promise.all([
+        api.get('/subjects').catch(() => null),
+        api.get('/assessments').catch(() => null),
+        api.get('/questions').catch(() => null),
+        api.get('/assessments/my-created').catch(() => null),
+      ]);
+
+      if (subRes?.data?.status === 'success') {
         setSubjects(subRes.data.data.subjects || []);
       }
 
-      const testRes = await api.get('/assessments');
-      let fetchedAssessments = [];
-      if (testRes.data?.status === 'success') {
-        fetchedAssessments = testRes.data.data.assessments || [];
-        setAssessments(fetchedAssessments);
+      if (testRes?.data?.status === 'success') {
+        setAssessments(testRes.data.data.assessments || []);
       }
 
-      const qRes = await api.get('/questions');
-      if (qRes.data?.status === 'success') {
+      if (qRes?.data?.status === 'success') {
         setQuestions(qRes.data.data.questions || []);
+      }
+
+      if (createdRes?.data?.status === 'success') {
+        setMyCreatedAssessments(createdRes.data.data.assessments || []);
       }
 
       // Fetch dynamic student attempts & existing users/assessments from backend DB
@@ -371,8 +389,10 @@ const InstructorDashboardView = () => {
     }
   };
 
-  // Fetch students for Assign Assessment modal
+  // Fetch initial dashboard data and students for Assign Assessment modal
   useEffect(() => {
+    fetchDashboardData();
+
     const fetchStudents = async () => {
       try {
         const res = await api.get('/users?role=student');
@@ -450,10 +470,13 @@ const InstructorDashboardView = () => {
 
       const calculatedMarks = selectedObjs.reduce((sum, q) => sum + (q.marks || 5), 0) || 20;
 
+      const rawSubject = selectedObjs[0]?.subject;
+      const subjectId = rawSubject && typeof rawSubject === 'object' ? rawSubject._id : (typeof rawSubject === 'string' && rawSubject.length === 24 ? rawSubject : null);
+
       const payload = {
         title: assignForm.title,
         description: assignForm.description,
-        subject: selectedObjs[0]?.subject || null,
+        subject: subjectId,
         type: selectedObjs[0]?.type || 'mcq',
         duration: Number(assignForm.duration) || 30,
         passingScore: Number(assignForm.passingScore) || 40,
@@ -479,10 +502,8 @@ const InstructorDashboardView = () => {
         fetchDashboardData();
       }
     } catch (err) {
-      console.warn('Backend assign endpoint fallback:', err);
-      alert(`Successfully assigned "${assignForm.title}" to student dashboard!`);
-      setShowAssignModal(false);
-      setSelectedQuestions([]);
+      console.error('Backend assign endpoint error:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to assign assessment.');
     } finally {
       setSubmittingAssign(false);
     }
@@ -492,10 +513,49 @@ const InstructorDashboardView = () => {
   useEffect(() => {
     if (location.pathname === '/instructor/grade' || location.search.includes('tab=grade')) {
       setActiveTab('grade');
+    } else if (location.search.includes('tab=my_created')) {
+      setActiveTab('my_created');
     } else {
       setActiveTab('assessments');
     }
   }, [location]);
+
+  // Open Date Edit Modal
+  const handleOpenEditDateModal = (assessment) => {
+    setEditingAssessmentForDate(assessment);
+    if (assessment.dueDate) {
+      const d = new Date(assessment.dueDate);
+      const isoStr = d.toISOString().split('T')[0];
+      setEditDueDate(isoStr);
+    } else {
+      setEditDueDate(new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0]);
+    }
+    setShowEditDateModal(true);
+  };
+
+  // Submit Updated Due Date
+  const handleSaveDateUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingAssessmentForDate || !editDueDate) return;
+
+    setSubmittingDateUpdate(true);
+    try {
+      const res = await api.put(`/assessments/${editingAssessmentForDate._id}/dates`, {
+        dueDate: editDueDate,
+      });
+
+      if (res.data?.status === 'success') {
+        alert(`Due date for "${editingAssessmentForDate.title}" updated successfully!`);
+        setShowEditDateModal(false);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error('Failed to update assessment date:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to update assessment due date.');
+    } finally {
+      setSubmittingDateUpdate(false);
+    }
+  };
 
   // Combine backend questions with sample fallback
   const allQuestionsCombined = [
@@ -757,21 +817,41 @@ const InstructorDashboardView = () => {
 
   return (
     <div className="space-y-6">
-      {/* ── TOP SUB-NAV TABS (MANAGE ASSESSMENTS / QUESTION BANK vs GRADE SUBMISSIONS) ── */}
-      <div className="flex border-b border-slate-200 gap-2">
+      {/* ── TOP SUB-NAV TABS ── */}
+      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto">
         <button
           onClick={() => {
             setActiveTab('assessments');
             navigate('/dashboard');
           }}
-          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer shrink-0 ${
             activeTab === 'assessments'
               ? 'border-[#4F46E5] text-[#4F46E5]'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           <BookOpen size={16} />
-          Manage Assessments & Question Bank
+          Question Bank
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('my_created');
+            navigate('/dashboard?tab=my_created');
+          }}
+          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer shrink-0 ${
+            activeTab === 'my_created'
+              ? 'border-[#4F46E5] text-[#4F46E5]'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Calendar size={16} />
+          Created Assessments
+          {myCreatedAssessments.length > 0 && (
+            <span className="px-2 py-0.5 text-[10px] font-black bg-indigo-100 text-indigo-700 rounded-full">
+              {myCreatedAssessments.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -779,7 +859,7 @@ const InstructorDashboardView = () => {
             setActiveTab('grade');
             navigate('/instructor/grade');
           }}
-          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer shrink-0 ${
             activeTab === 'grade'
               ? 'border-[#4F46E5] text-[#4F46E5]'
               : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -982,8 +1062,8 @@ const InstructorDashboardView = () => {
                     </td>
                   </tr>
                 ) : (
-                  paginatedQuestions.map((q) => (
-                    <tr key={q._id} className="hover:bg-slate-50/60 transition-colors">
+                  paginatedQuestions.map((q, idx) => (
+                    <tr key={q._id ? `q_${q._id}_${idx}` : `q_${idx}`} className="hover:bg-slate-50/60 transition-colors">
                       <td className="px-4 py-4 whitespace-nowrap">
                         <input
                           type="checkbox"
@@ -1169,6 +1249,185 @@ const InstructorDashboardView = () => {
         </div>
       )}
 
+      {/* ── TAB 2: CREATED ASSESSMENTS & DATE MANAGEMENT ── */}
+      {activeTab === 'my_created' && (
+        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-6 space-y-5">
+          {/* Header Title & Subtitle */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Created Assessments</h2>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                View all published assessments, assigned dates, target audiences, and modify due dates.
+              </p>
+            </div>
+            <span className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-xs rounded-xl self-start sm:self-auto">
+              Total Created: {myCreatedAssessments.length}
+            </span>
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+              <input
+                type="text"
+                placeholder="Search by assessment title..."
+                value={createdSearchQuery}
+                onChange={(e) => setCreatedSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 font-medium text-slate-800"
+              />
+            </div>
+
+            <div>
+              <select
+                value={createdSubjectFilter}
+                onChange={(e) => setCreatedSubjectFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 focus:outline-none focus:border-indigo-500 font-medium"
+              >
+                <option value="">All Subjects</option>
+                {subjects.map((sub) => (
+                  <option key={sub._id} value={sub.name}>
+                    {sub.name} ({sub.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setCreatedSearchQuery('');
+                  setCreatedSubjectFilter('');
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
+
+          {/* Table of Created Assessments */}
+          <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-4">ASSESSMENT TITLE & TYPE</th>
+                  <th className="py-3 px-4">SUBJECT & MARKS</th>
+                  <th className="py-3 px-4">ASSIGNED / CREATED DATE</th>
+                  <th className="py-3 px-4">DUE DATE</th>
+                  <th className="py-3 px-4">TARGET AUDIENCE</th>
+                  <th className="py-3 px-4 text-center">STATUS</th>
+                  <th className="py-3 px-4 text-right">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                {myCreatedAssessments.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                      No created assessments found. Use the Question Bank to assign new assessments!
+                    </td>
+                  </tr>
+                ) : (
+                  myCreatedAssessments
+                    .filter((ast) => {
+                      const matchesSearch = !createdSearchQuery || ast.title.toLowerCase().includes(createdSearchQuery.toLowerCase());
+                      const matchesSubject = !createdSubjectFilter || (ast.subject?.name || '').toLowerCase() === createdSubjectFilter.toLowerCase();
+                      return matchesSearch && matchesSubject;
+                    })
+                    .map((ast) => {
+                      const createdDateStr = ast.createdAt
+                        ? new Date(ast.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'N/A';
+
+                      const dueDateStr = ast.dueDate
+                        ? new Date(ast.dueDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })
+                        : 'No due date';
+
+                      return (
+                        <tr key={ast._id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div>
+                              <p className="font-extrabold text-slate-900 leading-tight">{ast.title}</p>
+                              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                {ast.type || 'MCQ'}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <div>
+                              <p className="font-bold text-slate-800">{ast.subject?.name || 'General'}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                {ast.totalMarks || 100} Marks • {ast.duration || 60} Mins
+                              </p>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-slate-600 font-semibold">
+                            <div className="flex items-center gap-1.5">
+                              <Clock size={13} className="text-slate-400 shrink-0" />
+                              <span>{createdDateStr}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 font-extrabold text-indigo-600">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={14} className="text-indigo-500 shrink-0" />
+                              <span>{dueDateStr}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-slate-600 font-medium">
+                            {ast.assignmentType === 'students'
+                              ? `${ast.assignedStudents?.length || 0} Specific Student(s)`
+                              : 'All Enrolled Students'}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-center">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                                ast.isActive
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-slate-100 text-slate-500 border border-slate-200'
+                              }`}
+                            >
+                              {ast.isActive ? 'Active' : 'Draft'}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleOpenEditDateModal(ast)}
+                                title="Edit Assessment Due Date"
+                                className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <Calendar size={13} />
+                                <span>Edit Date</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ── TAB 2: GRADE SUBMISSIONS MANAGEMENT SUITE ────────────────────────── */}
       {activeTab === 'grade' && (
         <div className="space-y-6">
@@ -1330,8 +1589,8 @@ const InstructorDashboardView = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredSubmissions.map((sub) => (
-                      <tr key={sub._id} className="hover:bg-slate-50/60 transition-colors">
+                    filteredSubmissions.map((sub, idx) => (
+                      <tr key={sub._id ? `sub_${sub._id}_${idx}` : `sub_${idx}`} className="hover:bg-slate-50/60 transition-colors">
                         {/* STUDENT */}
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
@@ -1438,7 +1697,7 @@ const InstructorDashboardView = () => {
                 </div>
               ) : (
                 selectedAttemptForGrading.theoryQuestions?.map((q, idx) => (
-                  <div key={q.questionId || idx} className="p-4 border border-slate-200 rounded-xl space-y-3 bg-white shadow-2xs">
+                  <div key={q.questionId ? `q_${q.questionId}_${idx}` : `q_${idx}`} className="p-4 border border-slate-200 rounded-xl space-y-3 bg-white shadow-2xs">
                     <div className="flex items-start justify-between gap-3">
                       <p className="font-bold text-slate-800 text-xs">
                         Q{idx + 1}: {q.prompt}
@@ -1854,8 +2113,8 @@ const InstructorDashboardView = () => {
               {studentsList.length === 0 ? (
                 <p className="text-slate-400 italic text-[11px]">No students found.</p>
               ) : (
-                studentsList.map((std) => (
-                  <label key={std._id} className="flex items-center gap-2.5 p-1.5 hover:bg-white rounded-lg cursor-pointer transition-colors">
+                studentsList.map((std, idx) => (
+                  <label key={std._id ? `std_${std._id}_${idx}` : `std_${idx}`} className="flex items-center gap-2.5 p-1.5 hover:bg-white rounded-lg cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={assignForm.selectedStudentIds.includes(std._id)}
@@ -1896,6 +2155,59 @@ const InstructorDashboardView = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: Edit Assessment Dates */}
+      <Modal
+        isOpen={showEditDateModal}
+        onClose={() => setShowEditDateModal(false)}
+        title="Change Assessment Due Date"
+      >
+        {editingAssessmentForDate && (
+          <form onSubmit={handleSaveDateUpdate} className="space-y-4 text-xs">
+            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
+                Target Assessment
+              </span>
+              <h4 className="font-extrabold text-slate-900 text-sm">{editingAssessmentForDate.title}</h4>
+              <p className="text-[11px] text-slate-500">
+                Subject: {editingAssessmentForDate.subject?.name || 'General'} • Assigned:{' '}
+                {editingAssessmentForDate.createdAt
+                  ? new Date(editingAssessmentForDate.createdAt).toLocaleDateString()
+                  : 'N/A'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">New Due Date *</label>
+              <input
+                type="date"
+                required
+                value={editDueDate}
+                onChange={(e) => setEditDueDate(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-medium text-slate-800"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowEditDateModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submittingDateUpdate}
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Calendar size={13} />
+                <span>{submittingDateUpdate ? 'Saving...' : 'Save New Date'}</span>
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

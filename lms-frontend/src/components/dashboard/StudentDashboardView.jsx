@@ -75,11 +75,18 @@ const StudentDashboardView = () => {
           api.get(`/attempts/my-attempts?t=${t}`).catch(() => ({ data: { data: { attempts: [] } } })),
         ]);
 
-        if (assignedRes?.data?.status === 'success' && assignedRes.data.data.assessments?.length > 0) {
-          setAssessments(assignedRes.data.data.assessments);
-        } else if (assessRes.data?.status === 'success') {
-          setAssessments(assessRes.data.data.assessments || []);
-        }
+        const assignedList = assignedRes?.data?.data?.assessments || [];
+        const allList = assessRes?.data?.data?.assessments || [];
+
+        const combinedMap = new Map();
+        assignedList.forEach((ast) => combinedMap.set(ast._id, ast));
+        allList.forEach((ast) => {
+          if (!combinedMap.has(ast._id)) {
+            combinedMap.set(ast._id, ast);
+          }
+        });
+
+        setAssessments(Array.from(combinedMap.values()));
 
         if (attemptsRes.data?.status === 'success') {
           setMyAttempts(attemptsRes.data.data.attempts || []);
@@ -110,7 +117,7 @@ const StudentDashboardView = () => {
       icon: <Code size={18} className="text-indigo-600" />,
       boxBg: 'bg-indigo-50 border-indigo-100',
       borderLeft: 'border-l-4 border-l-indigo-500',
-      dueDate: 'Due in 2 days',
+      dueDate: 'Due: Aug 3, 2026',
     },
     {
       id: 'asgn_2',
@@ -119,7 +126,7 @@ const StudentDashboardView = () => {
       icon: <BookOpen size={18} className="text-amber-600" />,
       boxBg: 'bg-amber-50 border-amber-100',
       borderLeft: 'border-l-4 border-l-amber-500',
-      dueDate: 'Due in 5 days',
+      dueDate: 'Due: Aug 5, 2026',
     },
     {
       id: 'asgn_3',
@@ -128,7 +135,7 @@ const StudentDashboardView = () => {
       icon: <CheckSquare size={18} className="text-emerald-600" />,
       boxBg: 'bg-emerald-50 border-emerald-100',
       borderLeft: 'border-l-4 border-l-emerald-500',
-      dueDate: 'Due in 7 days',
+      dueDate: 'Due: Aug 7, 2026',
     },
   ];
 
@@ -867,47 +874,67 @@ const StudentDashboardView = () => {
             </div>
 
             <div className="space-y-3">
-              {(assessments.length > 0
-                ? assessments.slice(0, 3).map((ast, idx) => ({
-                    id: ast._id,
-                    title: ast.title,
-                    type: ast.type === 'coding' ? 'Coding' : ast.type === 'mcq' ? 'MCQ' : 'Theory',
-                    icon: ast.type === 'coding' ? <Code size={18} className="text-indigo-600" /> : ast.type === 'mcq' ? <CheckSquare size={18} className="text-emerald-600" /> : <BookOpen size={18} className="text-amber-600" />,
-                    boxBg: ast.type === 'coding' ? 'bg-indigo-50 border-indigo-100' : ast.type === 'mcq' ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100',
-                    borderLeft: ast.type === 'coding' ? 'border-l-4 border-l-indigo-500' : ast.type === 'mcq' ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-amber-500',
-                    dueDate: `Due in ${(idx + 1) * 2} days`,
-                  }))
-                : defaultAssignedList
-              ).map((item) => (
-                <div
-                  key={item.id}
-                  className={`bg-white rounded-2xl border border-slate-100 ${item.borderLeft} p-4 shadow-xs flex items-center justify-between transition-all hover:shadow-md`}
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${item.boxBg}`}>
-                      {item.icon}
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-extrabold text-slate-900 leading-tight">{item.title}</h4>
-                      <p className="text-[11px] font-medium text-slate-400 mt-0.5 capitalize">{item.type}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-                      <Calendar size={14} className="text-slate-400 shrink-0" />
-                      <span>{item.dueDate}</span>
-                    </div>
-
-                    <button
-                      onClick={() => handleStartTest(item.id)}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
-                    >
-                      Start Test
-                    </button>
-                  </div>
+              {assessments.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center space-y-2 shadow-xs">
+                  <ClipboardList className="mx-auto text-slate-300" size={32} />
+                  <p className="font-extrabold text-slate-700 text-sm">No Assigned Assessments</p>
+                  <p className="text-xs text-slate-400">You currently have no pending assigned assessments.</p>
                 </div>
-              ))}
+              ) : (
+                assessments
+                  .map((ast) => {
+                    let dueDateText = 'Due: N/A';
+                    if (ast.dueDate) {
+                      const d = new Date(ast.dueDate);
+                      if (!isNaN(d.getTime())) {
+                        dueDateText = `Due: ${d.toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}`;
+                      }
+                    }
+                    return {
+                      id: ast._id,
+                      title: ast.title,
+                      type: ast.type === 'coding' ? 'Coding' : ast.type === 'mcq' ? 'MCQ' : 'Theory',
+                      icon: ast.type === 'coding' ? <Code size={18} className="text-indigo-600" /> : ast.type === 'mcq' ? <CheckSquare size={18} className="text-emerald-600" /> : <BookOpen size={18} className="text-amber-600" />,
+                      boxBg: ast.type === 'coding' ? 'bg-indigo-50 border-indigo-100' : ast.type === 'mcq' ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100',
+                      borderLeft: ast.type === 'coding' ? 'border-l-4 border-l-indigo-500' : ast.type === 'mcq' ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-amber-500',
+                      dueDate: dueDateText,
+                    };
+                  })
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className={`bg-white rounded-2xl border border-slate-100 ${item.borderLeft} p-4 shadow-xs flex items-center justify-between transition-all hover:shadow-md`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${item.boxBg}`}>
+                          {item.icon}
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-extrabold text-slate-900 leading-tight">{item.title}</h4>
+                          <p className="text-[11px] font-medium text-slate-400 mt-0.5 capitalize">{item.type}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                          <Calendar size={14} className="text-slate-400 shrink-0" />
+                          <span>{item.dueDate}</span>
+                        </div>
+
+                        <button
+                          onClick={() => handleStartTest(item.id)}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+                        >
+                          Start Test
+                        </button>
+                      </div>
+                    </div>
+                  ))
+              )}
             </div>
           </div>
 
