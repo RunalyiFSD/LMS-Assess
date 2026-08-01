@@ -21,6 +21,7 @@ This document consolidates the complete implementation plans across all core mod
 14. [Module 14: Activity Audit Logs (`/admin/logs`)](#module-14-activity-audit-logs-adminlogs)
 15. [Module 15: Support & Helpdesk Hub (`/admin/support`)](#module-15-support--helpdesk-hub-adminsupport)
 16. [Module 16: Instructor Grade Submissions Suite (`/instructor/grade`)](#module-16-instructor-grade-submissions-suite-instructorgrade)
+17. [Module 17: Question Bank Direct Assignment to Students (`/instructor/questions/assign`)](#module-17-question-bank-direct-assignment-to-students-instructorquestionsassign)
 
 ---
 
@@ -342,21 +343,28 @@ Provide a ticketing support system for students and instructors to submit techni
 
 ---
 
-## Module 16: Instructor Grade Submissions Suite (`/instructor/grade`)
+---
+
+## Module 17: Question Bank Direct Assignment to Students (`/instructor/questions/assign`)
 
 ### Objectives
-Provide faculty instructors with a comprehensive grading workflow to review student assessment attempts, evaluate theory/subjective text responses, assign question marks, write feedback, and update student results.
+Allow instructors to select one or multiple questions from the **Question Bank** tab on the **Instructor Dashboard**, click an **"Assign to Students"** button, specify assessment details (Title, Duration, Due Date, Passing Score, and Target Students/Batches), and publish them directly so they appear under the **Assigned Assessments** section on the **Student Dashboard**.
 
 ### Backend Architecture (`lms-backend`)
-1. **Controllers & Endpoints (`attemptController.js` / `assessmentController.js`)**:
-   - `GET /api/assessments/attempts/pending`: Returns student test submissions containing ungraded subjective responses.
-   - `POST /api/assessments/attempts/:attemptId/grade`: Evaluates subjective questions, awards manual marks, appends instructor remarks, recalculates total score percentage, and marks attempt as `graded`.
+1. **Schema Updates (`Assessment.js`)**:
+   - `assignedStudents`: Array of User ObjectIDs (`ref: 'User'`).
+   - `assignedBatch`: ObjectID (`ref: 'Batch'`).
+   - `assignmentType`: Enum (`'all'`, `'batch'`, `'students'`).
+2. **Endpoints (`assessmentRoutes.js` & `assessmentController.js`)**:
+   - `POST /api/assessments/assign`: Creates a live assessment from selected question IDs and assigns it to target students/batches.
+   - `GET /api/assessments/assigned-to-me`: Returns active assessments targeted to the currently logged-in student.
 
 ### Frontend Integration (`lms-frontend`)
 1. **Instructor Dashboard (`InstructorDashboardView.jsx`)**:
-   - Sub-navigation tab & route `/instructor/grade`.
-   - **Summary Metric Cards**: Pending Evaluation, Graded Submissions, Class Pass Rate, Submissions Needing Attention.
-   - **Search & Filters**: Search by student name, roll number, or test title; filter by Assessment and Status (`Pending Review`, `Graded`).
-   - **Submissions Roster Table**: Student details, Assessment title, Submitted timestamp, Auto-graded score (MCQ/Coding), Theory evaluation status, Total score, and Action button (**Grade Submission**).
-   - **Interactive Grading Modal**: Renders student's written theory answers, max marks, input field for awarded marks, feedback comment textarea, and "Publish Grades" submit action.
+   - Header action button **"Assign to Students"** enabled when 1 or more questions are selected via checkboxes.
+   - Row-level action button **"Assign"** for quick single-question assignment.
+   - **Assign Assessment Modal**: Form for entering Title, Due Date, Duration (mins), Passing Score (%), and target Audience (All / Batch / Selected Students).
+2. **Student Dashboard (`StudentDashboardView.jsx`)**:
+   - **Assigned Assessments Widget**: Dynamically fetches `/api/assessments/assigned-to-me` and displays assigned tests with question count, due date badge, total marks, and **Start Assessment** button.
+
 

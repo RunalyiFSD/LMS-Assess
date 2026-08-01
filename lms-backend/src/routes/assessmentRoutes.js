@@ -8,6 +8,14 @@ const router = express.Router();
 router.use(protect);
 
 router
+  .route('/assign')
+  .post(authorize('admin', 'instructor'), assessmentController.assignAssessment);
+
+router
+  .route('/assigned-to-me')
+  .get(assessmentController.getAssignedToMe);
+
+router
   .route('/calendar')
   .get(assessmentController.getCalendarEvents)
   .post(authorize('admin', 'instructor'), assessmentController.createCalendarEvent);

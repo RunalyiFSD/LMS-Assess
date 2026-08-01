@@ -69,12 +69,15 @@ const StudentDashboardView = () => {
       const t = Date.now();
 
       try {
-        const [assessRes, attemptsRes] = await Promise.all([
+        const [assignedRes, assessRes, attemptsRes] = await Promise.all([
+          api.get(`/assessments/assigned-to-me?t=${t}`).catch(() => null),
           api.get(`/assessments?t=${t}`).catch(() => ({ data: { data: { assessments: [] } } })),
           api.get(`/attempts/my-attempts?t=${t}`).catch(() => ({ data: { data: { attempts: [] } } })),
         ]);
 
-        if (assessRes.data?.status === 'success') {
+        if (assignedRes?.data?.status === 'success' && assignedRes.data.data.assessments?.length > 0) {
+          setAssessments(assignedRes.data.data.assessments);
+        } else if (assessRes.data?.status === 'success') {
           setAssessments(assessRes.data.data.assessments || []);
         }
 

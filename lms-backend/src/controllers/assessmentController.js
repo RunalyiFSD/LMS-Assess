@@ -288,3 +288,106 @@ exports.createCalendarEvent = async (req, res, next) => {
   }
 };
 
+// @desc    Assign Assessment from Question Bank to Students
+// @route   POST /api/assessments/assign
+// @access  Instructor, Admin
+exports.assignAssessment = async (req, res, next) => {
+  try {
+    const Notification = require('../models/Notification');
+    const {
+      title,
+      description,
+      subject,
+      type = 'mcq',
+      duration = 60,
+      passingScore = 40,
+      totalMarks = 100,
+      questions = [],
+      dueDate,
+      assignmentType = 'all',
+      assignedBatch = null,
+      assignedStudents = [],
+    } = req.body;
+
+    const calcDueDate = dueDate ? new Date(dueDate) : new Date(Date.now() + (duration || 60) * 60 * 1000);
+
+    const assessment = await Assessment.create({
+      title: title || 'Assigned Assessment',
+      description: description || '',
+      subject: subject || null,
+      type,
+      duration,
+      passingScore,
+      totalMarks,
+      questions,
+      creator: req.user._id,
+      isActive: true,
+      dueDate: calcDueDate,
+      assignmentType,
+      assignedBatch,
+      assignedStudents,
+    });
+
+    // Create notifications for assigned students
+    if (assignedStudents && assignedStudents.length > 0) {
+      const notifications = assignedStudents.map((studentId) => ({
+        recipient: studentId,
+        sender: req.user._id,
+        title: 'New Assessment Assigned',
+        message: `You have been assigned a new assessment: "${assessment.title}". Due by ${calcDueDate.toLocaleDateString()}.`,
+        type: 'assessment_assigned',
+      }));
+      await Notification.insertMany(notifications).catch((err) =>
+        console.warn('Failed to send assignment notifications:', err)
+      );
+    }
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Assessment assigned successfully',
+      data: {
+        assessment,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get Assessments Assigned to Currently Logged-in Student
+// @route   GET /api/assessments/assigned-to-me
+// @access  Student
+exports.getAssignedToMe = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const userBatch = req.user.batch;
+
+    const filter = {
+      isActive: true,
+      $or: [
+        { assignmentType: 'all' },
+        { assignedStudents: userId },
+      ],
+    };
+
+    if (userBatch) {
+      filter.$or.push({ assignedBatch: userBatch });
+    }
+
+    const assessments = await Assessment.find(filter)
+      .populate('subject', 'name code')
+      .populate('creator', 'name email')
+      .sort({ dueDate: 1, createdAt: -1 });
+
+    res.status(200).json({
+      status: 'success',
+      results: assessments.length,
+      data: {
+        assessments,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
