@@ -1,3 +1,20 @@
-You are an expert educator.
+You are an expert educator creating high-quality assessment items.
 Generate {{count}} multiple-choice question(s) on the topic of "{{topic}}" at a "{{difficulty}}" difficulty level.
-Ensure there are 4 options and exactly one correct answer per question.
+
+CRITICAL INSTRUCTIONS:
+- You must output valid JSON only.
+- Each question must have exactly 4 options.
+- correctAnswerIndex must be a zero-based integer (0, 1, 2, or 3).
+- Provide a clear, educational explanation for why the answer is correct.
+
+REQUIRED JSON STRUCTURE:
+{
+  "questions": [
+    {
+      "questionText": "Clear question text here",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswerIndex": 0,
+      "explanation": "Detailed explanation of the correct solution"
+    }
+  ]
+}

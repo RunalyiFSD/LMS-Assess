@@ -1,13 +1,16 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const PromptError = require('../errors/PromptError');
 
 /**
  * Prompt Registry
- * Loads prompt templates from disk, caches them, and compiles them with variables.
+ * Loads prompt templates from disk, caches them, versions them with SHA-256 hashes, and compiles them with variables.
  */
 class PromptRegistry {
   static #cache = new Map();
+  static #hashes = new Map();
+  static #version = '1.1.0';
 
   /**
    * Load a prompt template from the registry (with caching).
@@ -25,7 +28,10 @@ class PromptRegistry {
     const filePath = path.join(__dirname, domain, `${promptName}.txt`);
     try {
       const template = fs.readFileSync(filePath, 'utf-8');
+      const hash = crypto.createHash('sha256').update(template).digest('hex').substring(0, 12);
+      
       this.#cache.set(cacheKey, template);
+      this.#hashes.set(cacheKey, hash);
       return template;
     } catch (error) {
       if (error.code === 'ENOENT') {
@@ -36,10 +42,26 @@ class PromptRegistry {
   }
 
   /**
-   * Clears the in-memory prompt cache. Useful for testing or hot-reloading.
+   * Get metadata for a specific prompt template.
+   */
+  static getPromptMeta(domain, promptName) {
+    const cacheKey = `${domain}/${promptName}`;
+    if (!this.#cache.has(cacheKey)) {
+      this.loadTemplate(domain, promptName);
+    }
+    return {
+      name: cacheKey,
+      version: this.#version,
+      hash: this.#hashes.get(cacheKey) || 'unknown'
+    };
+  }
+
+  /**
+   * Clears the in-memory prompt cache.
    */
   static clearCache() {
     this.#cache.clear();
+    this.#hashes.clear();
   }
 
   /**
@@ -70,6 +92,15 @@ class PromptRegistry {
     }
 
     return template;
+  }
+
+  /**
+   * Returns compiled prompt alongside version and checksum metadata.
+   */
+  static getPromptWithMeta(domain, promptName, variables = {}) {
+    const prompt = this.getPrompt(domain, promptName, variables);
+    const meta = this.getPromptMeta(domain, promptName);
+    return { prompt, meta };
   }
 }
 
