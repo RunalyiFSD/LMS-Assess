@@ -85,6 +85,7 @@ A feature or task is classified as **Done** only when all of the following ten c
 - [Database Index](./DATABASE_INDEX.md) — Complete mapping of all Mongoose models, indexes, and relationships.
 
 ### Process & Governance
+- [Sprint 3.2 Architecture Specification (v1.0.0)](./Sprint_3_2_Architecture_v1.0.md) — Frozen specification for decoupled AI Evaluation Engine & Orchestrator.
 - [Pre-Implementation Checklist](./PRE_IMPLEMENTATION_CHECKLIST.md) — Standardized pre-flight gate for all new work.
 - [Implementation Playbook](./IMPLEMENTATION_PLAYBOOK.md) — The developer's guide for adding new features, controllers, models, and providers.
 - [Code Ownership Matrix](./CODE_OWNERSHIP.md) — Domain ownership, risk levels, and review responsibilities.
