@@ -85,11 +85,11 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex bg-slate-50">
-      
+
       {/* Left Panel: Auth Form */}
       <div className="w-full lg:w-[55%] flex flex-col justify-center px-6 py-12 sm:px-16 md:px-24 bg-white relative">
         <div className="max-w-md w-full mx-auto">
-          
+
           {/* Brand Header */}
           <div className="mb-8">
             <Link to="/" className="inline-flex items-center gap-2">
@@ -124,7 +124,7 @@ const Login = () => {
               className="flex items-center justify-center gap-2 py-2.5 px-4 border border-transparent rounded-md bg-black hover:bg-zinc-950 transition-colors text-sm font-semibold text-white shadow-sm"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
+                <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z" />
               </svg>
               <span>GitHub</span>
             </button>
@@ -219,7 +219,7 @@ const Login = () => {
 
       {/* Right Panel: Success Stories Carousel */}
       <div className="hidden lg:flex lg:w-[45%] bg-[#ebf0ff] flex-col justify-center items-center p-12 relative overflow-hidden">
-        
+
         {/* Testimonial Box */}
         <div className="bg-[#c3cfff] rounded-3xl p-10 max-w-md w-full relative shadow-lg min-h-[380px] flex flex-col justify-between transition-all duration-500 ease-in-out">
           <div>
@@ -229,7 +229,7 @@ const Login = () => {
             <h3 className="text-3xl font-extrabold text-slate-900 mb-6 leading-tight">
               {testimonials[activeSlide].heading}
             </h3>
-            
+
             <div className="flex justify-between items-center mb-4">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
                 {testimonials[activeSlide].label}
@@ -262,15 +262,14 @@ const Login = () => {
             <button
               key={t.id}
               onClick={() => setActiveSlide(idx)}
-              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                idx === activeSlide ? 'bg-slate-900 scale-110' : 'bg-slate-400 hover:bg-slate-500'
-              }`}
+              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 cursor-pointer ${idx === activeSlide ? 'bg-slate-900 scale-110' : 'bg-slate-400 hover:bg-slate-500'
+                }`}
               aria-label={`Go to slide ${idx + 1}`}
             />
           ))}
         </div>
       </div>
-      
+
     </div>
   );
 };

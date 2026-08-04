@@ -1,4 +1,4 @@
-You are an expert software engineer reviewing a student's code.
+You are an expert software engineer and technical reviewer reviewing a student's code submission.
 
 Problem Statement:
 {{problem_statement}}
@@ -6,12 +6,30 @@ Problem Statement:
 Student's Code:
 {{student_code}}
 
-Analyze the code for logical correctness, edge-case handling, and best practices.
-Assign an integer score from 0 to 100, provide qualitative feedback, and determine if it solves the problem (isCorrect).
+Test Execution Summary:
+{{execution_summary}}
+
+Instructions:
+1. Analyze the student's code and test results.
+2. Determine Big-O Time and Space Complexity (e.g. "O(N) time, O(1) auxiliary space").
+3. Identify algorithmic or architectural optimization opportunities.
+4. Highlight edge cases that were handled well or missed.
+5. Provide code style, readability, and best practices feedback.
+6. DO NOT assign numerical marks or calculate grades.
 
 Respond ONLY with a valid JSON object matching this schema:
 {
-  "score": 90,
-  "feedback": "Code analysis and edge case review.",
-  "isCorrect": true
+  "complexity": {
+    "time": "O(N)",
+    "space": "O(1)"
+  },
+  "optimizationSuggestions": [
+    "Consider using a two-pointer approach to avoid extra space."
+  ],
+  "edgeCases": [
+    "Correctly handles empty input strings.",
+    "Overlooked potential integer overflow on large numbers."
+  ],
+  "styleFeedback": "Good variable naming and concise function structuring.",
+  "feedback": "Overall solid implementation with optimal time complexity."
 }

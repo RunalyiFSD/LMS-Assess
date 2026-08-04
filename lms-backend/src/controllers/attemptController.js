@@ -118,11 +118,23 @@ exports.autoSaveAttempt = async (req, res, next) => {
 // @access  Student
 exports.submitAssessment = async (req, res, next) => {
   try {
-    const attempt = await Attempt.findById(req.params.id);
+    // Atomic status transition: 'started' → 'processing'
+    // This is a single DB operation. If two requests race, only ONE will find
+    // a document with status='started'. The second gets null and returns 400.
+    // This prevents: double testsTaken increments, double AI evaluation,
+    // double Result creation, and double notifications.
+    const attempt = await Attempt.findOneAndUpdate(
+      { _id: req.params.id, status: 'started' },
+      { $set: { status: 'processing' } },
+      { new: false } // return the document BEFORE the update (original state)
+    );
+
     if (!attempt) {
-      return next(new AppError('Attempt session not found', 404));
-    }
-    if (attempt.status !== 'started') {
+      // Either the attempt does not exist, or it was already submitted/graded/processing
+      const existing = await Attempt.findById(req.params.id).select('status');
+      if (!existing) {
+        return next(new AppError('Attempt session not found', 404));
+      }
       return next(new AppError('This assessment has already been submitted.', 400));
     }
 
@@ -166,7 +178,7 @@ exports.submitAssessment = async (req, res, next) => {
             parsedResult: {
               marks: ans.marksObtained,
               feedback: ans.feedback,
-              confidenceScore: ans.aiResult.score ? ans.aiResult.score / 100 : 0.85
+              confidenceScore: typeof ans.confidenceScore === 'number' ? ans.confidenceScore : (typeof ans.aiResult.confidence === 'number' ? ans.aiResult.confidence : 1.0)
             },
             tokensUsed: {
               input: ans.aiResult.usage?.promptTokens || 0,
@@ -292,8 +304,13 @@ exports.getMyAttempts = async (req, res, next) => {
           const anyPendingReview = attempt.answers.some(ans => ans.pendingReview === true);
           if (anyPendingReview) {
             attempt.status = 'submitted';
+            // Do NOT increment testsTaken here — the attempt is not fully resolved.
+            // testsTaken is incremented only when the result is finalized (graded).
           } else {
             attempt.status = 'graded';
+
+            // Increment testsTaken only when result is actually finalized
+            await User.findByIdAndUpdate(attempt.student, { $inc: { testsTaken: 1 } });
 
             // Create result scorecard
             const percentage = assessment.totalMarks > 0 
@@ -407,7 +424,7 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
       return next(new AppError('Assessment not found', 404));
     }
 
-    // 1. Merge grades for Theory questions
+    // 1. Merge grades for Theory questions supplied by the instructor
     const gradedMap = new Map();
     gradedAnswers.forEach((g) => {
       gradedMap.set(g.questionId.toString(), g);
@@ -422,6 +439,8 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
         ans.marksObtained = updatedGrade.marksObtained;
         ans.feedback = updatedGrade.feedback || '';
         ans.isGraded = true;
+        // Clear pendingReview for this answer now that an instructor has graded it
+        ans.pendingReview = false;
       }
       
       newTotalScore += ans.marksObtained;
@@ -430,11 +449,33 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
 
     attempt.totalMarksObtained = Math.max(0, newTotalScore);
     attempt.isPassed = attempt.totalMarksObtained >= assessment.passingScore;
-    attempt.status = 'graded';
 
+    // 2. Check whether any answer is still awaiting instructor review.
+    //    A partial grading payload must NOT prematurely publish the Result.
+    //    The attempt remains 'submitted' until every pendingReview flag is cleared.
+    const stillPending = attempt.answers.some((ans) => ans.pendingReview === true);
+
+    if (stillPending) {
+      // Keep status as 'submitted'; do not create or update the Result document.
+      // The instructor must return and grade the remaining flagged answers.
+      attempt.status = 'submitted';
+      await attempt.save();
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Partial grades saved. Some answers are still pending review. Please grade all flagged answers before the result is published.',
+        data: {
+          attempt,
+          remainingPending: attempt.answers.filter((a) => a.pendingReview).length,
+        },
+      });
+    }
+
+    // All answers resolved — finalize and publish
+    attempt.status = 'graded';
     await attempt.save();
 
-    // 2. Create scorecard result
+    // 3. Create or update scorecard result
     const percentage = Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100;
     await Result.findOneAndUpdate(
       { attempt: attempt._id },
@@ -451,10 +492,10 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
       { upsert: true, returnDocument: 'after' }
     );
 
-    // 3. Update leaderboard
+    // 4. Update leaderboard
     await leaderboardService.recalculateLeaderboard(assessment._id);
 
-    // 4. Notify student
+    // 5. Notify student
     await notificationService.createNotification(
       attempt.student._id,
       'Assessment Result Released',

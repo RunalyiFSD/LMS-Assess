@@ -29,13 +29,13 @@ const MEDAL_CONFIG = {
 const InlineStudentProfile = ({ studentId, rank = 1, onClose }) => {
   const panelRef = useRef(null);
 
-  const [profile, setProfile]                     = useState(null);
-  const [summary, setSummary]                     = useState(null);
-  const [subjectPerformance, setSubjectPerf]      = useState([]);
-  const [history, setHistory]                     = useState([]);
-  const [achievements, setAchievements]           = useState([]);
-  const [analytics, setAnalytics]                 = useState(null);
-  const [loading, setLoading]                     = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [subjectPerformance, setSubjectPerf] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [achievements, setAchievements] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const medal = MEDAL_CONFIG[rank] || MEDAL_CONFIG[5];
 

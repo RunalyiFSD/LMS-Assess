@@ -182,15 +182,14 @@ const InstructorDashboardView = () => {
         setQuestions(qRes.data.data.questions || []);
       }
 
-      // Fetch dynamic student attempts & existing users/assessments from backend DB
+      // Fetch dynamic student attempts from /attempts/all-submissions.
+      // Student details (name, email, batch) come from the populated Attempt.student subdocument.
+      // We intentionally do NOT call the admin-only GET /users endpoint here — instructors
+      // do not have permission for that route and it would always return 403.
       try {
-        const [attemptsRes, usersRes] = await Promise.all([
-          api.get('/attempts/all-submissions').catch(() => null),
-          api.get('/users').catch(() => null),
-        ]);
+        const attemptsRes = await api.get('/attempts/all-submissions').catch(() => null);
 
         const dbAttempts = attemptsRes?.data?.data?.attempts || [];
-        const existingUsers = (usersRes?.data?.data?.users || []).filter((u) => u.role === 'student' || u.role === 'user');
 
         const studentRosterData = [
           {
@@ -301,6 +300,8 @@ const InstructorDashboardView = () => {
 
         if (dbAttempts.length > 0) {
           fetchedSubmissions = dbAttempts.map((att) => {
+            // Read student info from the populated Attempt.student subdocument.
+            // This avoids needing the admin-only GET /users endpoint.
             const student = att.student || {};
             const assessment = att.assessment || {};
             
@@ -311,6 +312,16 @@ const InstructorDashboardView = () => {
                 prompt: ans.questionId?.question || ans.questionId?.title || 'Describe the core architecture and working principles.',
                 maxMarks: ans.questionId?.maxMarks || 10,
                 studentAnswer: ans.submittedText || 'Detailed response provided during assessment session.',
+                aiMarks: ans.aiMarks,
+                aiFeedback: ans.aiFeedback,
+                aiGraded: ans.aiGraded,
+                confidenceScore: ans.confidenceScore,
+                accuracy: ans.accuracy,
+                completeness: ans.completeness,
+                terminology: ans.terminology,
+                pendingReview: ans.pendingReview,
+                marksObtained: ans.marksObtained,
+                feedback: ans.feedback,
               }));
 
             const autoScore = att.totalMarksObtained || 0;
@@ -319,6 +330,7 @@ const InstructorDashboardView = () => {
 
             return {
               _id: att._id,
+              // student.name / email / batch come from the populated Attempt.student field
               studentName: student.name || 'Student User',
               rollNo: student.rollNo || student.batch || student.department || 'CS-2025',
               email: student.email || 'student@lms.edu',
@@ -463,8 +475,10 @@ const InstructorDashboardView = () => {
     const initialFeedback = {};
 
     attempt.theoryQuestions?.forEach((q) => {
-      initialMarks[q.questionId] = q.maxMarks;
-      initialFeedback[q.questionId] = 'Well written response. Demonstrates clear conceptual understanding.';
+      initialMarks[q.questionId] = (q.aiMarks !== null && q.aiMarks !== undefined) 
+        ? q.aiMarks 
+        : (q.marksObtained ?? q.maxMarks);
+      initialFeedback[q.questionId] = q.aiFeedback || q.feedback || 'Demonstrates clear conceptual understanding.';
     });
 
     setGradingMarksMap(initialMarks);
@@ -1304,7 +1318,71 @@ const InstructorDashboardView = () => {
                       </div>
                     </div>
 
-                    {/* Award Marks & Feedback */}
+                    {/* AI Evaluation Insights Card */}
+                    {(q.aiMarks !== null || q.aiFeedback) && (
+                      <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-black text-indigo-900">
+                              🤖 AI Evaluation: <span className="text-indigo-600">{q.aiMarks !== null && q.aiMarks !== undefined ? `${q.aiMarks} / ${q.maxMarks} pts` : 'Pending'}</span>
+                            </span>
+                            {q.confidenceScore !== null && q.confidenceScore !== undefined && (
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                q.confidenceScore >= 0.60
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {q.confidenceScore >= 0.60 ? `✓ High Confidence (${Math.round(q.confidenceScore * 100)}%)` : `⚠️ Review Needed (${Math.round(q.confidenceScore * 100)}%)`}
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (q.aiMarks !== null && q.aiMarks !== undefined) {
+                                setGradingMarksMap((p) => ({ ...p, [q.questionId]: q.aiMarks }));
+                              }
+                              if (q.aiFeedback) {
+                                setGradingFeedbackMap((p) => ({ ...p, [q.questionId]: q.aiFeedback }));
+                              }
+                            }}
+                            className="px-2.5 py-1 text-[10px] font-bold bg-white hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors shadow-2xs cursor-pointer"
+                          >
+                            Accept AI Grade
+                          </button>
+                        </div>
+
+                        {/* Rubric Breakdown Dimensions */}
+                        {(q.accuracy !== null || q.completeness !== null || q.terminology !== null) && (
+                          <div className="flex flex-wrap items-center gap-2 pt-1">
+                            {q.accuracy !== null && q.accuracy !== undefined && (
+                              <span className="px-2 py-0.5 rounded bg-white text-slate-700 font-semibold text-[10px] border border-slate-200">
+                                Accuracy: <strong className="text-indigo-600">{q.accuracy}/10</strong>
+                              </span>
+                            )}
+                            {q.completeness !== null && q.completeness !== undefined && (
+                              <span className="px-2 py-0.5 rounded bg-white text-slate-700 font-semibold text-[10px] border border-slate-200">
+                                Completeness: <strong className="text-indigo-600">{q.completeness}/10</strong>
+                              </span>
+                            )}
+                            {q.terminology !== null && q.terminology !== undefined && (
+                              <span className="px-2 py-0.5 rounded bg-white text-slate-700 font-semibold text-[10px] border border-slate-200">
+                                Terminology: <strong className="text-indigo-600">{q.terminology}/10</strong>
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {q.aiFeedback && (
+                          <p className="text-[11px] text-slate-600 leading-relaxed italic bg-white/70 p-2 rounded-lg border border-indigo-50">
+                            "{q.aiFeedback}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Award Marks & Feedback Override */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                       <div>
                         <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
@@ -1314,7 +1392,8 @@ const InstructorDashboardView = () => {
                           type="number"
                           min={0}
                           max={q.maxMarks}
-                          value={gradingMarksMap[q.questionId] ?? q.maxMarks}
+                          step={0.5}
+                          value={gradingMarksMap[q.questionId] ?? (q.aiMarks ?? q.maxMarks)}
                           onChange={(e) =>
                             setGradingMarksMap((p) => ({
                               ...p,
