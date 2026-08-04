@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import ProgressAnalyticsView from './ProgressAnalyticsView';
 import PerformanceReport from './PerformanceReport';
+import { DashboardSkeleton } from '../common/Skeleton';
 import {
   Award,
   Calendar,
@@ -76,17 +77,14 @@ const StudentDashboardView = () => {
         ]);
 
         const assignedList = assignedRes?.data?.data?.assessments || [];
-        const allList = assessRes?.data?.data?.assessments || [];
 
-        const combinedMap = new Map();
-        assignedList.forEach((ast) => combinedMap.set(ast._id, ast));
-        allList.forEach((ast) => {
-          if (!combinedMap.has(ast._id)) {
-            combinedMap.set(ast._id, ast);
-          }
-        });
+        // Focus strictly on assessments assigned by instructors
+        const recentAssigned = [...assignedList];
 
-        setAssessments(Array.from(combinedMap.values()));
+        // Sort by creation / assigned date descending (newest first)
+        recentAssigned.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+        setAssessments(recentAssigned);
 
         if (attemptsRes.data?.status === 'success') {
           setMyAttempts(attemptsRes.data.data.attempts || []);
@@ -260,12 +258,7 @@ const StudentDashboardView = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-16 text-slate-400 gap-2">
-        <span className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
-        <span>Loading Student Dashboard...</span>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
   const companyMocksList = [
     { _id: 'cmp_1', title: 'Infosys Placement Aptitude Mock', company: 'Infosys', reg: '582 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
@@ -864,7 +857,7 @@ const StudentDashboardView = () => {
           {/* Section 1: Assigned Assessments */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Assigned Assessments</h2>
+              <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Recently Assigned Assessments</h2>
               <button
                 onClick={() => navigate('/dashboard?tab=explore_mocks')}
                 className="text-xs font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer"
@@ -894,6 +887,12 @@ const StudentDashboardView = () => {
                         })}`;
                       }
                     }
+
+                    // Cross-reference with myAttempts state array if needed
+                    const userAttempt = myAttempts.find((att) => (att.assessment?._id || att.assessment) === ast._id);
+                    const isCompleted = ast.isCompleted || (userAttempt && (userAttempt.status === 'submitted' || userAttempt.status === 'graded'));
+                    const attemptStatus = ast.attemptStatus || userAttempt?.status || 'not_started';
+
                     return {
                       id: ast._id,
                       title: ast.title,
@@ -902,6 +901,8 @@ const StudentDashboardView = () => {
                       boxBg: ast.type === 'coding' ? 'bg-indigo-50 border-indigo-100' : ast.type === 'mcq' ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100',
                       borderLeft: ast.type === 'coding' ? 'border-l-4 border-l-indigo-500' : ast.type === 'mcq' ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-amber-500',
                       dueDate: dueDateText,
+                      isCompleted,
+                      attemptStatus,
                     };
                   })
                   .map((item) => (
@@ -925,12 +926,27 @@ const StudentDashboardView = () => {
                           <span>{item.dueDate}</span>
                         </div>
 
-                        <button
-                          onClick={() => handleStartTest(item.id)}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
-                        >
-                          Start Test
-                        </button>
+                        {item.isCompleted ? (
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold text-xs px-3.5 py-1.5 rounded-xl inline-flex items-center gap-1.5 shadow-2xs">
+                            <CheckCircle size={14} className="text-emerald-600" />
+                            <span>Completed</span>
+                          </span>
+                        ) : item.attemptStatus === 'started' ? (
+                          <button
+                            onClick={() => handleStartTest(item.id)}
+                            className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                          >
+                            <Clock size={13} />
+                            <span>Resume Test</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleStartTest(item.id)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer"
+                          >
+                            Start Test
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))

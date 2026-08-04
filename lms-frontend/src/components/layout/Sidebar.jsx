@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import {
   LayoutDashboard,
   Users,
@@ -20,15 +21,16 @@ import {
   ClipboardList,
   BarChart3,
   FileText,
-  Headphones
+  Headphones,
+  ArrowRight
 } from 'lucide-react';
 
 const Sidebar = () => {
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const location = useLocation();
   if (!user) return null;
 
-  // Define navigation items based on User roles
   const getNavLinks = () => {
     if (user.role === 'admin') {
       return [
@@ -73,15 +75,17 @@ const Sidebar = () => {
   };
 
   const links = getNavLinks();
-
   const isCollapsed = Boolean(user?.settings?.appearance?.sidebarCollapse);
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-[#2D2354] text-[#F8FAFC] min-h-[calc(100vh-62px)] flex flex-col justify-between border-r border-[#3D317C]/40 transition-all duration-300 print:hidden`}>
+    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} text-[#F8FAFC] min-h-[calc(100vh-62px)] flex flex-col justify-between transition-all duration-300 print:hidden border-r ${
+      isDark
+        ? 'bg-[#0d111d] border-[#1e2436]'
+        : 'bg-[#2D2354] border-[#3D317C]/40'
+    }`}>
       <div className={`${isCollapsed ? 'px-2' : 'px-4'} py-6`}>
         <div className="space-y-1">
           {links.map((link, idx) => {
-            // Calculate active state including query parameters to resolve dashboard overlay duplicates
             let isActive = false;
             if (link.to.includes('?')) {
               const [path, search] = link.to.split('?');
@@ -95,10 +99,13 @@ const Sidebar = () => {
                 key={idx}
                 to={link.to}
                 title={isCollapsed ? link.label : undefined}
-                className={`flex items-center ${isCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-3'} rounded-lg text-sm font-medium transition-all duration-300 ease ${isActive
-                    ? 'text-white shadow-sm'
-                    : 'text-[#F8FAFC] hover:bg-[#3D317C] hover:text-[#F8FAFC]'
-                  }`}
+                className={`flex items-center ${isCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-3'} rounded-xl text-sm font-medium transition-all duration-200 ${
+                  isActive
+                    ? 'text-white shadow-md font-bold'
+                    : isDark
+                      ? 'text-slate-400 hover:bg-[#182035] hover:text-white'
+                      : 'text-slate-200 hover:bg-[#3D317C] hover:text-white'
+                }`}
                 style={
                   isActive
                     ? { backgroundImage: 'linear-gradient(90deg, #6366F1, #7C3AED)' }
@@ -113,16 +120,30 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* Footer Role display card */}
-      <div className={`${isCollapsed ? 'p-2 text-center' : 'p-4'} border-t border-[#3D317C]/40 bg-slate-950/20`}>
+      {/* Footer */}
+      <div className={`${isCollapsed ? 'p-2 text-center' : 'p-4'} border-t ${
+        isDark
+          ? 'border-[#1e2436] bg-[#0a0e18]'
+          : 'border-[#3D317C]/40 bg-slate-950/20'
+      }`}>
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'}`}>
           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
           {!isCollapsed && (
-            <span className="text-xs text-slate-300 font-medium tracking-wide uppercase">
+            <span className={`text-xs font-semibold tracking-wide uppercase ${
+              isDark ? 'text-emerald-400' : 'text-slate-300'
+            }`}>
               {user.role} Session Active
             </span>
           )}
         </div>
+        {!isCollapsed && isDark && (
+          <div className="mt-2 space-y-1">
+            <p className="text-[11px] text-slate-500">You're now in a secure session.</p>
+            <button className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 transition-colors">
+              Learn more <ArrowRight size={11} />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

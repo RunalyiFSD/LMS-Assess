@@ -92,8 +92,8 @@ exports.executeCode = async (code, language, testCases, timeLimit = 2000) => {
         // Write input to stdin of process if inputs exist
         if (testInput) {
           process.stdin.write(testInput);
-          process.stdin.end();
         }
+        process.stdin.end();
       });
 
       if (result.success && result.output.trim() === expectedOut) {

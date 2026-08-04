@@ -1,4 +1,5 @@
 const AppError = require('../utils/AppError');
+const logger = require('../utils/logger');
 
 const handleCastErrorDB = (err) => {
   const message = `Invalid ${err.path}: ${err.value}.`;
@@ -20,6 +21,16 @@ const handleValidationErrorDB = (err) => {
 module.exports = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
+
+  // Log error via Winston with structured metadata
+  logger.error(err.message || 'Unhandled Express Error', {
+    requestId: req.id,
+    url: req.originalUrl,
+    method: req.method,
+    statusCode: err.statusCode,
+    userId: req.user ? req.user._id : undefined,
+    stack: err.stack,
+  });
 
   if (process.env.NODE_ENV === 'development') {
     res.status(err.statusCode).json({

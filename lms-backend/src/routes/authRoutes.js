@@ -1,14 +1,15 @@
 const express = require('express');
 const authController = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const { authLimiter } = require('../middleware/rateLimitMiddleware');
 
 const router = express.Router();
 
 router.post('/register', authController.register);
-router.post('/login', authController.login);
+router.post('/login', authLimiter, authController.login);
 router.post('/logout', protect, authController.logout);
 router.get('/me', protect, authController.getMe);
-router.post('/forgot-password', authController.forgotPassword);
+router.post('/forgot-password', authLimiter, authController.forgotPassword);
 router.post('/reset-password/:token', authController.resetPassword);
 
 // OAuth & Simulation Routes

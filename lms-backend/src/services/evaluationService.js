@@ -13,14 +13,20 @@ exports.evaluateAttemptAnswers = async (questions, studentAnswers) => {
   let totalMarksObtained = 0;
   const gradedAnswers = [];
 
+  const getIdString = (idObj) => {
+    if (!idObj) return '';
+    if (typeof idObj === 'object' && idObj._id) return idObj._id.toString();
+    return idObj.toString();
+  };
+
   // Map student answers by questionId for fast retrieval
   const answerMap = new Map();
   studentAnswers.forEach((ans) => {
-    answerMap.set(ans.questionId.toString(), ans);
+    answerMap.set(getIdString(ans.questionId), ans);
   });
 
   for (const qRef of questions) {
-    const qIdStr = qRef.questionId.toString();
+    const qIdStr = getIdString(qRef.questionId);
     const studentAns = answerMap.get(qIdStr);
     
     // Default structure for question answer

@@ -1,7 +1,9 @@
+const mongoose = require('mongoose');
 const Assessment = require('../models/Assessment');
 const MCQQuestion = require('../models/MCQQuestion');
 const CodingQuestion = require('../models/CodingQuestion');
 const TheoryQuestion = require('../models/TheoryQuestion');
+const Attempt = require('../models/Attempt');
 const AppError = require('../utils/AppError');
 
 // @desc    Create Assessment
@@ -103,6 +105,19 @@ exports.getAssessmentDetails = async (req, res, next) => {
 
     // Convert to JSON object for manipulation
     const assessmentObj = assessment.toObject();
+
+    // Check if student has an existing attempt
+    if (req.user.role === 'student') {
+      const existingAttempt = await Attempt.findOne({ student: req.user._id, assessment: req.params.id });
+      if (existingAttempt) {
+        assessmentObj.attemptStatus = existingAttempt.status;
+        assessmentObj.isCompleted = existingAttempt.status === 'submitted' || existingAttempt.status === 'graded';
+        assessmentObj.attemptId = existingAttempt._id;
+      } else {
+        assessmentObj.attemptStatus = 'not_started';
+        assessmentObj.isCompleted = false;
+      }
+    }
 
     // Secure answers and testcases from students to prevent cheating
     if (req.user.role === 'student') {
@@ -394,6 +409,7 @@ exports.getAssignedToMe = async (req, res, next) => {
 
     const filter = {
       isActive: true,
+      isMock: { $ne: true },
       $or: [
         { assignmentType: 'all' },
         { assignmentType: { $exists: false } },
@@ -404,7 +420,21 @@ exports.getAssignedToMe = async (req, res, next) => {
     };
 
     if (userBatch) {
-      filter.$or.push({ assignedBatch: userBatch });
+      if (mongoose.Types.ObjectId.isValid(userBatch)) {
+        filter.$or.push({ assignedBatch: userBatch });
+      } else {
+        const Batch = require('../models/Batch');
+        const foundBatch = await Batch.findOne({
+          $or: [
+            { name: userBatch },
+            { name: `Batch ${userBatch}` },
+            { academicYear: new RegExp(userBatch, 'i') },
+          ],
+        });
+        if (foundBatch) {
+          filter.$or.push({ assignedBatch: foundBatch._id });
+        }
+      }
     }
 
     const assessments = await Assessment.find(filter)
@@ -412,11 +442,32 @@ exports.getAssignedToMe = async (req, res, next) => {
       .populate('creator', 'name email')
       .sort({ createdAt: -1, dueDate: 1 });
 
+    // Query student's attempts to attach completion status
+    const studentAttempts = await Attempt.find({ student: userId });
+    const attemptMap = new Map();
+    studentAttempts.forEach((att) => {
+      attemptMap.set(att.assessment.toString(), att);
+    });
+
+    const enrichedAssessments = assessments.map((ast) => {
+      const astObj = ast.toObject();
+      const att = attemptMap.get(ast._id.toString());
+      if (att) {
+        astObj.attemptStatus = att.status;
+        astObj.isCompleted = att.status === 'submitted' || att.status === 'graded';
+        astObj.attemptId = att._id;
+      } else {
+        astObj.attemptStatus = 'not_started';
+        astObj.isCompleted = false;
+      }
+      return astObj;
+    });
+
     res.status(200).json({
       status: 'success',
-      results: assessments.length,
+      results: enrichedAssessments.length,
       data: {
-        assessments,
+        assessments: enrichedAssessments,
       },
     });
   } catch (error) {

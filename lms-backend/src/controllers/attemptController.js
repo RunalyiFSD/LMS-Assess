@@ -37,10 +37,8 @@ exports.startAssessment = async (req, res, next) => {
           },
         });
       } else {
-        // For testing purposes: delete the previous completed/submitted attempt and its results
-        // so that the student can start a fresh attempt.
-        await Attempt.deleteOne({ _id: attempt._id });
-        await Result.deleteOne({ attempt: attempt._id });
+        // Prevent retaking completed/submitted assessments
+        return next(new AppError('You have already completed this assessment. Re-attempts are strictly restricted.', 400));
       }
     }
 

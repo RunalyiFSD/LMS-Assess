@@ -97,8 +97,58 @@ exports.login = async (req, res, next) => {
       ],
     }).select('+password');
 
-    if (!user || !(await user.comparePassword(password))) {
+    if (!user) {
       return next(new AppError('Incorrect email/username or password', 401));
+    }
+
+    // Check if user account is currently locked
+    if (user.lockUntil && new Date(user.lockUntil).getTime() > Date.now()) {
+      const remainingMinutes = Math.ceil((new Date(user.lockUntil).getTime() - Date.now()) / (60 * 1000));
+      return next(
+        new AppError(
+          `Account is locked due to 5 consecutive failed login attempts. Please try again in ${remainingMinutes} minute(s).`,
+          429
+        )
+      );
+    }
+
+    // Verify password match
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      const currentAttempts = (user.failedLoginAttempts || 0) + 1;
+      const MAX_ATTEMPTS = 5;
+
+      if (currentAttempts >= MAX_ATTEMPTS) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 mins lock
+        user.failedLoginAttempts = 0;
+        await user.save({ validateBeforeSave: false });
+
+        return next(
+          new AppError(
+            'Account locked due to 5 consecutive failed login attempts. Please try again after 15 minutes.',
+            429
+          )
+        );
+      } else {
+        user.failedLoginAttempts = currentAttempts;
+        await user.save({ validateBeforeSave: false });
+
+        const remaining = MAX_ATTEMPTS - currentAttempts;
+        return next(
+          new AppError(
+            `Incorrect email/username or password. ${remaining} attempt(s) remaining before account lockout.`,
+            401
+          )
+        );
+      }
+    }
+
+    // Password verified successfully: reset lockout & failed attempt counters
+    if (user.failedLoginAttempts > 0 || user.lockUntil) {
+      user.failedLoginAttempts = 0;
+      user.lockUntil = null;
+      await user.save({ validateBeforeSave: false });
     }
 
     sendTokenResponse(user, 200, res);

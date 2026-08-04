@@ -343,28 +343,44 @@ Provide a ticketing support system for students and instructors to submit techni
 
 ---
 
+
+
 ---
 
-## Module 17: Question Bank Direct Assignment to Students (`/instructor/questions/assign`)
+
+
+---
+
+
+---
+
+
+---
+
+
+---
+
+## Module 24: Dark Mode Theme & Preference Persistence
 
 ### Objectives
-Allow instructors to select one or multiple questions from the **Question Bank** tab on the **Instructor Dashboard**, click an **"Assign to Students"** button, specify assessment details (Title, Duration, Due Date, Passing Score, and Target Students/Batches), and publish them directly so they appear under the **Assigned Assessments** section on the **Student Dashboard**.
+Implement a dark mode theme across the platform with a user-controlled toggle (Sun / Moon icon) and dual-layer persistence (LocalStorage + User Database Settings) so selected theme preferences are automatically restored on page refreshes and logins.
 
-### Backend Architecture (`lms-backend`)
-1. **Schema Updates (`Assessment.js`)**:
-   - `assignedStudents`: Array of User ObjectIDs (`ref: 'User'`).
-   - `assignedBatch`: ObjectID (`ref: 'Batch'`).
-   - `assignmentType`: Enum (`'all'`, `'batch'`, `'students'`).
-2. **Endpoints (`assessmentRoutes.js` & `assessmentController.js`)**:
-   - `POST /api/assessments/assign`: Creates a live assessment from selected question IDs and assigns it to target students/batches.
-   - `GET /api/assessments/assigned-to-me`: Returns active assessments targeted to the currently logged-in student.
+### Frontend Architecture (`lms-frontend`)
+1. **Theme Context & Hook (`ThemeContext.jsx`)**:
+   - Manages `'light'` vs `'dark'` theme state.
+   - Applies `.dark` class to `document.documentElement` (`<html>`).
+   - Persists state in `localStorage.setItem('theme', theme)`.
+   - Syncs user preference asynchronously to backend (`PUT /api/users/profile`, setting `user.settings.theme`).
+2. **Header Integration (`Header.jsx`)**:
+   - Renders Sun / Moon toggle button in top right navigation toolbar.
+3. **App Wrapper (`App.jsx`)**:
+   - Wrapped route hierarchy in `<ThemeProvider>`.
 
-### Frontend Integration (`lms-frontend`)
-1. **Instructor Dashboard (`InstructorDashboardView.jsx`)**:
-   - Header action button **"Assign to Students"** enabled when 1 or more questions are selected via checkboxes.
-   - Row-level action button **"Assign"** for quick single-question assignment.
-   - **Assign Assessment Modal**: Form for entering Title, Due Date, Duration (mins), Passing Score (%), and target Audience (All / Batch / Selected Students).
-2. **Student Dashboard (`StudentDashboardView.jsx`)**:
-   - **Assigned Assessments Widget**: Dynamically fetches `/api/assessments/assigned-to-me` and displays assigned tests with question count, due date badge, total marks, and **Start Assessment** button.
+
+
+
+
+
+
 
 

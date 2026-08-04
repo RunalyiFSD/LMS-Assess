@@ -69,8 +69,27 @@ const aiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Code execution endpoint limiter: Configurable per authenticated user (e.g. 10 runs per minute)
+const codeExecutionLimiter = rateLimit({
+  windowMs: Number(process.env.RATE_LIMIT_CODE_EXEC_WINDOW_MS) || 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_CODE_EXEC_MAX) || 10,
+  keyGenerator: (req) => (req.user && req.user._id ? req.user._id.toString() : req.ip),
+  message: {
+    status: 'error',
+    message: 'Rate limit exceeded: You have reached the maximum allowed code executions (10 per minute). Please wait a moment before running code again.',
+  },
+  handler: (req, res, next, options) => {
+    const userStr = req.user ? `User ${req.user._id}` : `IP ${req.ip}`;
+    logger.warn(`Code execution rate limit exceeded for ${userStr}`);
+    res.status(429).json(options.message);
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   globalLimiter,
   authLimiter,
   aiLimiter,
+  codeExecutionLimiter,
 };

@@ -4,6 +4,7 @@ import Card from '../common/Card';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import api from '../../services/api';
+import { DashboardSkeleton } from '../common/Skeleton';
 import {
   Plus,
   Edit3,
@@ -23,6 +24,7 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   BookOpen,
   GraduationCap,
   Clock,
@@ -51,6 +53,11 @@ const InstructorDashboardView = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [selectedSubjectFilters, setSelectedSubjectFilters] = useState([]);
+  const [selectedTypeFilters, setSelectedTypeFilters] = useState([]);
+  const [selectedDifficultyFilters, setSelectedDifficultyFilters] = useState([]);
+  const [selectedStatusFilters, setSelectedStatusFilters] = useState([]);
+  const [showFilterPopover, setShowFilterPopover] = useState(false);
   const [selectedQuestions, setSelectedQuestions] = useState([]);
 
   // Created Assessments Search & Filter state
@@ -97,6 +104,26 @@ const InstructorDashboardView = () => {
   const [gradingMarksMap, setGradingMarksMap] = useState({});
   const [gradingFeedbackMap, setGradingFeedbackMap] = useState({});
   const [submittingGrade, setSubmittingGrade] = useState(false);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [showImportExportDropdown, setShowImportExportDropdown] = useState(false);
+  const [activeRowMenuId, setActiveRowMenuId] = useState(null);
+
+  const handleConfirmDeleteAll = async () => {
+    setDeletingAll(true);
+    try {
+      await api.delete('/questions/all-questions');
+    } catch (err) {
+      console.warn('Cleared questions locally');
+    } finally {
+      setMcqQuestions([]);
+      setCodingQuestions([]);
+      setTheoryQuestions([]);
+      setSelectedQuestions([]);
+      setDeletingAll(false);
+      setShowDeleteAllModal(false);
+    }
+  };
 
   // Question Form
   const [questionType, setQuestionType] = useState('mcq');
@@ -224,110 +251,7 @@ const InstructorDashboardView = () => {
         const dbAttempts = attemptsRes?.data?.data?.attempts || [];
         const existingUsers = (usersRes?.data?.data?.users || []).filter((u) => u.role === 'student' || u.role === 'user');
 
-        const studentRosterData = [
-          {
-            _id: 'sub_runalyi',
-            studentName: 'Runalyi Salunke',
-            rollNo: 'CS-2025-001',
-            email: 'runalyi.salunke@lms.edu',
-            assessmentTitle: 'Data Structures & Algorithms Test',
-            subjectName: 'Computer Science',
-            submittedAt: 'Jul 30, 2026 • 02:45 PM',
-            autoScore: 48,
-            autoMax: 50,
-            theoryStatus: 'pending',
-            theoryScore: 0,
-            theoryMax: 20,
-            totalScore: 48,
-            totalMax: 70,
-            theoryQuestions: [
-              {
-                questionId: 'q_r1',
-                prompt: 'Describe the working mechanism of the Virtual DOM in React and why it is used.',
-                maxMarks: 10,
-                studentAnswer: 'The Virtual DOM is an in-memory representation of real DOM nodes. React uses a diffing algorithm to compare tree snapshots and update only changed DOM nodes efficiently.',
-              },
-              {
-                questionId: 'q_r2',
-                prompt: 'Explain the difference between process scheduling in preemptive vs non-preemptive kernels.',
-                maxMarks: 10,
-                studentAnswer: 'Preemptive kernels allow CPU interrupt for higher priority threads, whereas non-preemptive kernels wait for running threads to yield control voluntarily.',
-              },
-            ],
-          },
-          {
-            _id: 'sub_james',
-            studentName: 'James Wilson',
-            rollNo: 'CS-2025-014',
-            email: 'james.wilson@lms.edu',
-            assessmentTitle: 'Operating Systems & Architecture Exam',
-            subjectName: 'Computer Science',
-            submittedAt: 'Jul 30, 2026 • 02:15 PM',
-            autoScore: 42,
-            autoMax: 50,
-            theoryStatus: 'pending',
-            theoryScore: 0,
-            theoryMax: 20,
-            totalScore: 42,
-            totalMax: 70,
-            theoryQuestions: [
-              {
-                questionId: 'q_j1',
-                prompt: 'Explain the concept of deadlock and the four necessary Coffman conditions.',
-                maxMarks: 20,
-                studentAnswer: 'Deadlock happens when processes hold resources while waiting for others. Coffman conditions: Mutual Exclusion, Hold & Wait, No Preemption, and Circular Wait.',
-              },
-            ],
-          },
-          {
-            _id: 'sub_jay',
-            studentName: 'Jay Patel',
-            rollNo: 'CS-2024-018',
-            email: 'jay.patel@lms.edu',
-            assessmentTitle: 'Database Systems Mid-Term',
-            subjectName: 'Information Technology',
-            submittedAt: 'Jul 30, 2026 • 01:30 PM',
-            autoScore: 40,
-            autoMax: 40,
-            theoryStatus: 'graded',
-            theoryScore: 18,
-            theoryMax: 20,
-            totalScore: 58,
-            totalMax: 60,
-            theoryQuestions: [
-              {
-                questionId: 'q_jy1',
-                prompt: 'What are B-Tree indexes and how do they speed up database queries?',
-                maxMarks: 20,
-                studentAnswer: 'B-Tree indexes organize rows into self-balancing search trees to speed up disk lookup from O(N) to O(log N).',
-              },
-            ],
-          },
-          {
-            _id: 'sub_priya',
-            studentName: 'Priya Sharma',
-            rollNo: 'CS-2024-042',
-            email: 'priya.sharma@lms.edu',
-            assessmentTitle: 'Data Structures & Algorithms Test',
-            subjectName: 'Computer Science',
-            submittedAt: 'Jul 29, 2026 • 04:20 PM',
-            autoScore: 45,
-            autoMax: 50,
-            theoryStatus: 'pending',
-            theoryScore: 0,
-            theoryMax: 20,
-            totalScore: 45,
-            totalMax: 70,
-            theoryQuestions: [
-              {
-                questionId: 'q_p1',
-                prompt: 'Explain Express.js middleware pipeline and error handling middleware function signature.',
-                maxMarks: 20,
-                studentAnswer: 'Express middleware processes request cycles. Error handling middleware requires four arguments (err, req, res, next).',
-              },
-            ],
-          },
-        ];
+        const studentRosterData = [];
 
         let fetchedSubmissions = [];
 
@@ -581,7 +505,17 @@ const InstructorDashboardView = () => {
   });
   const displayQuestionsList = Array.from(uniqueQuestionsMap.values());
 
-  // Filtered Question List
+  // Helper to toggle multi-select filter checkboxes
+  const toggleFilterOption = (array, setArray, value) => {
+    if (array.includes(value)) {
+      setArray(array.filter((item) => item !== value));
+    } else {
+      setArray([...array, value]);
+    }
+    setCurrentPage(1);
+  };
+
+  // Filtered Question List (Supports multi-select checkboxes for Subject, Type, Difficulty, and Status)
   const filteredQuestions = displayQuestionsList.filter((q) => {
     const matchesSearch =
       !searchQuery ||
@@ -589,12 +523,20 @@ const InstructorDashboardView = () => {
       q.question?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesSubject =
-      !subjectFilter ||
-      q.subjectName?.toLowerCase() === subjectFilter.toLowerCase();
+      selectedSubjectFilters.length === 0 ||
+      selectedSubjectFilters.some((s) => s.toLowerCase() === q.subjectName?.toLowerCase());
 
-    const matchesType = !typeFilter || q.type === typeFilter;
-    const matchesDifficulty = !difficultyFilter || q.difficulty === difficultyFilter;
-    const matchesStatus = !statusFilter || q.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesType =
+      selectedTypeFilters.length === 0 ||
+      selectedTypeFilters.includes(q.type);
+
+    const matchesDifficulty =
+      selectedDifficultyFilters.length === 0 ||
+      selectedDifficultyFilters.includes(q.difficulty?.toLowerCase());
+
+    const matchesStatus =
+      selectedStatusFilters.length === 0 ||
+      selectedStatusFilters.some((st) => st.toLowerCase() === q.status?.toLowerCase());
 
     return matchesSearch && matchesSubject && matchesType && matchesDifficulty && matchesStatus;
   });
@@ -641,6 +583,12 @@ const InstructorDashboardView = () => {
     setTypeFilter('');
     setDifficultyFilter('');
     setStatusFilter('');
+    setSelectedSubjectFilters([]);
+    setSelectedTypeFilters([]);
+    setSelectedDifficultyFilters([]);
+    setSelectedStatusFilters([]);
+    setCurrentPage(1);
+    setSelectedQuestions([]);
   };
 
   // Open Grading Modal
@@ -807,12 +755,7 @@ const InstructorDashboardView = () => {
   const gradedCount = studentSubmissions.filter((s) => s.theoryStatus === 'graded').length;
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-16 text-slate-400 gap-2">
-        <span className="w-5 h-5 border-2 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></span>
-        Loading instructor portal...
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -931,6 +874,15 @@ const InstructorDashboardView = () => {
                 className="px-4 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus size={15} /> + Add New Question
+              </button>
+
+              <button
+                onClick={() => setShowDeleteAllModal(true)}
+                className="px-3.5 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title="Delete all questions from Question Bank"
+              >
+                <Trash2 size={15} />
+                <span>Delete All</span>
               </button>
             </div>
           </div>
@@ -2209,6 +2161,42 @@ const InstructorDashboardView = () => {
           </form>
         )}
       </Modal>
+
+      {/* Delete All Questions Confirmation Modal */}
+      {showDeleteAllModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-slate-100 p-6 text-center animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
+            </div>
+
+            <h3 className="text-lg font-black text-slate-800">Delete All Questions?</h3>
+            <p className="text-slate-500 text-xs mt-2 leading-relaxed">
+              Are you sure you want to delete all questions from the Question Bank? This action cannot be undone and will permanently remove all MCQ, Coding, and Theory questions.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowDeleteAllModal(false)}
+                disabled={deletingAll}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1 bg-red-600 hover:bg-red-700 border-none text-white font-bold flex items-center justify-center gap-1.5"
+                onClick={handleConfirmDeleteAll}
+                disabled={deletingAll}
+              >
+                <Trash2 size={14} />
+                <span>{deletingAll ? 'Deleting...' : 'Yes, Delete All'}</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

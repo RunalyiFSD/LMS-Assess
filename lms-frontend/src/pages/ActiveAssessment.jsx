@@ -114,8 +114,9 @@ const ActiveAssessment = () => {
         setRunResult(res.data.data.result);
       }
     } catch (err) {
+      const errMsg = err.response?.data?.message || err.message;
       setRunResult({
-        executionLogs: `Execution Failure: ${err.message}`,
+        executionLogs: `Execution Failure: ${errMsg}`,
       });
     } finally {
       setRunningCode(false);
