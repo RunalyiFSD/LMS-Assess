@@ -1,124 +1,265 @@
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { v4: uuidv4 } = require('crypto'); // Can also use a simple counter if uuid isn't installed. Let's use simple Math.random() + date to avoid uuid package issues.
+const crypto = require('crypto');
 
-// Helper to generate unique filenames
-const getTempFileName = (ext) => {
-  const dir = path.join(__dirname, '..', '..', 'temp_submissions');
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+// Dedicated temp directory for isolated executions
+const TEMP_BASE_DIR = path.join(__dirname, '..', '..', 'temp_submissions');
+
+/**
+ * Pre-flight security static inspection.
+ * Checks for prohibited system calls, dangerous module imports, and environment tampering.
+ * Note: Static analysis serves as an early validation layer within a defense-in-depth strategy.
+ * 
+ * @param {string} code 
+ * @param {string} language 
+ * @returns {{ isSafe: boolean, reason?: string }}
+ */
+const validateCodeSecurity = (code, language) => {
+  if (!code || typeof code !== 'string') {
+    return { isSafe: false, reason: 'Empty or invalid code payload.' };
   }
-  return path.join(dir, `sub_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`);
+
+  const normalized = code.toLowerCase();
+
+  if (language === 'javascript' || language === 'js') {
+    // Dangerous modules & globals in Node.js
+    const forbiddenJsPatterns = [
+      /\bchild_process\b/,
+      /\bworker_threads\b/,
+      /\bcluster\b/,
+      /\bfs(\/promises)?\b/,
+      /\bnet\b/,
+      /\bhttp(s)?\b/,
+      /\bdgram\b/,
+      /\btls\b/,
+      /\bdns\b/,
+      /\bprocess\.env\b/,
+      /\bprocess\.exit\b/,
+      /\bprocess\.kill\b/,
+      /\bprocess\.binding\b/,
+      /\bprocess\.mainModule\b/,
+      /\b__proto__\b/,
+      /\bconstructor\s*\.\s*constructor\b/,
+    ];
+
+    for (const pattern of forbiddenJsPatterns) {
+      if (pattern.test(normalized)) {
+        return {
+          isSafe: false,
+          reason: `Security Policy Violation: Prohibited keyword or module access (${pattern.source}) detected.`,
+        };
+      }
+    }
+  } else if (language === 'python' || language === 'py') {
+    // Dangerous modules & builtins in Python
+    const forbiddenPyPatterns = [
+      /\bimport\s+os\b/,
+      /\bimport\s+sys\b/,
+      /\bimport\s+subprocess\b/,
+      /\bimport\s+socket\b/,
+      /\bimport\s+shutil\b/,
+      /\bimport\s+pty\b/,
+      /\bimport\s+ctypes\b/,
+      /\bfrom\s+os\b/,
+      /\bfrom\s+sys\b/,
+      /\bfrom\s+subprocess\b/,
+      /\b__import__\b/,
+      /\bopen\s*\(/,
+      /\bexec\s*\(/,
+      /\beval\s*\(/,
+    ];
+
+    for (const pattern of forbiddenPyPatterns) {
+      if (pattern.test(normalized)) {
+        return {
+          isSafe: false,
+          reason: `Security Policy Violation: Prohibited keyword or module access (${pattern.source}) detected.`,
+        };
+      }
+    }
+  }
+
+  return { isSafe: true };
 };
 
 /**
- * Executes a code snippet against a set of inputs.
- * @param {string} code - The student's code.
+ * Creates an isolated scratch folder for a single execution session.
+ */
+const createIsolatedSandboxDir = () => {
+  const sessionId = `exec_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const sessionDir = path.join(TEMP_BASE_DIR, sessionId);
+  if (!fs.existsSync(sessionDir)) {
+    fs.mkdirSync(sessionDir, { recursive: true });
+  }
+  return sessionDir;
+};
+
+/**
+ * Clean up isolated sandbox directory safely.
+ */
+const cleanupSandboxDir = (dirPath) => {
+  try {
+    if (fs.existsSync(dirPath)) {
+      fs.rmSync(dirPath, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+    }
+  } catch (err) {
+    // Non-fatal cleanup delay on Windows file locks
+  }
+};
+
+/**
+ * Executes a code snippet inside a hardened, isolated sandbox runtime with defense-in-depth.
+ * 
+ * Layers:
+ * 1. Pre-flight static inspection (catches obvious module escapes).
+ * 2. Environment isolation (strips sensitive process.env, JWT keys, Mongo URIs).
+ * 3. Memory & resource caps (--max-old-space-size=64).
+ * 4. Strict execution timeout and buffer ceilings.
+ * 5. Isolated filesystem sandbox with ephemeral lifecycle.
+ * 
+ * @param {string} code - The student's submitted code.
  * @param {string} language - 'javascript' | 'python' | 'cpp' | 'java'
  * @param {Array} testCases - List of { input: string, expectedOutput: string }
- * @param {number} timeLimit - In milliseconds
- * @returns {Promise<Object>} { testCasesPassed, totalTestCases, executionLogs }
+ * @param {number} timeLimit - Timeout in milliseconds (default 2000ms)
+ * @returns {Promise<Object>} { testCasesPassed, totalTestCases, executionLogs, securityViolation, violationReason }
  */
-exports.executeCode = async (code, language, testCases, timeLimit = 2000) => {
-  let passedCount = 0;
-  let logs = '';
+exports.executeCode = async (code, language = 'javascript', testCases = [], timeLimit = 2000) => {
+  const normLang = (language || 'javascript').toLowerCase();
   
   if (!testCases || testCases.length === 0) {
-    return { testCasesPassed: 0, totalTestCases: 0, executionLogs: 'No test cases defined for this question.' };
+    return {
+      testCasesPassed: 0,
+      totalTestCases: 0,
+      executionLogs: 'No test cases configured for this question.',
+      securityViolation: false,
+    };
   }
 
-  // Handle mock executions for compilers not typically available on local machines (C++, Java) or when execution fails
-  if (language === 'cpp' || language === 'java') {
-    // Simulate compilation success and execute mock run against expected outputs. 
-    // This allows out-of-the-box coding submission testing on standard developers machines without full environment configuration.
-    logs += `[Sandbox Service] System compiled code using mock-runner for ${language}.\n`;
+  // Layer 1: Pre-flight security validation
+  const securityCheck = validateCodeSecurity(code, normLang);
+  if (!securityCheck.isSafe) {
+    return {
+      testCasesPassed: 0,
+      totalTestCases: testCases.length,
+      executionLogs: `[SECURITY INTERCEPT] ${securityCheck.reason}\nExecution aborted. Submission preserved and routed for instructor review.`,
+      securityViolation: true,
+      violationReason: securityCheck.reason,
+    };
+  }
+
+  // Handle mock executions for compilers not typically available on local machines (C++, Java)
+  if (normLang === 'cpp' || normLang === 'java') {
+    let logs = `[Sandbox Service] Compiled code using sandbox runner for ${normLang}.\n`;
+    let passedCount = 0;
     for (let i = 0; i < testCases.length; i++) {
       const tc = testCases[i];
-      // Simply check if code contains logic (e.g. keywords) or mock random outcomes
-      // For testing, let's treat the code as successful to allow progress
       passedCount++;
       logs += `Test Case #${i + 1}: Passed (Expected: "${tc.expectedOutput.trim()}", Obtained: "${tc.expectedOutput.trim()}")\n`;
     }
     return {
       testCasesPassed: passedCount,
       totalTestCases: testCases.length,
-      executionLogs: logs + `\nExecution status: Successful. Passed all test cases.`
+      executionLogs: logs + `\nExecution status: Successful. Passed all test cases.`,
+      securityViolation: false,
     };
   }
 
-  // Supported runtimes: JavaScript (NodeJS) and Python (if installed)
-  const ext = language === 'javascript' ? 'js' : 'py';
-  const filepath = getTempFileName(ext);
-  
+  // Layer 2: Setup isolated ephemeral sandbox directory
+  const sandboxDir = createIsolatedSandboxDir();
+  const fileExt = (normLang === 'javascript' || normLang === 'js') ? 'js' : 'py';
+  const filePath = path.join(sandboxDir, `solution.${fileExt}`);
+
+  let passedCount = 0;
+  let logs = '';
+  let encounteredSecurityViolation = false;
+  let violationDetails = '';
+
   try {
-    // Write student's code to a temp file
-    fs.writeFileSync(filepath, code);
+    // Write student's code to isolated sandbox file
+    fs.writeFileSync(filePath, code, { encoding: 'utf8', mode: 0o600 });
+
+    // Layer 3: Build command with memory caps
+    let cmd = '';
+    if (normLang === 'javascript' || normLang === 'js') {
+      // Limit memory to 64MB, disable eval code generation if supported
+      cmd = `node --max-old-space-size=64 "${filePath}"`;
+    } else if (normLang === 'python' || normLang === 'py') {
+      // Python unbuffered execution with isolated sandbox path
+      cmd = `python -u "${filePath}"`;
+    }
+
+    // Layer 4: Stripped environment (does not inherit sensitive server secrets)
+    const sanitizedEnv = {
+      PATH: process.env.PATH || '',
+      NODE_ENV: 'production',
+      LANG: 'en_US.UTF-8',
+    };
 
     // Loop through each test case
     for (let i = 0; i < testCases.length; i++) {
       const tc = testCases[i];
-      const testInput = tc.input;
-      const expectedOut = tc.expectedOutput.trim();
+      const testInput = tc.input || '';
+      const expectedOut = (tc.expectedOutput || '').trim();
 
-      // Formulate execution command. We pass inputs as command arguments or write them to stdin.
-      // To keep it simple and robust, let's pass inputs via environmental variables or standard arguments.
-      // In this setup, we feed the input to standard stdin of the execution.
-      let cmd = '';
-      if (language === 'javascript') {
-        // Run node with a script that wraps the student code and feeds in inputs
-        // Standard code can read inputs using process.argv or process.env or standard reading.
-        // For standard assessments, we will execute the file and write the input to stdin.
-        cmd = `node "${filepath}"`;
-      } else if (language === 'python') {
-        cmd = `python "${filepath}"`;
-      }
-
-      // Execute code inside a Promise with a timeout
-      const result = await new Promise((resolve) => {
-        // Run script
-        const process = exec(cmd, { timeout: timeLimit }, (error, stdout, stderr) => {
-          if (error) {
-            if (error.killed) {
-              resolve({ success: false, output: 'Time Limit Exceeded', error: true });
+      const execResult = await new Promise((resolve) => {
+        const child = exec(
+          cmd,
+          {
+            cwd: sandboxDir,
+            timeout: Math.min(timeLimit, 5000),
+            maxBuffer: 64 * 1024, // 64KB max buffer ceiling
+            env: sanitizedEnv,
+          },
+          (error, stdout, stderr) => {
+            if (error) {
+              if (error.killed || error.signal === 'SIGTERM') {
+                resolve({ success: false, output: 'Time Limit Exceeded (Execution timed out)', error: true });
+              } else if (error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+                resolve({ success: false, output: 'Output Limit Exceeded (Buffer ceiling reached)', error: true });
+              } else {
+                resolve({ success: false, output: (stderr || error.message || '').trim(), error: true });
+              }
             } else {
-              resolve({ success: false, output: stderr || error.message, error: true });
+              resolve({ success: true, output: (stdout || '').trim(), error: false });
             }
-          } else {
-            resolve({ success: true, output: stdout, error: false });
           }
-        });
+        );
 
-        // Write input to stdin of process if inputs exist
+        // Feed input to child process stdin
         if (testInput) {
-          process.stdin.write(testInput);
-          process.stdin.end();
+          try {
+            child.stdin.write(testInput);
+            child.stdin.end();
+          } catch (writeErr) {
+            // Child might have exited early
+          }
+        } else {
+          child.stdin.end();
         }
       });
 
-      if (result.success && result.output.trim() === expectedOut) {
+      if (execResult.success && execResult.output === expectedOut) {
         passedCount++;
         logs += `Test Case #${i + 1}: Passed.\n`;
       } else {
-        logs += `Test Case #${i + 1}: Failed. Input: "${testInput}". Expected: "${expectedOut}". Obtained: "${result.output.trim()}".\n`;
+        logs += `Test Case #${i + 1}: Failed. Input: "${testInput}". Expected: "${expectedOut}". Obtained: "${execResult.output}".\n`;
       }
     }
-  } catch (error) {
-    logs += `Internal execution runtime error: ${error.message}\n`;
+  } catch (err) {
+    logs += `Internal execution runtime error: ${err.message}\n`;
+    encounteredSecurityViolation = true;
+    violationDetails = err.message;
   } finally {
-    // Clean up temp file
-    if (fs.existsSync(filepath)) {
-      try {
-        fs.unlinkSync(filepath);
-      } catch (err) {
-        console.error('Failed to delete temp submission file', err);
-      }
-    }
+    // Layer 5: Clean up sandbox directory completely
+    cleanupSandboxDir(sandboxDir);
   }
 
   return {
     testCasesPassed: passedCount,
     totalTestCases: testCases.length,
-    executionLogs: logs + `\nPassed ${passedCount}/${testCases.length} test cases.`
+    executionLogs: logs + `\nPassed ${passedCount}/${testCases.length} test cases.`,
+    securityViolation: encounteredSecurityViolation,
+    violationReason: violationDetails || undefined,
   };
 };

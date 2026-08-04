@@ -44,4 +44,8 @@ const resultSchema = new mongoose.Schema(
   }
 );
 
+// Compound indexes for leaderboard rankings and student lookup
+resultSchema.index({ assessment: 1, scoreObtained: -1 });
+resultSchema.index({ student: 1, assessment: 1 });
+
 module.exports = mongoose.model('Result', resultSchema);

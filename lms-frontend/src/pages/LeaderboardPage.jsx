@@ -93,9 +93,9 @@ const LeaderboardPage = () => {
       header: 'Rank',
       accessor: (row) => (
         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-xs ${row.rank === 1 ? 'bg-amber-100 text-amber-800' :
-            row.rank === 2 ? 'bg-slate-100 text-slate-700' :
-              row.rank === 3 ? 'bg-orange-100 text-orange-800' :
-                'text-slate-500'
+          row.rank === 2 ? 'bg-slate-100 text-slate-700' :
+            row.rank === 3 ? 'bg-orange-100 text-orange-800' :
+              'text-slate-500'
           }`}>
           {row.rank}
         </span>

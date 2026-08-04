@@ -1,3 +1,8 @@
+/**
+ * @deprecated DO NOT USE.
+ * This service is deprecated and will be removed in Sprint 3.2.
+ * All evaluation features must use `evaluationService.js`.
+ */
 const NotImplementedError = require('../errors/NotImplementedError');
 
 class TheoryEvaluationService {
@@ -7,3 +12,4 @@ class TheoryEvaluationService {
 }
 
 module.exports = TheoryEvaluationService;
+

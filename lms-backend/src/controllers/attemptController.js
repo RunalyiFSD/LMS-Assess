@@ -2,6 +2,7 @@ const Attempt = require('../models/Attempt');
 const Assessment = require('../models/Assessment');
 const Result = require('../models/Result');
 const User = require('../models/User');
+const AIEvaluationLog = require('../models/AIEvaluationLog');
 const evaluationService = require('../services/evaluationService');
 const leaderboardService = require('../services/leaderboardService');
 const notificationService = require('../services/notificationService');
@@ -117,11 +118,23 @@ exports.autoSaveAttempt = async (req, res, next) => {
 // @access  Student
 exports.submitAssessment = async (req, res, next) => {
   try {
-    const attempt = await Attempt.findById(req.params.id);
+    // Atomic status transition: 'started' → 'processing'
+    // This is a single DB operation. If two requests race, only ONE will find
+    // a document with status='started'. The second gets null and returns 400.
+    // This prevents: double testsTaken increments, double AI evaluation,
+    // double Result creation, and double notifications.
+    const attempt = await Attempt.findOneAndUpdate(
+      { _id: req.params.id, status: 'started' },
+      { $set: { status: 'processing' } },
+      { new: false } // return the document BEFORE the update (original state)
+    );
+
     if (!attempt) {
-      return next(new AppError('Attempt session not found', 404));
-    }
-    if (attempt.status !== 'started') {
+      // Either the attempt does not exist, or it was already submitted/graded/processing
+      const existing = await Attempt.findById(req.params.id).select('status');
+      if (!existing) {
+        return next(new AppError('Attempt session not found', 404));
+      }
       return next(new AppError('This assessment has already been submitted.', 400));
     }
 
@@ -140,7 +153,7 @@ exports.submitAssessment = async (req, res, next) => {
       attempt.answers = req.body.answers;
     }
 
-    // 2. Run auto grading rules
+    // 2. Run auto grading rules (including AI Theory evaluation)
     const evaluation = await evaluationService.evaluateAttemptAnswers(assessment.questions, attempt.answers);
     
     attempt.answers = evaluation.gradedAnswers;
@@ -150,45 +163,64 @@ exports.submitAssessment = async (req, res, next) => {
     // Increment testsTaken counter on the user
     await User.findByIdAndUpdate(attempt.student, { $inc: { testsTaken: 1 } });
 
-    // Check if manual grading is needed (i.e. has Theory questions)
-    const hasTheory = assessment.type === 'theory' || assessment.questions.some(q => q.questionModel === 'TheoryQuestion');
-    
-    if (hasTheory) {
-      // Theory assessments require manual verification before finalizing results
-      attempt.status = 'submitted';
-      await attempt.save();
+    // 3. Persist AI evaluation audit telemetry logs
+    for (const ans of evaluation.gradedAnswers) {
+      if (ans.aiResult && ans.aiResult.rawAiResponse) {
+        try {
+          await AIEvaluationLog.create({
+            attemptId: attempt._id,
+            questionId: ans.questionId,
+            studentId: attempt.student,
+            provider: ans.aiResult.provider || 'groq',
+            modelName: ans.aiResult.modelName || 'llama-3.1-8b-instant',
+            promptHash: ans.aiResult.promptHash || 'unknown',
+            rawAiResponse: ans.aiResult.rawAiResponse,
+            parsedResult: {
+              marks: ans.marksObtained,
+              feedback: ans.feedback,
+              confidenceScore: typeof ans.confidenceScore === 'number' ? ans.confidenceScore : (typeof ans.aiResult.confidence === 'number' ? ans.aiResult.confidence : 1.0)
+            },
+            tokensUsed: {
+              input: ans.aiResult.usage?.promptTokens || 0,
+              output: ans.aiResult.usage?.completionTokens || 0,
+              total: ans.aiResult.usage?.totalTokens || 0
+            },
+            processingTimeMs: ans.aiResult.telemetry?.latencyMs || 0,
+            needsHumanReview: !!ans.pendingReview
+          });
+        } catch (logErr) {
+          console.warn('[AttemptController] AIEvaluationLog creation warning:', logErr.message);
+        }
+      }
+    }
 
-      // Notify instructor
-      await notificationService.createNotification(
-        assessment.creator,
-        'Theory review submission by student',
-        `Student "${req.user.name}" submitted "${assessment.title}". Theory review required.`,
-        'notification'
-      );
+    // 4. Check if any question requires manual instructor review
+    const anyPendingReview = attempt.answers.some(ans => ans.pendingReview === true);
 
-      res.status(200).json({
-        status: 'success',
-        message: 'Assessment submitted successfully. Pending instructor grading for theory answers.',
-        data: {
-          attempt,
-        },
-      });
-    } else {
-      // MCQ & Coding tests can be graded and published immediately!
+    if (!anyPendingReview) {
+      // All questions evaluated and finalized!
       attempt.status = 'graded';
       await attempt.save();
 
-      // Create scorecard result
-      const percentage = Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100;
-      await Result.create({
-        student: attempt.student,
-        assessment: attempt.assessment,
-        attempt: attempt._id,
-        totalMarks: assessment.totalMarks,
-        scoreObtained: attempt.totalMarksObtained,
-        percentage,
-        status: attempt.isPassed ? 'pass' : 'fail',
-      });
+      // Create or update scorecard result
+      const percentage = assessment.totalMarks > 0 
+        ? Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100 
+        : 0;
+
+      await Result.findOneAndUpdate(
+        { attempt: attempt._id },
+        {
+          student: attempt.student,
+          assessment: attempt.assessment,
+          attempt: attempt._id,
+          totalMarks: assessment.totalMarks,
+          scoreObtained: attempt.totalMarksObtained,
+          percentage,
+          status: attempt.isPassed ? 'pass' : 'fail',
+          publishedAt: new Date()
+        },
+        { upsert: true, returnDocument: 'after' }
+      );
 
       // Recalculate assessment rankings
       await leaderboardService.recalculateLeaderboard(assessment._id);
@@ -202,9 +234,29 @@ exports.submitAssessment = async (req, res, next) => {
         req.user.email
       );
 
-      res.status(200).json({
+      return res.status(200).json({
         status: 'success',
-        message: 'Assessment submitted and graded successfully.',
+        message: 'Assessment submitted and evaluated by AI successfully.',
+        data: {
+          attempt,
+        },
+      });
+    } else {
+      // Borderline or offline theory answers flagged for instructor review
+      attempt.status = 'submitted';
+      await attempt.save();
+
+      // Notify instructor
+      await notificationService.createNotification(
+        assessment.creator,
+        'Theory review submission by student',
+        `Student "${req.user.name}" submitted "${assessment.title}". AI flagged some answers for human review.`,
+        'notification'
+      );
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Assessment submitted. AI preliminary grades generated; instructor review recommended for flagged answers.',
         data: {
           attempt,
         },
@@ -249,14 +301,21 @@ exports.getMyAttempts = async (req, res, next) => {
           // Increment testsTaken counter on the user
           await User.findByIdAndUpdate(attempt.student, { $inc: { testsTaken: 1 } });
 
-          const hasTheory = assessment.type === 'theory' || assessment.questions.some(q => q.questionModel === 'TheoryQuestion');
-          if (hasTheory) {
+          const anyPendingReview = attempt.answers.some(ans => ans.pendingReview === true);
+          if (anyPendingReview) {
             attempt.status = 'submitted';
+            // Do NOT increment testsTaken here — the attempt is not fully resolved.
+            // testsTaken is incremented only when the result is finalized (graded).
           } else {
             attempt.status = 'graded';
 
+            // Increment testsTaken only when result is actually finalized
+            await User.findByIdAndUpdate(attempt.student, { $inc: { testsTaken: 1 } });
+
             // Create result scorecard
-            const percentage = Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100;
+            const percentage = assessment.totalMarks > 0 
+              ? Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100 
+              : 0;
             await Result.findOneAndUpdate(
               { attempt: attempt._id },
               {
@@ -365,7 +424,7 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
       return next(new AppError('Assessment not found', 404));
     }
 
-    // 1. Merge grades for Theory questions
+    // 1. Merge grades for Theory questions supplied by the instructor
     const gradedMap = new Map();
     gradedAnswers.forEach((g) => {
       gradedMap.set(g.questionId.toString(), g);
@@ -380,6 +439,8 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
         ans.marksObtained = updatedGrade.marksObtained;
         ans.feedback = updatedGrade.feedback || '';
         ans.isGraded = true;
+        // Clear pendingReview for this answer now that an instructor has graded it
+        ans.pendingReview = false;
       }
       
       newTotalScore += ans.marksObtained;
@@ -388,11 +449,33 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
 
     attempt.totalMarksObtained = Math.max(0, newTotalScore);
     attempt.isPassed = attempt.totalMarksObtained >= assessment.passingScore;
-    attempt.status = 'graded';
 
+    // 2. Check whether any answer is still awaiting instructor review.
+    //    A partial grading payload must NOT prematurely publish the Result.
+    //    The attempt remains 'submitted' until every pendingReview flag is cleared.
+    const stillPending = attempt.answers.some((ans) => ans.pendingReview === true);
+
+    if (stillPending) {
+      // Keep status as 'submitted'; do not create or update the Result document.
+      // The instructor must return and grade the remaining flagged answers.
+      attempt.status = 'submitted';
+      await attempt.save();
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Partial grades saved. Some answers are still pending review. Please grade all flagged answers before the result is published.',
+        data: {
+          attempt,
+          remainingPending: attempt.answers.filter((a) => a.pendingReview).length,
+        },
+      });
+    }
+
+    // All answers resolved — finalize and publish
+    attempt.status = 'graded';
     await attempt.save();
 
-    // 2. Create scorecard result
+    // 3. Create or update scorecard result
     const percentage = Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100;
     await Result.findOneAndUpdate(
       { attempt: attempt._id },
@@ -406,13 +489,13 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
         status: attempt.isPassed ? 'pass' : 'fail',
         publishedAt: new Date(),
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
-    // 3. Update leaderboard
+    // 4. Update leaderboard
     await leaderboardService.recalculateLeaderboard(assessment._id);
 
-    // 4. Notify student
+    // 5. Notify student
     await notificationService.createNotification(
       attempt.student._id,
       'Assessment Result Released',

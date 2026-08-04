@@ -15,10 +15,10 @@ const CompanyLogo = ({ name }) => {
       return (
         <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-white shadow-sm border border-slate-100" title="Google">
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" fill="#FBBC05" />
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
           </svg>
         </span>
       );
@@ -26,10 +26,10 @@ const CompanyLogo = ({ name }) => {
       return (
         <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-white shadow-sm border border-slate-100" title="Microsoft">
           <svg viewBox="0 0 23 23" className="w-3.5 h-3.5">
-            <rect x="0" y="0" width="10" height="10" fill="#F25022"/>
-            <rect x="11" y="0" width="10" height="10" fill="#7FBA00"/>
-            <rect x="0" y="11" width="10" height="10" fill="#00A4EF"/>
-            <rect x="11" y="11" width="10" height="10" fill="#FFB900"/>
+            <rect x="0" y="0" width="10" height="10" fill="#F25022" />
+            <rect x="11" y="0" width="10" height="10" fill="#7FBA00" />
+            <rect x="0" y="11" width="10" height="10" fill="#00A4EF" />
+            <rect x="11" y="11" width="10" height="10" fill="#FFB900" />
           </svg>
         </span>
       );
@@ -37,8 +37,8 @@ const CompanyLogo = ({ name }) => {
       return (
         <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-white shadow-sm border border-slate-100" title="Amazon">
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-slate-800">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.33c-.37.2-.74.34-1.12.43-.37.09-.76.13-1.16.13-.57 0-1.02-.12-1.34-.37-.32-.24-.48-.6-.48-1.07 0-.32.08-.6.23-.83.15-.24.38-.43.68-.58.3-.15.68-.27 1.13-.36.45-.09.96-.18 1.54-.26v-.24c0-.37-.09-.64-.28-.8-.19-.17-.52-.25-.97-.25-.33 0-.64.05-.92.14-.28.09-.59.25-.93.47l-.52-.77c.43-.33.89-.58 1.39-.73.49-.16 1.05-.24 1.66-.24.8 0 1.4.2 1.8.61.4.4.6.99.6 1.78v3.07c0 .4.07.72.2.94v.09h-1.09c-.11-.2-.17-.48-.21-.86zm-2.07-1.74c-.38.07-.71.14-.98.22-.27.08-.48.2-.62.35-.14.15-.21.34-.21.57 0 .28.09.49.27.63.18.14.45.21.82.21.31 0 .59-.06.84-.18.25-.12.44-.29.58-.51.14-.22.21-.49.21-.8v-.52c-.41.05-.71.08-.91.08z"/>
-            <path d="M7 17.5c2.5 1.5 5.5 1.5 8 0" stroke="#FF9900" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.33c-.37.2-.74.34-1.12.43-.37.09-.76.13-1.16.13-.57 0-1.02-.12-1.34-.37-.32-.24-.48-.6-.48-1.07 0-.32.08-.6.23-.83.15-.24.38-.43.68-.58.3-.15.68-.27 1.13-.36.45-.09.96-.18 1.54-.26v-.24c0-.37-.09-.64-.28-.8-.19-.17-.52-.25-.97-.25-.33 0-.64.05-.92.14-.28.09-.59.25-.93.47l-.52-.77c.43-.33.89-.58 1.39-.73.49-.16 1.05-.24 1.66-.24.8 0 1.4.2 1.8.61.4.4.6.99.6 1.78v3.07c0 .4.07.72.2.94v.09h-1.09c-.11-.2-.17-.48-.21-.86zm-2.07-1.74c-.38.07-.71.14-.98.22-.27.08-.48.2-.62.35-.14.15-.21.34-.21.57 0 .28.09.49.27.63.18.14.45.21.82.21.31 0 .59-.06.84-.18.25-.12.44-.29.58-.51.14-.22.21-.49.21-.8v-.52c-.41.05-.71.08-.91.08z" />
+            <path d="M7 17.5c2.5 1.5 5.5 1.5 8 0" stroke="#FF9900" strokeWidth="1.5" fill="none" strokeLinecap="round" />
           </svg>
         </span>
       );
@@ -47,7 +47,7 @@ const CompanyLogo = ({ name }) => {
       return (
         <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-white shadow-sm border border-slate-100" title="Meta">
           <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-[#1877F2]">
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
           </svg>
         </span>
       );
@@ -61,7 +61,7 @@ const CompanyLogo = ({ name }) => {
       return (
         <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-white shadow-sm border border-slate-100" title="Adobe">
           <svg viewBox="0 0 24 24" className="w-3 h-3 fill-[#FF0000]">
-            <path d="M14.58 2H24v20L14.58 2zM9.42 2H0v20L9.42 2zM12 9.04L18.07 22h-3.9l-2.07-4.88H8.86L12 9.04z"/>
+            <path d="M14.58 2H24v20L14.58 2zM9.42 2H0v20L9.42 2zM12 9.04L18.07 22h-3.9l-2.07-4.88H8.86L12 9.04z" />
           </svg>
         </span>
       );
@@ -102,9 +102,8 @@ const FilterDropdown = ({ label, options, selectedValue, onChange }) => {
                     onChange(option.value);
                     setIsOpen(false);
                   }}
-                  className={`flex items-center justify-between w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors ${
-                    selectedValue === option.value ? 'bg-slate-50/80 font-bold text-brand-600' : ''
-                  }`}
+                  className={`flex items-center justify-between w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors ${selectedValue === option.value ? 'bg-slate-50/80 font-bold text-brand-600' : ''
+                    }`}
                 >
                   <span>{option.label}</span>
                   {selectedValue === option.value && <Check size={12} className="text-brand-600" />}
@@ -315,9 +314,9 @@ const LandingPage = () => {
     if (sortedQuestions.length === 0) return;
     const randomIndex = Math.floor(Math.random() * sortedQuestions.length);
     const randomQuestion = sortedQuestions[randomIndex];
-    
+
     setHighlightedId(randomQuestion.id);
-    
+
     const element = document.getElementById(`mnc-quest-${randomQuestion.id}`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -409,12 +408,11 @@ const LandingPage = () => {
                   >
                     <div className="flex items-center gap-3">
                       {/* Rank Display */}
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                        student.rank === 1 ? 'bg-amber-100 text-amber-700 border border-amber-300' :
-                        student.rank === 2 ? 'bg-slate-200 text-slate-700 border border-slate-300' :
-                        student.rank === 3 ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                        'bg-slate-100 text-slate-500'
-                      }`}>
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${student.rank === 1 ? 'bg-amber-100 text-amber-700 border border-amber-300' :
+                          student.rank === 2 ? 'bg-slate-200 text-slate-700 border border-slate-300' :
+                            student.rank === 3 ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                              'bg-slate-100 text-slate-500'
+                        }`}>
                         {student.rank}
                       </span>
 
@@ -586,18 +584,17 @@ const LandingPage = () => {
                   q.difficulty.toLowerCase() === 'easy'
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                     : q.difficulty.toLowerCase() === 'medium'
-                    ? 'bg-amber-50 text-amber-600 border-amber-100'
-                    : 'bg-rose-50 text-rose-700 border-rose-100';
+                      ? 'bg-amber-50 text-amber-600 border-amber-100'
+                      : 'bg-rose-50 text-rose-700 border-rose-100';
 
                 return (
                   <div
                     key={q.id}
                     id={`mnc-quest-${q.id}`}
-                    className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-xl transition-all duration-300 gap-4 ${
-                      highlightedId === q.id
+                    className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-xl transition-all duration-300 gap-4 ${highlightedId === q.id
                         ? 'border-amber-400 bg-amber-50/50 shadow-md ring-2 ring-amber-400/50 scale-[1.01]'
                         : 'border-slate-100 hover:border-slate-200 bg-white hover:bg-slate-50/30 hover:shadow-sm'
-                    }`}
+                      }`}
                   >
                     {/* Left: Info */}
                     <div className="flex flex-col sm:flex-row flex-wrap sm:flex-nowrap items-start sm:items-center gap-3 md:gap-5 flex-1 w-full">
@@ -681,9 +678,8 @@ const LandingPage = () => {
             {techTracks.map((track) => (
               <div
                 key={track.id}
-                className={`relative bg-white rounded-xl shadow-sm border p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 ${
-                  track.popular ? 'border-cyan-400/80 ring-1 ring-cyan-400/30' : 'border-slate-200/80'
-                }`}
+                className={`relative bg-white rounded-xl shadow-sm border p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 ${track.popular ? 'border-cyan-400/80 ring-1 ring-cyan-400/30' : 'border-slate-200/80'
+                  }`}
               >
                 {/* Badge tags */}
                 <div className="absolute -top-3 right-3 z-10 flex">

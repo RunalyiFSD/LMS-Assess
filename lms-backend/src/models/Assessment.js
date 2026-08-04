@@ -95,4 +95,9 @@ const assessmentSchema = new mongoose.Schema(
   }
 );
 
+// Compound indexes for active scheduling, subject listings, and creator lookups
+assessmentSchema.index({ isActive: 1, scheduledAt: 1, dueDate: 1 });
+assessmentSchema.index({ subject: 1, isActive: 1 });
+assessmentSchema.index({ creator: 1, isActive: 1 });
+
 module.exports = mongoose.model('Assessment', assessmentSchema);
