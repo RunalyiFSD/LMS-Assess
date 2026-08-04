@@ -6,3 +6,10 @@ Correct Answer: {{correct_answer}}
 Student's Answer: {{student_answer}}
 
 Determine if the student is correct, and provide a short, encouraging explanation.
+
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "isCorrect": true,
+  "score": 100,
+  "feedback": "Concise explanation of the correct concept."
+}

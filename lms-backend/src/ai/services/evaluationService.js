@@ -18,35 +18,59 @@ class EvaluationService {
   }
 
   static async evaluateMCQ(question, correctAnswer, studentAnswer) {
-    const prompt = PromptRegistry.getPrompt('evaluation', 'mcq', {
+    const { prompt, meta } = PromptRegistry.getPromptWithMeta('evaluation', 'mcq', {
       question,
       correct_answer: correctAnswer,
       student_answer: studentAnswer
     });
     const provider = ProviderFactory.getProvider();
     const response = await provider.generateJson(prompt, this.responseSchema);
-    return response.data;
+    return {
+      ...response.data,
+      usage: response.usage,
+      telemetry: response.telemetry,
+      provider: provider.config?.provider || 'groq',
+      modelName: response.telemetry?.model || 'llama-3.1-8b-instant',
+      promptHash: meta?.hash || 'evaluation_mcq_v1',
+      rawAiResponse: JSON.stringify(response.data)
+    };
   }
 
   static async evaluateCoding(problemStatement, studentCode) {
-    const prompt = PromptRegistry.getPrompt('evaluation', 'coding', {
+    const { prompt, meta } = PromptRegistry.getPromptWithMeta('evaluation', 'coding', {
       problem_statement: problemStatement,
       student_code: studentCode
     });
     const provider = ProviderFactory.getProvider();
     const response = await provider.generateJson(prompt, this.responseSchema);
-    return response.data;
+    return {
+      ...response.data,
+      usage: response.usage,
+      telemetry: response.telemetry,
+      provider: provider.config?.provider || 'groq',
+      modelName: response.telemetry?.model || 'llama-3.1-8b-instant',
+      promptHash: meta?.hash || 'evaluation_coding_v1',
+      rawAiResponse: JSON.stringify(response.data)
+    };
   }
 
   static async evaluateTheory(question, rubric, studentAnswer) {
-    const prompt = PromptRegistry.getPrompt('evaluation', 'theory', {
+    const { prompt, meta } = PromptRegistry.getPromptWithMeta('evaluation', 'theory', {
       question,
       rubric,
       student_answer: studentAnswer
     });
     const provider = ProviderFactory.getProvider();
     const response = await provider.generateJson(prompt, this.responseSchema);
-    return response.data;
+    return {
+      ...response.data,
+      usage: response.usage,
+      telemetry: response.telemetry,
+      provider: provider.config?.provider || 'groq',
+      modelName: response.telemetry?.model || 'llama-3.1-8b-instant',
+      promptHash: meta?.hash || 'evaluation_theory_v1',
+      rawAiResponse: JSON.stringify(response.data)
+    };
   }
 }
 

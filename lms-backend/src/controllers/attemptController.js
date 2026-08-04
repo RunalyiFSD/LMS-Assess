@@ -2,6 +2,7 @@ const Attempt = require('../models/Attempt');
 const Assessment = require('../models/Assessment');
 const Result = require('../models/Result');
 const User = require('../models/User');
+const AIEvaluationLog = require('../models/AIEvaluationLog');
 const evaluationService = require('../services/evaluationService');
 const leaderboardService = require('../services/leaderboardService');
 const notificationService = require('../services/notificationService');
@@ -140,7 +141,7 @@ exports.submitAssessment = async (req, res, next) => {
       attempt.answers = req.body.answers;
     }
 
-    // 2. Run auto grading rules
+    // 2. Run auto grading rules (including AI Theory evaluation)
     const evaluation = await evaluationService.evaluateAttemptAnswers(assessment.questions, attempt.answers);
     
     attempt.answers = evaluation.gradedAnswers;
@@ -150,45 +151,64 @@ exports.submitAssessment = async (req, res, next) => {
     // Increment testsTaken counter on the user
     await User.findByIdAndUpdate(attempt.student, { $inc: { testsTaken: 1 } });
 
-    // Check if manual grading is needed (i.e. has Theory questions)
-    const hasTheory = assessment.type === 'theory' || assessment.questions.some(q => q.questionModel === 'TheoryQuestion');
-    
-    if (hasTheory) {
-      // Theory assessments require manual verification before finalizing results
-      attempt.status = 'submitted';
-      await attempt.save();
+    // 3. Persist AI evaluation audit telemetry logs
+    for (const ans of evaluation.gradedAnswers) {
+      if (ans.aiResult && ans.aiResult.rawAiResponse) {
+        try {
+          await AIEvaluationLog.create({
+            attemptId: attempt._id,
+            questionId: ans.questionId,
+            studentId: attempt.student,
+            provider: ans.aiResult.provider || 'groq',
+            modelName: ans.aiResult.modelName || 'llama-3.1-8b-instant',
+            promptHash: ans.aiResult.promptHash || 'unknown',
+            rawAiResponse: ans.aiResult.rawAiResponse,
+            parsedResult: {
+              marks: ans.marksObtained,
+              feedback: ans.feedback,
+              confidenceScore: ans.aiResult.score ? ans.aiResult.score / 100 : 0.85
+            },
+            tokensUsed: {
+              input: ans.aiResult.usage?.promptTokens || 0,
+              output: ans.aiResult.usage?.completionTokens || 0,
+              total: ans.aiResult.usage?.totalTokens || 0
+            },
+            processingTimeMs: ans.aiResult.telemetry?.latencyMs || 0,
+            needsHumanReview: !!ans.pendingReview
+          });
+        } catch (logErr) {
+          console.warn('[AttemptController] AIEvaluationLog creation warning:', logErr.message);
+        }
+      }
+    }
 
-      // Notify instructor
-      await notificationService.createNotification(
-        assessment.creator,
-        'Theory review submission by student',
-        `Student "${req.user.name}" submitted "${assessment.title}". Theory review required.`,
-        'notification'
-      );
+    // 4. Check if any question requires manual instructor review
+    const anyPendingReview = attempt.answers.some(ans => ans.pendingReview === true);
 
-      res.status(200).json({
-        status: 'success',
-        message: 'Assessment submitted successfully. Pending instructor grading for theory answers.',
-        data: {
-          attempt,
-        },
-      });
-    } else {
-      // MCQ & Coding tests can be graded and published immediately!
+    if (!anyPendingReview) {
+      // All questions evaluated and finalized!
       attempt.status = 'graded';
       await attempt.save();
 
-      // Create scorecard result
-      const percentage = Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100;
-      await Result.create({
-        student: attempt.student,
-        assessment: attempt.assessment,
-        attempt: attempt._id,
-        totalMarks: assessment.totalMarks,
-        scoreObtained: attempt.totalMarksObtained,
-        percentage,
-        status: attempt.isPassed ? 'pass' : 'fail',
-      });
+      // Create or update scorecard result
+      const percentage = assessment.totalMarks > 0 
+        ? Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100 
+        : 0;
+
+      await Result.findOneAndUpdate(
+        { attempt: attempt._id },
+        {
+          student: attempt.student,
+          assessment: attempt.assessment,
+          attempt: attempt._id,
+          totalMarks: assessment.totalMarks,
+          scoreObtained: attempt.totalMarksObtained,
+          percentage,
+          status: attempt.isPassed ? 'pass' : 'fail',
+          publishedAt: new Date()
+        },
+        { upsert: true, returnDocument: 'after' }
+      );
 
       // Recalculate assessment rankings
       await leaderboardService.recalculateLeaderboard(assessment._id);
@@ -202,9 +222,29 @@ exports.submitAssessment = async (req, res, next) => {
         req.user.email
       );
 
-      res.status(200).json({
+      return res.status(200).json({
         status: 'success',
-        message: 'Assessment submitted and graded successfully.',
+        message: 'Assessment submitted and evaluated by AI successfully.',
+        data: {
+          attempt,
+        },
+      });
+    } else {
+      // Borderline or offline theory answers flagged for instructor review
+      attempt.status = 'submitted';
+      await attempt.save();
+
+      // Notify instructor
+      await notificationService.createNotification(
+        assessment.creator,
+        'Theory review submission by student',
+        `Student "${req.user.name}" submitted "${assessment.title}". AI flagged some answers for human review.`,
+        'notification'
+      );
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Assessment submitted. AI preliminary grades generated; instructor review recommended for flagged answers.',
         data: {
           attempt,
         },
@@ -249,14 +289,16 @@ exports.getMyAttempts = async (req, res, next) => {
           // Increment testsTaken counter on the user
           await User.findByIdAndUpdate(attempt.student, { $inc: { testsTaken: 1 } });
 
-          const hasTheory = assessment.type === 'theory' || assessment.questions.some(q => q.questionModel === 'TheoryQuestion');
-          if (hasTheory) {
+          const anyPendingReview = attempt.answers.some(ans => ans.pendingReview === true);
+          if (anyPendingReview) {
             attempt.status = 'submitted';
           } else {
             attempt.status = 'graded';
 
             // Create result scorecard
-            const percentage = Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100;
+            const percentage = assessment.totalMarks > 0 
+              ? Math.round((attempt.totalMarksObtained / assessment.totalMarks) * 100 * 100) / 100 
+              : 0;
             await Result.findOneAndUpdate(
               { attempt: attempt._id },
               {
@@ -406,7 +448,7 @@ exports.gradeTheoryAttempt = async (req, res, next) => {
         status: attempt.isPassed ? 'pass' : 'fail',
         publishedAt: new Date(),
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // 3. Update leaderboard
