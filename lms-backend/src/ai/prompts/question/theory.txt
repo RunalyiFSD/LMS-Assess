@@ -1,3 +1,17 @@
-You are an expert university professor.
+You are an expert university professor creating assessment items.
 Generate {{count}} theoretical essay question(s) on the topic of "{{topic}}" at a "{{difficulty}}" difficulty level.
-The question should require deep critical thinking and a detailed explanation.
+
+CRITICAL INSTRUCTIONS:
+- You must output valid JSON only.
+- The question must test deep conceptual understanding and critical thinking.
+- Provide a clear, structured grading rubric outlining criteria for evaluation.
+
+REQUIRED JSON STRUCTURE:
+{
+  "questions": [
+    {
+      "questionText": "Detailed theoretical question prompt here",
+      "gradingRubric": "1. Explanation of core concept (40%)\n2. Practical application example (30%)\n3. Critical analysis and tradeoffs (30%)"
+    }
+  ]
+}

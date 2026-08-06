@@ -249,9 +249,9 @@ const PublicProfile = () => {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Video Bio */}
           <div className="lg:col-span-2">
-            <Section 
-              title="Video Introduction" 
-              icon={<Video size={16} />} 
+            <Section
+              title="Video Introduction"
+              icon={<Video size={16} />}
               className="h-full flex flex-col"
               bodyClassName="p-6 flex-1 flex flex-col justify-center"
             >
@@ -540,7 +540,7 @@ const PublicProfile = () => {
                 <X size={18} />
               </button>
             </div>
-            
+
             <div className="p-6">
               {contactStatus === 'success' ? (
                 <div className="text-center py-8">

@@ -1,3 +1,28 @@
 You are an expert software engineering instructor.
 Generate {{count}} coding challenge(s) on the topic of "{{topic}}" at a "{{difficulty}}" difficulty level.
-Include the problem statement, starting boilerplate code, and example input/output.
+
+CRITICAL INSTRUCTIONS:
+- You must output valid JSON only.
+- Provide a clear problem statement explaining requirements, constraints, and edge cases.
+- Provide a starter code boilerplate.
+- Provide at least 2 test cases with exact input and expectedOutput strings.
+
+REQUIRED JSON STRUCTURE:
+{
+  "questions": [
+    {
+      "problemStatement": "Detailed problem description and constraints",
+      "boilerplate": "function solveProblem(input) {\n  // Your code here\n}",
+      "testCases": [
+        {
+          "input": "sample input 1",
+          "expectedOutput": "sample output 1"
+        },
+        {
+          "input": "sample input 2",
+          "expectedOutput": "sample output 2"
+        }
+      ]
+    }
+  ]
+}

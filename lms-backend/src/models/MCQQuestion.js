@@ -84,4 +84,8 @@ const mcqQuestionSchema = new mongoose.Schema(
   }
 );
 
+// Compound indexes for question bank filtering and author queries
+mcqQuestionSchema.index({ subject: 1, difficulty: 1 });
+mcqQuestionSchema.index({ createdBy: 1 });
+
 module.exports = mongoose.model('MCQQuestion', mcqQuestionSchema);

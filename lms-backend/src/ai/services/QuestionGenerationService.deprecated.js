@@ -1,3 +1,8 @@
+/**
+ * @deprecated DO NOT USE.
+ * This service is deprecated and will be removed in Sprint 3.2.
+ * All generation features must use `generationService.js`.
+ */
 const NotImplementedError = require('../errors/NotImplementedError');
 
 class QuestionGenerationService {
@@ -11,3 +16,4 @@ class QuestionGenerationService {
 }
 
 module.exports = QuestionGenerationService;
+

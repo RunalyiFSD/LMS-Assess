@@ -106,4 +106,8 @@ const codingQuestionSchema = new mongoose.Schema(
   }
 );
 
+// Compound indexes for question bank filtering and author queries
+codingQuestionSchema.index({ subject: 1, difficulty: 1 });
+codingQuestionSchema.index({ createdBy: 1 });
+
 module.exports = mongoose.model('CodingQuestion', codingQuestionSchema);

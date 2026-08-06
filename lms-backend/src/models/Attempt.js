@@ -14,7 +14,10 @@ const attemptSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['started', 'submitted', 'graded'],
+      // 'processing' is a transient lock state used only during the submit flow
+      // to prevent duplicate concurrent submissions. The controller always
+      // transitions to 'submitted' or 'graded' before sending the HTTP response.
+      enum: ['started', 'processing', 'submitted', 'graded'],
       default: 'started',
     },
     startedAt: {
@@ -63,7 +66,7 @@ const attemptSchema = new mongoose.Schema(
           type: Number, // Coding test case tracking
           default: 0,
         },
-        // --- AI Integration Fields (Phase 2) ---
+        // --- AI Integration Fields (Phase 2 & 3) ---
         aiFeedback: {
           type: String,
           default: null, // Null means AI hasn't graded it
@@ -76,9 +79,29 @@ const attemptSchema = new mongoose.Schema(
           type: Boolean,
           default: false,
         },
+        confidenceScore: {
+          type: Number,
+          default: null,
+        },
+        accuracy: {
+          type: Number,
+          default: null,
+        },
+        completeness: {
+          type: Number,
+          default: null,
+        },
+        terminology: {
+          type: Number,
+          default: null,
+        },
+        executionLogs: {
+          type: String,
+          default: null,
+        },
         pendingReview: {
           type: Boolean,
-          default: false, // True if AI was uncertain and flagged it for human instructor
+          default: false, // True if AI confidence is low (< 0.60) or AI was unreachable
         },
         hintUsed: {
           type: Boolean,
@@ -106,5 +129,8 @@ const attemptSchema = new mongoose.Schema(
 
 // Compound index to ensure a student cannot have duplicate active/submitted attempts for the same assessment
 attemptSchema.index({ student: 1, assessment: 1 }, { unique: true });
+attemptSchema.index({ assessment: 1, status: 1 });
+attemptSchema.index({ student: 1, status: 1 });
+attemptSchema.index({ status: 1, 'answers.pendingReview': 1 });
 
 module.exports = mongoose.model('Attempt', attemptSchema);

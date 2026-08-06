@@ -77,7 +77,7 @@ const ActiveAssessment = () => {
 
   const { formatTime, timeLeft } = useTimer(
     isExamActive ? initialDuration : 0,
-    isExamActive ? handleFinalSubmit : () => {}
+    isExamActive ? handleFinalSubmit : () => { }
   );
 
   // Heartbeat Auto-save every 30 seconds (Only when exam is active)
@@ -284,11 +284,10 @@ const ActiveAssessment = () => {
           <div className="space-y-6">
             {/* Review mode score display banner */}
             {!isExamActive && (
-              <div className={`p-4 rounded-xl border flex items-center justify-between ${
-                (currentAnswer?.marksObtained || 0) > 0 
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+              <div className={`p-4 rounded-xl border flex items-center justify-between ${(currentAnswer?.marksObtained || 0) > 0
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                   : 'bg-red-50 border-red-200 text-red-800'
-              }`}>
+                }`}>
                 <div className="flex items-center gap-2 text-xs font-bold">
                   {(currentAnswer?.marksObtained || 0) > 0 ? (
                     <>
@@ -328,7 +327,7 @@ const ActiveAssessment = () => {
                       const isCorrect = activeQuestion?.correctAnswerIndex === oIdx;
 
                       let btnStyle = 'bg-white border-slate-200/80 hover:bg-slate-50 text-slate-700';
-                      
+
                       if (!isExamActive) {
                         if (isCorrect) {
                           // Correct options show green in review
@@ -354,7 +353,7 @@ const ActiveAssessment = () => {
                             </span>
                             {opt}
                           </div>
-                          
+
                           {!isExamActive && (
                             <div className="text-[10px] font-bold uppercase">
                               {isCorrect && <span className="text-emerald-600">Correct Answer</span>}
@@ -446,8 +445,8 @@ const ActiveAssessment = () => {
                     <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sandbox Console Log Output</label>
                       <pre className="bg-slate-950 text-emerald-400 p-4 rounded-xl font-mono text-[11px] leading-relaxed max-h-60 overflow-y-auto border border-slate-800 shadow-inner">
-                        {runResult 
-                          ? runResult.executionLogs 
+                        {runResult
+                          ? runResult.executionLogs
                           : currentAnswer?.executionLogs || 'No compilation/execution logs recorded.'}
                       </pre>
                     </div>
@@ -502,9 +501,8 @@ const ActiveAssessment = () => {
                         <button
                           type="button"
                           onClick={() => setShowPreview(!showPreview)}
-                          className={`p-1 px-2 rounded text-xs font-bold flex items-center gap-1 transition-colors ${
-                            showPreview ? 'bg-brand-100 text-brand-700' : 'hover:bg-slate-200'
-                          }`}
+                          className={`p-1 px-2 rounded text-xs font-bold flex items-center gap-1 transition-colors ${showPreview ? 'bg-brand-100 text-brand-700' : 'hover:bg-slate-200'
+                            }`}
                         >
                           <Eye size={12} /> {showPreview ? 'Edit Editor' : 'Live Preview'}
                         </button>
@@ -536,7 +534,7 @@ const ActiveAssessment = () => {
                       <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80">
                         <span className="text-[10px] font-bold text-slate-400 block mb-2 uppercase">Your Answer Submission</span>
                         <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed font-sans">{theoryText || '— No Answer Submitted —'}</p>
-                        
+
                         <div className="flex justify-end text-[10px] text-slate-400 mt-4">
                           <span>{theoryText.length} Characters | {wordCount} Words</span>
                         </div>
@@ -545,7 +543,10 @@ const ActiveAssessment = () => {
                       {/* Instructor grading feedback box */}
                       <div className="p-4 bg-amber-50/50 border border-amber-200 text-amber-900 rounded-xl">
                         <span className="text-[10px] font-bold text-amber-600 block mb-1 uppercase">Instructor Evaluation Feedback</span>
-                        <p className="text-xs italic leading-relaxed">{currentAnswer?.feedback || 'Pending evaluation.'}</p>
+                        <p className="text-xs italic leading-relaxed">
+                          {/* Priority: manual instructor feedback → AI feedback → pending message */}
+                          {currentAnswer?.feedback || currentAnswer?.aiFeedback || 'Pending evaluation.'}
+                        </p>
                       </div>
                     </div>
                   )}

@@ -47,10 +47,12 @@ export const mapAIToQuestionSchema = (aiQuestion, config) => {
       difficulty,
       title: `Coding Challenge: ${config.topic}`,
       description: aiQuestion.problemStatement,
-      testCases: (aiQuestion.testCases || []).map((tc) => ({
+      testCases: (aiQuestion.testCases || []).map((tc, index) => ({
         input: tc.input,
         expectedOutput: tc.expectedOutput,
-        isSample: false,
+        // Respect AI-provided isSample flag; otherwise mark the first test case
+        // as the sample so students can use "Run Code" in the exam sandbox.
+        isSample: tc.isSample === true || index === 0,
       })),
       templates: [
         {
@@ -63,12 +65,14 @@ export const mapAIToQuestionSchema = (aiQuestion, config) => {
   }
 
   if (config.type === 'theory') {
-    // TheoryQuestion schema has NO difficulty field — omit it entirely.
     return {
       subject: config.subject,
       question: aiQuestion.questionText,
       suggestedAnswer: aiQuestion.gradingRubric || '',
       maxMarks: parseInt(config.marksPerQuestion, 10) || 5,
+      // New optional fields — supported by updated TheoryQuestion schema
+      difficulty,
+      topic: config.topic || '',
     };
   }
 
