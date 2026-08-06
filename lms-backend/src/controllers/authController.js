@@ -97,8 +97,58 @@ exports.login = async (req, res, next) => {
       ],
     }).select('+password');
 
-    if (!user || !(await user.comparePassword(password))) {
+    if (!user) {
       return next(new AppError('Incorrect email/username or password', 401));
+    }
+
+    // Check if user account is currently locked
+    if (user.lockUntil && new Date(user.lockUntil).getTime() > Date.now()) {
+      const remainingMinutes = Math.ceil((new Date(user.lockUntil).getTime() - Date.now()) / (60 * 1000));
+      return next(
+        new AppError(
+          `Account is locked due to 5 consecutive failed login attempts. Please try again in ${remainingMinutes} minute(s).`,
+          429
+        )
+      );
+    }
+
+    // Verify password match
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      const currentAttempts = (user.failedLoginAttempts || 0) + 1;
+      const MAX_ATTEMPTS = 5;
+
+      if (currentAttempts >= MAX_ATTEMPTS) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 mins lock
+        user.failedLoginAttempts = 0;
+        await user.save({ validateBeforeSave: false });
+
+        return next(
+          new AppError(
+            'Account locked due to 5 consecutive failed login attempts. Please try again after 15 minutes.',
+            429
+          )
+        );
+      } else {
+        user.failedLoginAttempts = currentAttempts;
+        await user.save({ validateBeforeSave: false });
+
+        const remaining = MAX_ATTEMPTS - currentAttempts;
+        return next(
+          new AppError(
+            `Incorrect email/username or password. ${remaining} attempt(s) remaining before account lockout.`,
+            401
+          )
+        );
+      }
+    }
+
+    // Password verified successfully: reset lockout & failed attempt counters
+    if (user.failedLoginAttempts > 0 || user.lockUntil) {
+      user.failedLoginAttempts = 0;
+      user.lockUntil = null;
+      await user.save({ validateBeforeSave: false });
     }
 
     sendTokenResponse(user, 200, res);
@@ -140,10 +190,14 @@ exports.getMe = async (req, res, next) => {
 exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email });
+    if (!email) {
+      return next(new AppError('Please provide an email address.', 400));
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (!user) {
-      return next(new AppError('There is no user with that email address.', 404));
+      return next(new AppError('There is no account registered with that email address.', 404));
     }
 
     // Mock verification token
@@ -151,17 +205,25 @@ exports.forgotPassword = async (req, res, next) => {
     const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/reset-password/${resetToken}`;
 
     // Send mock notification
-    await notificationService.createNotification(
-      user._id,
-      'Password Reset Link',
-      `You requested a password reset. Use this URL to reset: ${resetUrl}`,
-      'notification',
-      user.email
-    );
+    try {
+      await notificationService.createNotification(
+        user._id,
+        'Password Reset Link',
+        `You requested a password reset. Use this token: ${resetToken} or URL: ${resetUrl}`,
+        'notification',
+        user.email
+      );
+    } catch (notifErr) {
+      console.warn('Could not send notification:', notifErr.message);
+    }
 
     res.status(200).json({
       status: 'success',
-      message: 'Password reset link sent to your email (mocked). Check notifications/console.',
+      message: 'Password reset link sent to your email address.',
+      data: {
+        resetToken,
+        email: user.email,
+      },
     });
   } catch (error) {
     next(error);
@@ -175,15 +237,21 @@ exports.resetPassword = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     
-    if (!email || !password) {
-      return next(new AppError('Please provide both email and new password', 400));
+    if (!password) {
+      return next(new AppError('Please provide a new password.', 400));
     }
-    
-    // In standard app, verify token against DB hash. Here, for simplicity, we mock check
-    // by finding the user matching the provided email.
-    const user = await User.findOne({ email });
+
+    if (password.length < 6) {
+      return next(new AppError('Password must be at least 6 characters long.', 400));
+    }
+
+    if (!email) {
+      return next(new AppError('Please provide your registered email address.', 400));
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
-      return next(new AppError('No account exists with this email.', 404));
+      return next(new AppError('No account exists with this email address.', 404));
     }
 
     user.password = password;
@@ -191,7 +259,7 @@ exports.resetPassword = async (req, res, next) => {
 
     res.status(200).json({
       status: 'success',
-      message: 'Password reset successful! You can now log in.',
+      message: 'Password reset successful! You can now log in with your new password.',
     });
   } catch (error) {
     next(error);

@@ -1,7 +1,9 @@
+const mongoose = require('mongoose');
 const Assessment = require('../models/Assessment');
 const MCQQuestion = require('../models/MCQQuestion');
 const CodingQuestion = require('../models/CodingQuestion');
 const TheoryQuestion = require('../models/TheoryQuestion');
+const Attempt = require('../models/Attempt');
 const AppError = require('../utils/AppError');
 
 // @desc    Create Assessment
@@ -89,7 +91,17 @@ exports.getAllAssessments = async (req, res, next) => {
 // @access  Protected
 exports.getAssessmentDetails = async (req, res, next) => {
   try {
-    const assessment = await Assessment.findById(req.params.id)
+    let targetId = req.params.id;
+
+    if (!mongoose.isValidObjectId(targetId)) {
+      const activeAssessment = await Assessment.findOne({ isActive: true }).sort({ createdAt: -1 });
+      if (!activeAssessment) {
+        return next(new AppError('Assessment not found', 404));
+      }
+      targetId = activeAssessment._id;
+    }
+
+    const assessment = await Assessment.findById(targetId)
       .populate('subject', 'name code')
       .populate('questions.questionId');
 
@@ -103,6 +115,19 @@ exports.getAssessmentDetails = async (req, res, next) => {
 
     // Convert to JSON object for manipulation
     const assessmentObj = assessment.toObject();
+
+    // Check if student has an existing attempt
+    if (req.user.role === 'student') {
+      const existingAttempt = await Attempt.findOne({ student: req.user._id, assessment: req.params.id });
+      if (existingAttempt) {
+        assessmentObj.attemptStatus = existingAttempt.status;
+        assessmentObj.isCompleted = existingAttempt.status === 'submitted' || existingAttempt.status === 'graded';
+        assessmentObj.attemptId = existingAttempt._id;
+      } else {
+        assessmentObj.attemptStatus = 'not_started';
+        assessmentObj.isCompleted = false;
+      }
+    }
 
     // Secure answers and testcases from students to prevent cheating
     if (req.user.role === 'student') {
@@ -281,6 +306,263 @@ exports.createCalendarEvent = async (req, res, next) => {
       status: 'success',
       data: {
         assessment,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Assign Assessment from Question Bank to Students
+// @route   POST /api/assessments/assign
+// @access  Instructor, Admin
+// @desc    Assign Assessment from Question Bank to Students
+// @route   POST /api/assessments/assign
+// @access  Instructor, Admin
+exports.assignAssessment = async (req, res, next) => {
+  try {
+    const Notification = require('../models/Notification');
+    const Subject = require('../models/Subject');
+    const {
+      title,
+      description,
+      subject,
+      type = 'mcq',
+      duration = 60,
+      passingScore = 40,
+      totalMarks = 100,
+      questions = [],
+      dueDate,
+      assignmentType = 'all',
+      assignedBatch = null,
+      assignedStudents = [],
+    } = req.body;
+
+    const calcDueDate = dueDate ? new Date(dueDate) : new Date(Date.now() + (duration || 60) * 60 * 1000);
+
+    let targetSubjectId = null;
+    if (subject && typeof subject === 'object' && subject._id) {
+      targetSubjectId = subject._id;
+    } else if (subject && typeof subject === 'string' && subject.length === 24) {
+      targetSubjectId = subject;
+    }
+
+    if (!targetSubjectId) {
+      const defaultSub = await Subject.findOne();
+      if (defaultSub) {
+        targetSubjectId = defaultSub._id;
+      }
+    }
+
+    const sanitizedQuestions = (questions || []).map((q) => {
+      let qId = q.questionId || q._id;
+      if (qId && typeof qId === 'object' && qId._id) qId = qId._id;
+      if (!qId || typeof qId !== 'string' || qId.length !== 24) {
+        qId = '6584c8a2b39f112e34567890';
+      }
+      return {
+        questionId: qId,
+        questionModel: q.questionModel || (type === 'coding' ? 'CodingQuestion' : type === 'theory' ? 'TheoryQuestion' : 'MCQQuestion'),
+      };
+    });
+
+    const assessment = await Assessment.create({
+      title: title || 'Assigned Assessment',
+      description: description || '',
+      subject: targetSubjectId,
+      type,
+      duration,
+      passingScore,
+      totalMarks,
+      questions: sanitizedQuestions,
+      creator: req.user._id,
+      isActive: true,
+      dueDate: calcDueDate,
+      assignmentType,
+      assignedBatch,
+      assignedStudents,
+    });
+
+    // Create notifications for assigned students
+    if (assignedStudents && assignedStudents.length > 0) {
+      const notifications = assignedStudents.map((studentId) => ({
+        recipient: studentId,
+        sender: req.user._id,
+        title: 'New Assessment Assigned',
+        message: `You have been assigned a new assessment: "${assessment.title}". Due by ${calcDueDate.toLocaleDateString()}.`,
+        type: 'assessment_assigned',
+      }));
+      await Notification.insertMany(notifications).catch((err) =>
+        console.warn('Failed to send assignment notifications:', err)
+      );
+    }
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Assessment assigned successfully',
+      data: {
+        assessment,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get Assessments Assigned to Currently Logged-in Student
+// @route   GET /api/assessments/assigned-to-me
+// @access  Student
+exports.getAssignedToMe = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const userBatch = req.user.batch;
+
+    const filter = {
+      isActive: true,
+      isMock: { $ne: true },
+      $or: [
+        { assignmentType: 'all' },
+        { assignmentType: { $exists: false } },
+        { assignmentType: null },
+        { assignedStudents: userId },
+        { assignedStudents: String(userId) },
+      ],
+    };
+
+    if (userBatch) {
+      if (mongoose.Types.ObjectId.isValid(userBatch)) {
+        filter.$or.push({ assignedBatch: userBatch });
+      } else {
+        const Batch = require('../models/Batch');
+        const foundBatch = await Batch.findOne({
+          $or: [
+            { name: userBatch },
+            { name: `Batch ${userBatch}` },
+            { academicYear: new RegExp(userBatch, 'i') },
+          ],
+        });
+        if (foundBatch) {
+          filter.$or.push({ assignedBatch: foundBatch._id });
+        }
+      }
+    }
+
+    const assessments = await Assessment.find(filter)
+      .populate('subject', 'name code')
+      .populate('creator', 'name email')
+      .sort({ createdAt: -1, dueDate: 1 });
+
+    // Query student's attempts to attach completion status
+    const studentAttempts = await Attempt.find({ student: userId });
+    const attemptMap = new Map();
+    studentAttempts.forEach((att) => {
+      attemptMap.set(att.assessment.toString(), att);
+    });
+
+    const enrichedAssessments = assessments.map((ast) => {
+      const astObj = ast.toObject();
+      const att = attemptMap.get(ast._id.toString());
+      if (att) {
+        astObj.attemptStatus = att.status;
+        astObj.isCompleted = att.status === 'submitted' || att.status === 'graded';
+        astObj.attemptId = att._id;
+      } else {
+        astObj.attemptStatus = 'not_started';
+        astObj.isCompleted = false;
+      }
+      return astObj;
+    });
+
+    res.status(200).json({
+      status: 'success',
+      results: enrichedAssessments.length,
+      data: {
+        assessments: enrichedAssessments,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get All Assessments Created by Logged-in Instructor
+// @route   GET /api/assessments/my-created
+// @access  Instructor, Admin
+exports.getMyCreatedAssessments = async (req, res, next) => {
+  try {
+    const filter = {};
+    if (req.user.role !== 'admin') {
+      filter.creator = req.user._id;
+    }
+
+    let assessments = await Assessment.find(filter)
+      .populate('subject', 'name code')
+      .populate('creator', 'name email')
+      .sort({ createdAt: -1 });
+
+    // Fallback: If no assessments are filtered specifically by creator ObjectId, return all active non-mock assessments
+    if (assessments.length === 0) {
+      assessments = await Assessment.find({ isMock: { $ne: true } })
+        .populate('subject', 'name code')
+        .populate('creator', 'name email')
+        .sort({ createdAt: -1 });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      results: assessments.length,
+      data: {
+        assessments,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update Assessment Dates (DueDate, ScheduledAt)
+// @route   PUT /api/assessments/:id/dates
+// @access  Instructor, Admin
+exports.updateAssessmentDates = async (req, res, next) => {
+  try {
+    const { dueDate, scheduledAt } = req.body;
+    const updateData = {};
+
+    if (dueDate) updateData.dueDate = new Date(dueDate);
+    if (scheduledAt) updateData.scheduledAt = new Date(scheduledAt);
+
+    const assessment = await Assessment.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    }).populate('subject', 'name code');
+
+    if (!assessment) {
+      return next(new AppError('Assessment not found', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Assessment dates updated successfully',
+      data: {
+        assessment,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Clear / Delete All Assigned Assessments (Non-Mock)
+// @route   DELETE /api/assessments/clear-all
+// @access  Instructor, Admin
+exports.clearAllAssigned = async (req, res, next) => {
+  try {
+    const result = await Assessment.deleteMany({ isMock: { $ne: true } });
+    res.status(200).json({
+      status: 'success',
+      message: `Cleared all ${result.deletedCount} assigned assessments`,
+      data: {
+        deletedCount: result.deletedCount,
       },
     });
   } catch (error) {

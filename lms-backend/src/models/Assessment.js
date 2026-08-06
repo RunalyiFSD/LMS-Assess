@@ -15,7 +15,7 @@ const assessmentSchema = new mongoose.Schema(
     subject: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Subject',
-      required: true,
+      required: false,
     },
     type: {
       type: String,
@@ -72,6 +72,23 @@ const assessmentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // --- Student & Batch Assignment Fields ---
+    assignmentType: {
+      type: String,
+      enum: ['all', 'batch', 'students'],
+      default: 'all',
+    },
+    assignedBatch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Batch',
+      default: null,
+    },
+    assignedStudents: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
     // --- AI Integration Fields (Phase 2) ---
     aiGenerated: {
       type: Boolean,

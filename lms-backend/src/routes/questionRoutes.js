@@ -10,6 +10,7 @@ router.use(protect);
 router.use(authorize('admin', 'instructor'));
 
 router.route('/').get(questionController.getAllQuestions);
+router.delete('/all-questions', questionController.deleteAllQuestions);
 
 router.route('/:type').post(questionController.createQuestion);
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { ProfileSkeleton } from '../components/common/Skeleton';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid,
@@ -113,12 +114,7 @@ const PublicProfile = () => {
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
-        <div className="w-14 h-14 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-400 text-sm font-medium">Loading student profile…</p>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   // ── Error ────────────────────────────────────────────────────────────────

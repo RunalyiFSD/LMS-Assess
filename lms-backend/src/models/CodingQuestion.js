@@ -84,6 +84,22 @@ const codingQuestionSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    companyTags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    leetcodeSlug: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    source: {
+      type: String,
+      enum: ['manual', 'ai', 'leetcode'],
+      default: 'manual',
+    },
   },
   {
     timestamps: true,

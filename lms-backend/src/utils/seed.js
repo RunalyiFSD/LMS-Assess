@@ -2,8 +2,14 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
 
+const dns = require('dns');
+
 // Load env variables
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {}
 
 const User = require('../models/User');
 const Subject = require('../models/Subject');
@@ -19,7 +25,7 @@ const Notification = require('../models/Notification');
 const seedData = async () => {
   try {
     console.log('Connecting to database...');
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/lms-assessment');
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://admin:V5321ibC8RQDOZri@cluster0.xaibubk.mongodb.net/lms-assessment?retryWrites=true&w=majority');
     console.log('Connected. Cleaning up old database records...');
 
     // Clean all collections

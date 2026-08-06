@@ -73,7 +73,9 @@ exports.getUserByIdAdmin = async (req, res, next) => {
         resultsCount: results.length,
       };
     } else if (user.role === 'instructor') {
-      const createdAssessmentsCount = await Assessment.countDocuments({ createdBy: user._id });
+      const createdAssessmentsCount = await Assessment.countDocuments({
+        $or: [{ creator: user._id }, { createdBy: user._id }],
+      });
       stats = {
         createdAssessmentsCount,
       };

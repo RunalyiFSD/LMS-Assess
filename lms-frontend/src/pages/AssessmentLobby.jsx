@@ -4,7 +4,7 @@ import Layout from '../components/layout/Layout';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import api from '../services/api';
-import { ClipboardList, ShieldAlert, Clock, Award, Play } from 'lucide-react';
+import { ClipboardList, ShieldAlert, Clock, Award, Play, CheckCircle2 } from 'lucide-react';
 
 const AssessmentLobby = () => {
   const { id } = useParams();
@@ -38,7 +38,7 @@ const AssessmentLobby = () => {
         navigate(`/assessment/${attemptId}`);
       }
     } catch (err) {
-      alert(err.message || 'Failed to start attempt session');
+      alert(err.response?.data?.message || err.message || 'Failed to start attempt session');
     }
   };
 
@@ -78,7 +78,7 @@ const AssessmentLobby = () => {
           </div>
         </div>
 
-        <Card title={assessment.title} subtitle={`${assessment.subject?.name} (${assessment.subject?.code})`}>
+        <Card title={assessment.title} subtitle={`${assessment.subject?.name || ''} (${assessment.subject?.code || ''})`}>
           <div className="space-y-6">
             {/* Meta values */}
             <div className="grid grid-cols-3 gap-4 border-b border-slate-100 pb-4">
@@ -124,9 +124,24 @@ const AssessmentLobby = () => {
               </ul>
             </div>
 
-            <Button onClick={handleBeginAttempt} className="w-full gap-2 py-3" size="lg">
-              <Play size={18} /> Start Assessment
-            </Button>
+            {assessment.isCompleted ? (
+              <div className="bg-emerald-50 border border-emerald-200/80 p-5 rounded-2xl text-center space-y-3">
+                <div className="flex items-center justify-center gap-2 text-emerald-800 font-extrabold text-sm">
+                  <CheckCircle2 size={20} className="text-emerald-600" />
+                  <span>Assessment Already Completed</span>
+                </div>
+                <p className="text-xs text-emerald-700 font-medium">
+                  You have already submitted your attempt for this assessment. Single-attempt rules are enforced and re-attempts are prohibited.
+                </p>
+                <Button onClick={() => navigate('/dashboard')} variant="outline" className="mt-2">
+                  Return to Dashboard
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={handleBeginAttempt} className="w-full gap-2 py-3" size="lg">
+                <Play size={18} /> {assessment.attemptStatus === 'started' ? 'Resume Assessment' : 'Start Assessment'}
+              </Button>
+            )}
           </div>
         </Card>
       </div>

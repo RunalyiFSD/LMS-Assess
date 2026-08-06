@@ -565,26 +565,17 @@ const ProgressAnalyticsView = ({ analyticsData, userProfile }) => {
       {showReportModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static print:block">
           <div className="bg-white rounded-3xl max-w-[900px] w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl relative space-y-4 print:max-h-none print:shadow-none print:p-0 print:overflow-visible">
-            {/* Modal Actions */}
+            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 print:hidden">
               <span className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
                 📄 Performance Report Preview
               </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
-                >
-                  <Printer size={15} />
-                  <span>Print / Save as PDF</span>
-                </button>
-                <button
-                  onClick={() => setShowReportModal(false)}
-                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             {/* Performance Report Document Component */}

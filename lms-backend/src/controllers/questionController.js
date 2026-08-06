@@ -168,3 +168,22 @@ exports.deleteQuestion = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Delete ALL Questions from all models
+// @route   DELETE /api/questions/all-questions
+// @access  Instructor, Admin
+exports.deleteAllQuestions = async (req, res, next) => {
+  try {
+    await MCQQuestion.deleteMany({});
+    await CodingQuestion.deleteMany({});
+    await TheoryQuestion.deleteMany({});
+
+    res.status(200).json({
+      status: 'success',
+      message: 'All questions deleted successfully from the Question Bank',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

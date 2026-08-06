@@ -25,14 +25,15 @@ const Table = ({ columns, data = [], loading = false, pagination, emptyMessage =
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
             {loading ? (
-              <tr>
-                <td colSpan={columns.length} className="px-6 py-10 text-center text-slate-400 text-sm">
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></span>
-                    Loading records...
-                  </div>
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, rIndex) => (
+                <tr key={rIndex} className="animate-pulse">
+                  {columns.map((_, cIndex) => (
+                    <td key={cIndex} className="px-6 py-4">
+                      <div className="h-4 bg-slate-200/80 rounded" />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : data.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-10 text-center text-slate-400 text-sm">

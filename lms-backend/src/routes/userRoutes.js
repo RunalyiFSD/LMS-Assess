@@ -14,17 +14,13 @@ router.get('/profile/:id/analytics', userController.getUserAnalytics);
 router.put('/profile', userController.updateUserProfile);
 router.delete('/me', userController.deleteMyAccount);
 
-// Admin-only user management routes
-router.use(authorize('admin'));
-router
-  .route('/')
-  .get(userController.getAllUsers)
-  .post(userController.createUser);
+// User routes accessible by Admin & Instructor for viewing lists & details
+router.get('/', authorize('admin', 'instructor'), userController.getAllUsers);
+router.get('/:id', authorize('admin', 'instructor'), userController.getUserByIdAdmin);
 
-router
-  .route('/:id')
-  .get(userController.getUserByIdAdmin)
-  .put(userController.updateUserByAdmin)
-  .delete(userController.deleteUser);
+// Admin-only user management routes (creation, modification, deletion)
+router.post('/', authorize('admin'), userController.createUser);
+router.put('/:id', authorize('admin'), userController.updateUserByAdmin);
+router.delete('/:id', authorize('admin'), userController.deleteUser);
 
 module.exports = router;

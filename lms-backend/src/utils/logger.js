@@ -1,53 +1,62 @@
-/**
- * Application Logger
- *
- * Purpose:
- *   Centralized structured logging with log levels and timestamps.
- *   Provides a foundation for adding robust logging (like Winston/Pino)
- *   in the future without rewriting every log statement.
- *
- * Responsibilities:
- *   - Provide standard log levels (info, warn, error, debug)
- *   - Format log messages consistently
- *   - Prevent debug logs in production
- *
- * Future extension points:
- *   - Connect to external log aggregation (DataDog, CloudWatch)
- *   - Swap internal implementation to a high-performance logger (Pino)
- *
- * Dependencies:
- *   - None (uses native console for now)
- */
+const winston = require('winston');
+const path = require('path');
+const fs = require('fs');
 
-const getTimestamp = () => new Date().toISOString();
+// Ensure logs directory exists inside lms-backend
+const logDir = path.join(__dirname, '..', '..', 'logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
 
-const formatMessage = (level, message, meta) => {
-  const metaStr = meta ? ` | ${JSON.stringify(meta)}` : '';
-  return `[${getTimestamp()}] [${level.toUpperCase()}] ${message}${metaStr}`;
-};
+// Log Format for File Transports (Structured JSON with timestamp & error stack serialization)
+const jsonFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.errors({ stack: true }),
+  winston.format.splat(),
+  winston.format.json()
+);
 
-const logger = {
-  info: (message, meta) => {
-    console.log(formatMessage('info', message, meta));
-  },
-  warn: (message, meta) => {
-    console.warn(formatMessage('warn', message, meta));
-  },
-  error: (message, errorOrMeta) => {
-    let meta = errorOrMeta;
-    if (errorOrMeta instanceof Error) {
-      meta = { 
-        message: errorOrMeta.message, 
-        stack: errorOrMeta.stack, 
-        name: errorOrMeta.name 
-      };
-    }
-    console.error(formatMessage('error', message, meta));
-  },
-  debug: (message, meta) => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.debug(formatMessage('debug', message, meta));
-    }
+// Log Format for Console Transports (Colorized & readable for development)
+const consoleFormat = winston.format.combine(
+  winston.format.colorize(),
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.errors({ stack: true }),
+  winston.format.printf(({ level, message, timestamp, stack, ...meta }) => {
+    const metaStr = Object.keys(meta).length ? ` | ${JSON.stringify(meta)}` : '';
+    const stackStr = stack ? `\n${stack}` : '';
+    return `[${timestamp}] [${level}] ${message}${metaStr}${stackStr}`;
+  })
+);
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  format: jsonFormat,
+  defaultMeta: { service: 'lms-backend-api' },
+  transports: [
+    // File transport for error logs only
+    new winston.transports.File({
+      filename: path.join(logDir, 'error.log'),
+      level: 'error',
+      maxsize: 5 * 1024 * 1024, // 5MB
+      maxFiles: 5,
+    }),
+    // File transport for all combined logs
+    new winston.transports.File({
+      filename: path.join(logDir, 'combined.log'),
+      maxsize: 10 * 1024 * 1024, // 10MB
+      maxFiles: 5,
+    }),
+    // Console transport
+    new winston.transports.Console({
+      format: process.env.NODE_ENV === 'production' ? jsonFormat : consoleFormat,
+    }),
+  ],
+});
+
+// Stream interface for Express Morgan HTTP access logger
+logger.stream = {
+  write: (message) => {
+    logger.info(message.trim());
   },
 };
 

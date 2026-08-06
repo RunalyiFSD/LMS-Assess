@@ -228,15 +228,9 @@ exports.executeCode = async (code, language = 'javascript', testCases = [], time
 
         // Feed input to child process stdin
         if (testInput) {
-          try {
-            child.stdin.write(testInput);
-            child.stdin.end();
-          } catch (writeErr) {
-            // Child might have exited early
-          }
-        } else {
-          child.stdin.end();
+          process.stdin.write(testInput);
         }
+        process.stdin.end();
       });
 
       if (execResult.success && execResult.output === expectedOut) {
