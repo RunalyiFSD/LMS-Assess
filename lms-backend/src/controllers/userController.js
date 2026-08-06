@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Attempt = require('../models/Attempt');
 const Result = require('../models/Result');
@@ -202,6 +203,11 @@ exports.deleteUser = async (req, res, next) => {
 exports.getUserProfile = async (req, res, next) => {
   try {
     const studentId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return next(new AppError('Invalid User ID format', 400));
+    }
+
     const student = await User.findById(studentId);
     if (!student) {
       return next(new AppError('Student not found', 404));
@@ -342,6 +348,10 @@ exports.getUserProfile = async (req, res, next) => {
 exports.getUserAnalytics = async (req, res, next) => {
   try {
     const studentId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return next(new AppError('Invalid User ID format', 400));
+    }
 
     const results = await Result.find({ student: studentId })
       .populate({

@@ -19,37 +19,36 @@ const handleValidationErrorDB = (err) => {
 };
 
 module.exports = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
+  let error = err;
+
+  if (err.name === 'CastError') error = handleCastErrorDB(err);
+  if (err.code === 11000) error = handleDuplicateFieldsDB(err); // Mongo duplicate key
+  if (err.name === 'ValidationError') error = handleValidationErrorDB(err);
+
+  error.statusCode = error.statusCode || 500;
+  error.status = error.status || 'error';
 
   // Log error via Winston with structured metadata
-  logger.error(err.message || 'Unhandled Express Error', {
+  logger.error(error.message || 'Unhandled Express Error', {
     requestId: req.id,
     url: req.originalUrl,
     method: req.method,
-    statusCode: err.statusCode,
+    statusCode: error.statusCode,
     userId: req.user ? req.user._id : undefined,
-    stack: err.stack,
+    stack: error.stack,
   });
 
   if (process.env.NODE_ENV === 'development') {
-    res.status(err.statusCode).json({
-      status: err.status,
-      error: err,
-      message: err.message,
-      stack: err.stack,
+    res.status(error.statusCode).json({
+      status: error.status,
+      error: error,
+      message: error.message,
+      stack: error.stack,
     });
   } else {
     // Production Mode: Send operational, user-friendly messages
-    let error = { ...err };
-    error.message = err.message;
-
-    if (err.name === 'CastError') error = handleCastErrorDB(error);
-    if (err.code === 11000) error = handleDuplicateFieldsDB(err); // Mongo duplicate key
-    if (err.name === 'ValidationError') error = handleValidationErrorDB(error);
-
-    res.status(error.statusCode || 500).json({
-      status: error.status || 'error',
+    res.status(error.statusCode).json({
+      status: error.status,
       message: error.message || 'Something went wrong on the server',
     });
   }
