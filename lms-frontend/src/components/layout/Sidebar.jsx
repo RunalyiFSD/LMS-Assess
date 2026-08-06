@@ -59,6 +59,7 @@ const Sidebar = () => {
       return [
         ...common,
         { to: '/instructor/questions', label: 'Question Bank', icon: <FileQuestion size={18} /> },
+        { to: '/instructor/mock-assignments', label: 'Mock Assessments', icon: <Building2 size={18} /> },
         { to: '/instructor/grade', label: 'Grade Submissions', icon: <GraduationCap size={18} /> }
       ];
     }

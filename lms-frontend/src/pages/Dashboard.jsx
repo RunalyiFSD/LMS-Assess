@@ -612,9 +612,9 @@ const Dashboard = () => {
               {/* Professional Information (Optional) Section */}
               <div className="pt-4 border-t border-slate-100 space-y-3">
                 <h4 className="text-xs font-semibold text-slate-400">Professional Information (Optional)</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">DEPARTMENT</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 min-h-[24px] flex items-end">DEPARTMENT</label>
                     <input
                       type="text"
                       value={profileForm.department}
@@ -624,7 +624,7 @@ const Dashboard = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">LANGUAGE</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 min-h-[24px] flex items-end">LANGUAGE</label>
                     <input
                       type="text"
                       value={profileForm.language}
@@ -634,7 +634,7 @@ const Dashboard = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">YEARS OF EXPERIENCE</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 min-h-[24px] flex items-end">EXPERIENCE (YRS)</label>
                     <input
                       type="text"
                       value={profileForm.experience}

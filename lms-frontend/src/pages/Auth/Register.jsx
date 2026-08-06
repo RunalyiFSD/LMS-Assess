@@ -190,9 +190,9 @@ const Register = () => {
                   {formData.role === 'instructor' ? (
                     <>
                       <p className="text-xs text-slate-400 font-medium mb-3">Professional Information (Optional)</p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Department</label>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 min-h-[28px] flex items-end">Department</label>
                           <input
                             type="text"
                             name="department"
@@ -204,7 +204,7 @@ const Register = () => {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Language</label>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 min-h-[28px] flex items-end">Language</label>
                           <input
                             type="text"
                             name="language"
@@ -216,7 +216,7 @@ const Register = () => {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Years of Experience</label>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 min-h-[28px] flex items-end">Experience (Yrs)</label>
                           <input
                             type="text"
                             name="experience"
@@ -231,9 +231,9 @@ const Register = () => {
                   ) : (
                     <>
                       <p className="text-xs text-slate-400 font-medium mb-3">Academic Information (Optional)</p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">College/Univ</label>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 min-h-[28px] flex items-end">College/Univ</label>
                           <input
                             type="text"
                             name="college"
@@ -245,7 +245,7 @@ const Register = () => {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Department</label>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 min-h-[28px] flex items-end">Department</label>
                           <input
                             type="text"
                             name="department"
@@ -257,7 +257,7 @@ const Register = () => {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Batch Year</label>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 min-h-[28px] flex items-end">Batch Year</label>
                           <input
                             type="text"
                             name="batch"

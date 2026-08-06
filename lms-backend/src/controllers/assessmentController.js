@@ -91,7 +91,17 @@ exports.getAllAssessments = async (req, res, next) => {
 // @access  Protected
 exports.getAssessmentDetails = async (req, res, next) => {
   try {
-    const assessment = await Assessment.findById(req.params.id)
+    let targetId = req.params.id;
+
+    if (!mongoose.isValidObjectId(targetId)) {
+      const activeAssessment = await Assessment.findOne({ isActive: true }).sort({ createdAt: -1 });
+      if (!activeAssessment) {
+        return next(new AppError('Assessment not found', 404));
+      }
+      targetId = activeAssessment._id;
+    }
+
+    const assessment = await Assessment.findById(targetId)
       .populate('subject', 'name code')
       .populate('questions.questionId');
 

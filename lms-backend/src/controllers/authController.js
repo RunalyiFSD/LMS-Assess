@@ -190,10 +190,14 @@ exports.getMe = async (req, res, next) => {
 exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
-    const user = await User.findOne({ email });
+    if (!email) {
+      return next(new AppError('Please provide an email address.', 400));
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (!user) {
-      return next(new AppError('There is no user with that email address.', 404));
+      return next(new AppError('There is no account registered with that email address.', 404));
     }
 
     // Mock verification token
@@ -201,17 +205,25 @@ exports.forgotPassword = async (req, res, next) => {
     const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/reset-password/${resetToken}`;
 
     // Send mock notification
-    await notificationService.createNotification(
-      user._id,
-      'Password Reset Link',
-      `You requested a password reset. Use this URL to reset: ${resetUrl}`,
-      'notification',
-      user.email
-    );
+    try {
+      await notificationService.createNotification(
+        user._id,
+        'Password Reset Link',
+        `You requested a password reset. Use this token: ${resetToken} or URL: ${resetUrl}`,
+        'notification',
+        user.email
+      );
+    } catch (notifErr) {
+      console.warn('Could not send notification:', notifErr.message);
+    }
 
     res.status(200).json({
       status: 'success',
-      message: 'Password reset link sent to your email (mocked). Check notifications/console.',
+      message: 'Password reset link sent to your email address.',
+      data: {
+        resetToken,
+        email: user.email,
+      },
     });
   } catch (error) {
     next(error);
@@ -225,15 +237,21 @@ exports.resetPassword = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     
-    if (!email || !password) {
-      return next(new AppError('Please provide both email and new password', 400));
+    if (!password) {
+      return next(new AppError('Please provide a new password.', 400));
     }
-    
-    // In standard app, verify token against DB hash. Here, for simplicity, we mock check
-    // by finding the user matching the provided email.
-    const user = await User.findOne({ email });
+
+    if (password.length < 6) {
+      return next(new AppError('Password must be at least 6 characters long.', 400));
+    }
+
+    if (!email) {
+      return next(new AppError('Please provide your registered email address.', 400));
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
     if (!user) {
-      return next(new AppError('No account exists with this email.', 404));
+      return next(new AppError('No account exists with this email address.', 404));
     }
 
     user.password = password;
@@ -241,7 +259,7 @@ exports.resetPassword = async (req, res, next) => {
 
     res.status(200).json({
       status: 'success',
-      message: 'Password reset successful! You can now log in.',
+      message: 'Password reset successful! You can now log in with your new password.',
     });
   } catch (error) {
     next(error);

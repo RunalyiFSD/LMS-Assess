@@ -74,6 +74,7 @@ const codeExecutionLimiter = rateLimit({
   windowMs: Number(process.env.RATE_LIMIT_CODE_EXEC_WINDOW_MS) || 60 * 1000,
   max: Number(process.env.RATE_LIMIT_CODE_EXEC_MAX) || 10,
   keyGenerator: (req) => (req.user && req.user._id ? req.user._id.toString() : req.ip),
+  validate: { keyGeneratorIpFallback: false },
   message: {
     status: 'error',
     message: 'Rate limit exceeded: You have reached the maximum allowed code executions (10 per minute). Please wait a moment before running code again.',

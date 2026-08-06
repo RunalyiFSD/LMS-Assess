@@ -49,6 +49,7 @@ const StudentDashboardView = () => {
   const [selectedScorecard, setSelectedScorecard] = useState(null);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState('This Month');
   const [selectedMockCategory, setSelectedMockCategory] = useState(null);
+  const [startingCardId, setStartingCardId] = useState(null);
 
   // Sync viewMode with URL params
   useEffect(() => {
@@ -239,7 +240,34 @@ const StudentDashboardView = () => {
     },
   ];
 
-  const handleStartTest = (testId) => {
+  const handleStartTest = async (testId, mockItem) => {
+    // Company mock cards — create a real assessment via backend, then navigate
+    if (typeof testId === 'string' && testId.startsWith('cmp_')) {
+      setStartingCardId(testId);
+      try {
+        const companySlug = (mockItem?.companySlug || mockItem?.company || 'google').toLowerCase();
+        const res = await api.post('/leetcode/create-mock', { companySlug });
+        if (res.data?.data?.assessment?._id) {
+          navigate(`/lobby/${res.data.data.assessment._id}`);
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to auto-create mock:', err);
+      } finally {
+        setStartingCardId(null);
+      }
+      // Fallback: go to company-mock page (never navigate to /lobby/cmp_X)
+      navigate('/company-mock');
+      return;
+    }
+
+    // Language / assigned mock cards
+    if (typeof testId === 'string' && (testId.startsWith('lang_') || testId.startsWith('asgn_'))) {
+      navigate('/company-mock');
+      return;
+    }
+
+    // Real MongoDB ObjectId — go straight to lobby
     navigate(`/lobby/${testId}`);
   };
 
@@ -609,57 +637,94 @@ const StudentDashboardView = () => {
               </button>
             </div>
 
-            {/* Grid list of cards */}
+            {/* Company question cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {(selectedMockCategory === 'company' ? companyMocksList : languageMocksList).map((mock) => (
-                <div
-                  key={mock._id}
-                  onClick={() => handleStartTest(mock._id)}
-                  className="bg-white rounded-3xl shadow-xs border border-slate-100 p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group"
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center border shadow-2xs bg-slate-50 text-indigo-600">
-                        {selectedMockCategory === 'company' ? <Building2 size={20} /> : <Code2 size={20} />}
+              {(selectedMockCategory === 'company' ? companyMocksList : languageMocksList).map((mock) => {
+                const isStarting = startingCardId === mock._id;
+
+                return (
+                  <div
+                    key={mock._id}
+                    className="bg-white rounded-3xl shadow-xs border border-slate-100 p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 group"
+                  >
+                    <div className="space-y-4">
+                      {/* Header row */}
+                      <div className="flex items-center justify-between">
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center border shadow-2xs bg-slate-50 text-indigo-600">
+                          {selectedMockCategory === 'company' ? <Building2 size={20} /> : <Code2 size={20} />}
+                        </div>
+                        {mock.reg && (
+                          <span className="bg-red-50 text-red-600 border border-red-200/60 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold">
+                            🔥 {mock.reg}
+                          </span>
+                        )}
                       </div>
-                      {mock.reg && (
-                        <span className="bg-red-50 text-red-600 border border-red-200/60 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold">
-                          🔥 {mock.reg}
-                        </span>
+
+                      {/* Title */}
+                      <div>
+                        <h4 className="font-extrabold text-slate-900 text-sm leading-snug">{mock.title}</h4>
+                      </div>
+
+                      {/* Meta row */}
+                      <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
+                        <span className="flex items-center gap-1"><Clock size={11} /> {mock.time}</span>
+                        <span className="w-px h-3 bg-slate-200" />
+                        <span className="flex items-center gap-1"><LayoutGrid size={11} /> {mock.obj} Obj</span>
+                        <span className="w-px h-3 bg-slate-200" />
+                        <span className="flex items-center gap-1"><Code size={11} /> {mock.prog} Prog</span>
+                      </div>
+
+                      {/* Question list — always visible */}
+                      {mock.sampleQuestions && (
+                        <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Sample Questions</span>
+                          {mock.sampleQuestions.map((q, qIdx) => (
+                            <div
+                              key={qIdx}
+                              className="flex items-start gap-2 p-2 bg-slate-50/80 rounded-xl border border-slate-200/60 text-[11px]"
+                            >
+                              <span className="mt-0.5 w-5 h-5 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-extrabold shrink-0">
+                                {qIdx + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-slate-800 leading-tight truncate">{q.title}</p>
+                                <div className="flex items-center gap-2 mt-0.5 text-[10px] font-semibold text-slate-400">
+                                  <span>{q.type}</span>
+                                  <span className="w-px h-2.5 bg-slate-200" />
+                                  <span className={q.difficulty === 'Easy' ? 'text-emerald-500' : 'text-amber-500'}>{q.difficulty}</span>
+                                  <span className="w-px h-2.5 bg-slate-200" />
+                                  <span className="text-indigo-500">{q.marks} pts</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
 
-                    <div>
-                      <h4 className="font-extrabold text-slate-900 text-sm leading-snug">{mock.title}</h4>
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-slate-100 text-[11px] font-semibold text-slate-500">
-                      <div className="flex items-center gap-2">
-                        <Clock size={13} className="text-slate-400" />
-                        <span>Time: {mock.time}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <LayoutGrid size={13} className="text-slate-400" />
-                        <span>Objective: {mock.obj}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Code size={13} className="text-slate-400" />
-                        <span>Programming: {mock.prog}</span>
-                      </div>
+                    {/* Action button */}
+                    <div className="border-t border-slate-100 pt-4 mt-5 text-center">
+                      <button
+                        onClick={() => handleStartTest(mock._id, mock)}
+                        disabled={isStarting}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        {isStarting ? (
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+                            <span>Generating Exam...</span>
+                          </span>
+                        ) : (
+                          <>
+                            <span>Attempt Now</span>
+                            <ArrowRight size={14} />
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
-
-                  <div className="border-t border-slate-100 pt-4 mt-5 text-center">
-                    <button
-                      onClick={() => handleStartTest(mock._id)}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1.5 transition-all"
-                    >
-                      <span>Attempt Now</span>
-                      <ArrowRight size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -676,24 +741,30 @@ const StudentDashboardView = () => {
   }
 
   return (
-    <div className="space-y-8 pb-12 print:hidden max-w-7xl mx-auto">
+    <div className="space-y-8 pb-12 max-w-7xl mx-auto">
       {/* Report Modal */}
       {selectedScorecard && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
-            <button
-              onClick={() => setSelectedScorecard(null)}
-              className="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-full transition-colors cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-            <PerformanceReport scorecard={selectedScorecard} onClose={() => setSelectedScorecard(null)} />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 print:bg-white print:p-0 print:static print:block">
+          <div className="bg-white rounded-3xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative space-y-4 print:max-h-none print:shadow-none print:p-0 print:overflow-visible">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 print:hidden">
+              <span className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                🏆 Verified Assessment Certificate & Report
+              </span>
+              <button
+                onClick={() => setSelectedScorecard(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <PerformanceReport scorecard={selectedScorecard} userProfile={user} onClose={() => setSelectedScorecard(null)} />
           </div>
         </div>
       )}
 
       {/* ── 1. TOP METRIC CARDS ROW (4 CARDS) ────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 print:hidden">
 
         {/* Card 1: LMS ACHIEVEMENTS Banner */}
         <div className="bg-gradient-to-br from-[#4338CA] via-[#3730A3] to-[#312E81] text-white p-6 rounded-3xl relative overflow-hidden shadow-xs flex flex-col justify-between min-h-[160px]">
@@ -849,7 +920,7 @@ const StudentDashboardView = () => {
       </div>
 
       {/* ── 2. MAIN GRID (LEFT CONTENT 7 COLS, RIGHT LEADERBOARD 5 COLS) ───── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:hidden">
 
         {/* ── LEFT COLUMN (7 COLS) ─────────────────────────────────────────── */}
         <div className="lg:col-span-7 space-y-8">
@@ -1080,11 +1151,10 @@ const StudentDashboardView = () => {
                 {leaderboardData.slice(0, 5).map((item) => (
                   <div
                     key={item.rank}
-                    className={`flex items-center justify-between p-3 rounded-2xl transition-all ${
-                      item.isCurrentUser
+                    className={`flex items-center justify-between p-3 rounded-2xl transition-all ${item.isCurrentUser
                         ? 'bg-indigo-50/70 border border-indigo-100 shadow-2xs'
                         : 'hover:bg-slate-50/80 border border-transparent'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       {/* Rank Badge */}
@@ -1133,7 +1203,7 @@ const StudentDashboardView = () => {
       </div>
 
       {/* ── 3. TECHNOLOGY MOCK PREPARATION CAROUSEL SECTION (SCREENSHOT 2) ─── */}
-      <div className="pt-6 space-y-6">
+      <div className="pt-6 space-y-6 print:hidden">
         <div className="text-center space-y-1">
           <h2 className="text-xl font-black text-slate-900 tracking-tight">
             Looking to prepare for a specific technology?

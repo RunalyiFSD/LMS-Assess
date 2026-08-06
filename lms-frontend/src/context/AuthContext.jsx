@@ -69,8 +69,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const forgotPassword = async (email) => {
+    try {
+      const response = await api.post('/auth/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.message || 'Failed to request password reset');
+    }
+  };
+
+  const resetPassword = async (token, email, password) => {
+    try {
+      const response = await api.post(`/auth/reset-password/${token || 'default'}`, { email, password });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.message || 'Failed to reset password');
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword, setUser }}>
       {children}
     </AuthContext.Provider>
   );

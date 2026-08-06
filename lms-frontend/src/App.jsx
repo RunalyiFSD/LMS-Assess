@@ -8,6 +8,8 @@ import PageLoader from './components/common/PageLoader';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
+import ForgotPassword from './pages/Auth/ForgotPassword';
+import ResetPassword from './pages/Auth/ResetPassword';
 import Dashboard from './pages/Dashboard';
 
 // Lazy Loaded Pages (Code-split into separate async chunks)
@@ -26,6 +28,7 @@ const AdminAssessmentsPage = lazy(() => import('./pages/AdminAssessmentsPage'));
 const ReportsAnalyticsPage = lazy(() => import('./pages/ReportsAnalyticsPage'));
 const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
+const CompanyMockPage = lazy(() => import('./pages/CompanyMockPage'));
 const FuturePage = lazy(() => import('./pages/FuturePage'));
 
 // Protected Route Wrapper
@@ -61,6 +64,9 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
 
               {/* General Protected Routes */}
@@ -169,6 +175,14 @@ function App() {
                 }
               />
               <Route
+                path="/instructor/mock-assignments"
+                element={
+                  <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/instructor/ai-generation"
                 element={
                   <ProtectedRoute allowedRoles={['instructor', 'admin']}>
@@ -196,8 +210,8 @@ function App() {
                 }
               />
 
-              {/* Catch-all Fallback and Future Feature Routes */}
-              <Route path="/company-mock" element={<ProtectedRoute><FuturePage routeKey="company-mock" /></ProtectedRoute>} />
+              {/* Company Aptitude & LeetCode Coding Mock Route */}
+              <Route path="/company-mock" element={<ProtectedRoute><CompanyMockPage /></ProtectedRoute>} />
               <Route path="/language-mock" element={<ProtectedRoute><FuturePage routeKey="language-mock" /></ProtectedRoute>} />
               <Route path="/future/:routeKey" element={<ProtectedRoute><FuturePage /></ProtectedRoute>} />
               <Route path="/404" element={<FuturePage />} />

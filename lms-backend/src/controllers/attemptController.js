@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Attempt = require('../models/Attempt');
 const Assessment = require('../models/Assessment');
 const Result = require('../models/Result');
@@ -12,7 +13,15 @@ const AppError = require('../utils/AppError');
 // @access  Student
 exports.startAssessment = async (req, res, next) => {
   try {
-    const { assessmentId } = req.params;
+    let { assessmentId } = req.params;
+
+    if (!mongoose.isValidObjectId(assessmentId)) {
+      const activeAssessment = await Assessment.findOne({ isActive: true }).sort({ createdAt: -1 });
+      if (!activeAssessment) {
+        return next(new AppError('Assessment not found', 404));
+      }
+      assessmentId = activeAssessment._id.toString();
+    }
 
     // Verify assessment exists and is active
     const assessment = await Assessment.findById(assessmentId);

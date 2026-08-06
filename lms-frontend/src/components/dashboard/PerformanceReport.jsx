@@ -1,7 +1,8 @@
 import React from 'react';
+import { useAuth } from '../../context/AuthContext';
 import {
   TrendingUp, Calendar, Target, ClipboardList, Zap, Award,
-  CheckCircle2, Trophy, AlertTriangle, Lightbulb
+  CheckCircle2, Trophy, AlertTriangle, Lightbulb, Download, Printer
 } from 'lucide-react';
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -26,7 +27,12 @@ const CustomValueLabel = (props) => {
   );
 };
 
-const PerformanceReport = ({ analyticsData, userProfile, onClose, isPrintView = false }) => {
+const PerformanceReport = ({ analyticsData, userProfile, scorecard, onClose, isPrintView = false }) => {
+  const authContext = useAuth();
+  const authUser = authContext?.user;
+
+  const currentUser = userProfile || authUser;
+
   const currentDate = new Date().toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -36,10 +42,10 @@ const PerformanceReport = ({ analyticsData, userProfile, onClose, isPrintView = 
     minute: '2-digit'
   });
 
-  const studentName = userProfile?.name || 'Riya Sharma';
-  const studentId = userProfile?.studentId || (userProfile?._id ? `STU${userProfile._id.substring(0, 8).toUpperCase()}` : 'STU20240056');
-  const course = userProfile?.department || userProfile?.college || 'B.Tech Computer Science';
-  const batch = userProfile?.batch || '2024-2028';
+  const studentName = scorecard?.studentName || currentUser?.name || 'Student';
+  const studentId = currentUser?.studentId || (currentUser?._id ? `STU${currentUser._id.substring(0, 8).toUpperCase()}` : 'STU2026001');
+  const course = scorecard?.department || currentUser?.department || currentUser?.college || 'Computer Science';
+  const batch = scorecard?.batch || currentUser?.batch || '2024-2028';
 
   const averageScore = analyticsData?.averageScore ?? 78.6;
   const assessmentsTaken = analyticsData?.assessmentsTaken ?? 24;
@@ -101,29 +107,91 @@ const PerformanceReport = ({ analyticsData, userProfile, onClose, isPrintView = 
   const strongestTopic = analyticsData?.strongestTopic || topicsList[0] || { name: 'Web Development', score: 90 };
   const weakestTopic = analyticsData?.weakestTopic || topicsList[topicsList.length - 1] || { name: 'System Design', score: 65 };
 
+  const handleDownloadPDF = () => {
+    const reportElem = document.getElementById('printable-performance-report');
+    if (!reportElem) {
+      window.print();
+      return;
+    }
+
+    try {
+      const printWindow = window.open('', '_blank', 'width=900,height=1000');
+      if (printWindow) {
+        const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+          .map(style => style.outerHTML)
+          .join('\n');
+
+        const clone = reportElem.cloneNode(true);
+        const hiddenElems = clone.querySelectorAll('.print\\:hidden');
+        hiddenElems.forEach(el => el.remove());
+
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${(studentName || 'Student').replace(/\s+/g, '_')}_Performance_Certificate</title>
+              ${styles}
+              <style>
+                body { background: #ffffff !important; padding: 24px !important; margin: 0 !important; font-family: system-ui, -apple-system, sans-serif; }
+                @page { size: auto; margin: 10mm; }
+                .print\\:hidden { display: none !important; }
+              </style>
+            </head>
+            <body>
+              <div style="max-width: 850px; margin: 0 auto;">
+                ${clone.outerHTML}
+              </div>
+              <script>
+                setTimeout(() => {
+                  window.print();
+                  window.close();
+                }, 400);
+              </script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      } else {
+        window.print();
+      }
+    } catch (err) {
+      console.warn('Print popup fallback:', err);
+      window.print();
+    }
+  };
+
   return (
-    <div className="bg-white text-slate-900 w-full max-w-[850px] mx-auto p-8 border border-slate-200 rounded-3xl shadow-2xl space-y-6 print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none">
+    <div id="printable-performance-report" className="print-report-card bg-white text-slate-900 w-full max-w-[850px] mx-auto p-8 border border-slate-200 rounded-3xl shadow-2xl space-y-6 print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none">
       {/* ── TOP HEADER ────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-100 pb-5 gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-md">
-            M
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-md">
+            A
           </div>
           <div>
-            <span className="font-black text-xl text-slate-900 tracking-tight block">EduFlow</span>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">Performance Report</h1>
-            <p className="text-xs text-slate-500 font-medium">Overview of your performance and progress</p>
+            <span className="font-black text-xl text-slate-900 tracking-tight block">AssessLMS</span>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">Performance Report & Certificate</h1>
+            <p className="text-xs text-slate-500 font-medium">Official verified score record for student placement</p>
           </div>
         </div>
 
-        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl px-4 py-2 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-indigo-100/70 text-indigo-600 flex items-center justify-center">
-            <Calendar size={16} />
+        <div className="flex items-center gap-3 print:hidden">
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl px-3.5 py-1.5 flex items-center gap-2.5">
+            <Calendar size={14} className="text-indigo-600" />
+            <div>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Generated On</span>
+              <span className="text-[11px] font-bold text-slate-800">{currentDate}</span>
+            </div>
           </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Report Generated On</span>
-            <span className="text-xs font-bold text-slate-800">{currentDate}</span>
-          </div>
+
+          <button
+            onClick={handleDownloadPDF}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer shrink-0"
+            title="Download PDF Certificate to local device"
+          >
+            <Download size={15} />
+            <span>Download Certificate (PDF)</span>
+          </button>
         </div>
       </div>
 

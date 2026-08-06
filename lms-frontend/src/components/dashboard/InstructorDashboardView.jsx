@@ -433,10 +433,76 @@ const InstructorDashboardView = () => {
     }
   };
 
+  // Mock Assessment Assignment State
+  const [showMockAssignModal, setShowMockAssignModal] = useState(false);
+  const [selectedMockForAssign, setSelectedMockForAssign] = useState(null);
+  const [mockAssignForm, setMockAssignForm] = useState({
+    title: '',
+    duration: 60,
+    passingScore: 40,
+    dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
+    assignmentType: 'all',
+    selectedStudentIds: [],
+  });
+  const [submittingMockAssign, setSubmittingMockAssign] = useState(false);
+
+  const handleOpenAssignMockModal = (mockItem) => {
+    setSelectedMockForAssign(mockItem);
+    setMockAssignForm({
+      title: `${mockItem.company || mockItem.lang || 'Company'} Aptitude & Coding Assessment`,
+      duration: 60,
+      passingScore: 40,
+      dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
+      assignmentType: 'all',
+      selectedStudentIds: [],
+    });
+    setShowMockAssignModal(true);
+  };
+
+  const handleSubmitAssignMock = async (e) => {
+    e.preventDefault();
+    if (!selectedMockForAssign) return;
+
+    setSubmittingMockAssign(true);
+    try {
+      const companySlug = (selectedMockForAssign.companySlug || selectedMockForAssign.company || selectedMockForAssign.lang || 'google').toLowerCase();
+
+      const payload = {
+        companySlug,
+        title: mockAssignForm.title,
+        duration: Number(mockAssignForm.duration),
+        passingScore: Number(mockAssignForm.passingScore),
+        dueDate: mockAssignForm.dueDate,
+        assignmentType: mockAssignForm.assignmentType,
+        assignedStudents: mockAssignForm.assignmentType === 'students' ? mockAssignForm.selectedStudentIds : [],
+      };
+
+      const res = await api.post('/leetcode/create-mock', payload);
+
+      if (res.data?.status === 'success') {
+        alert(`Mock Assessment "${mockAssignForm.title}" assigned successfully to students!`);
+        setShowMockAssignModal(false);
+        const t = Date.now();
+        const refreshedRes = await api.get(`/assessments?t=${t}`).catch(() => null);
+        if (refreshedRes?.data?.data?.assessments) {
+          const list = refreshedRes.data.data.assessments;
+          const myCreated = list.filter((a) => a.creator?._id === user?._id || a.creator === user?._id);
+          setMyCreatedAssessments(myCreated);
+        }
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to assign mock assessment.');
+    } finally {
+      setSubmittingMockAssign(false);
+    }
+  };
+
   // Sync activeTab with URL tab query parameter or path
   useEffect(() => {
     if (location.pathname === '/instructor/grade' || location.search.includes('tab=grade')) {
       setActiveTab('grade');
+    } else if (location.pathname === '/instructor/mock-assignments' || location.search.includes('tab=mock_assignments')) {
+      setActiveTab('mock_assignments');
     } else if (location.search.includes('tab=my_created')) {
       setActiveTab('my_created');
     } else {
@@ -775,6 +841,21 @@ const InstructorDashboardView = () => {
         >
           <BookOpen size={16} />
           Question Bank
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('mock_assignments');
+            navigate('/instructor/mock-assignments');
+          }}
+          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer shrink-0 ${
+            activeTab === 'mock_assignments'
+              ? 'border-[#4F46E5] text-[#4F46E5]'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Building2 size={16} />
+          Mock Assessments
         </button>
 
         <button
@@ -1196,6 +1277,83 @@ const InstructorDashboardView = () => {
                   <option value={50}>50</option>
                 </select>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: MOCK ASSESSMENTS (COMPANY & TECH STACK ASSIGNMENTS) ── */}
+      {activeTab === 'mock_assignments' && (
+        <div className="space-y-8">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white p-6 rounded-3xl shadow-md relative overflow-hidden">
+            <div className="relative z-10 space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-indigo-200 text-xs font-bold border border-white/10">
+                <Building2 size={14} />
+                <span>Instructor Mock Assignment Engine</span>
+              </div>
+              <h2 className="text-2xl font-black tracking-tight">Assign Company & Tech Stack Mocks</h2>
+              <p className="text-xs text-indigo-200 max-w-2xl font-medium">
+                Select from top hiring firm presets (Infosys, Uber, Amazon, TCS, etc.) or tech stacks. Configure duration, passing score, due date, and assign directly to your students.
+              </p>
+            </div>
+          </div>
+
+          {/* Cards Grid */}
+          <div className="space-y-4">
+            <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+              <Sparkles size={18} className="text-amber-500" />
+              <span>Available Mock Templates</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {[
+                { _id: 'inst_cmp_1', title: 'Infosys Placement Aptitude Mock', company: 'Infosys', companySlug: 'infosys', reg: '582 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+                { _id: 'inst_cmp_2', title: 'Uber Engineering Aptitude Mock', company: 'Uber', companySlug: 'meta', reg: '1240 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+                { _id: 'inst_cmp_3', title: 'LinkedIn Tech Assessment Aptitude', company: 'LinkedIn', companySlug: 'microsoft', reg: '980 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+                { _id: 'inst_cmp_4', title: 'MindTree Placement Aptitude Mock', company: 'MindTree', companySlug: 'amdocs', reg: '450 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+                { _id: 'inst_cmp_5', title: 'TCS NQT Aptitude Simulation', company: 'TCS', companySlug: 'tcs', reg: '3420 Registrations', time: '60 Minutes', obj: 20, prog: 2 },
+                { _id: 'inst_cmp_6', title: 'Amazon SDE Aptitude Screening', company: 'Amazon', companySlug: 'amazon', reg: '4120 Registrations', time: '60 Minutes', obj: 15, prog: 2 },
+              ].map((mock) => (
+                <div
+                  key={mock._id}
+                  className="bg-white rounded-3xl shadow-xs border border-slate-200/80 p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 group"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center border shadow-2xs bg-indigo-50 text-indigo-600">
+                        <Building2 size={20} />
+                      </div>
+                      <span className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold">
+                        Ready to Assign
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 text-sm leading-snug">{mock.title}</h4>
+                      <p className="text-[11px] text-slate-400 font-medium mt-1">Includes 15 MCQ Aptitude + 2 LeetCode Coding challenges.</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 pt-2 border-t border-slate-100">
+                      <span className="flex items-center gap-1"><Clock size={11} /> {mock.time}</span>
+                      <span className="w-px h-3 bg-slate-200" />
+                      <span className="flex items-center gap-1"><CheckCircle2 size={11} /> {mock.obj} Obj</span>
+                      <span className="w-px h-3 bg-slate-200" />
+                      <span className="flex items-center gap-1"><Code2 size={11} /> {mock.prog} Prog</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-4 mt-5">
+                    <button
+                      onClick={() => handleOpenAssignMockModal(mock)}
+                      className="w-full text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
+                    >
+                      <Plus size={14} />
+                      <span>Configure & Assign</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -2197,6 +2355,158 @@ const InstructorDashboardView = () => {
           </div>
         </div>
       )}
+      {/* Modal: Configure & Assign Company Mock */}
+      <Modal
+        isOpen={showMockAssignModal}
+        onClose={() => setShowMockAssignModal(false)}
+        title={`Assign ${selectedMockForAssign?.company || selectedMockForAssign?.lang || 'Company'} Mock Assessment`}
+      >
+        {selectedMockForAssign && (
+          <form onSubmit={handleSubmitAssignMock} className="space-y-4 text-xs">
+            <div className="p-3.5 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold shrink-0">
+                <Building2 size={20} />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-slate-900 text-sm leading-tight">
+                  {selectedMockForAssign.company || selectedMockForAssign.lang} Placement Simulation
+                </h4>
+                <p className="text-[11px] text-indigo-700 font-semibold mt-0.5">
+                  Includes 15 MCQ Aptitude Questions + 2 LeetCode Coding Questions
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Assessment Title</label>
+              <input
+                type="text"
+                required
+                value={mockAssignForm.title}
+                onChange={(e) => setMockAssignForm((p) => ({ ...p, title: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Duration (Minutes)</label>
+                <input
+                  type="number"
+                  required
+                  min="10"
+                  max="180"
+                  value={mockAssignForm.duration}
+                  onChange={(e) => setMockAssignForm((p) => ({ ...p, duration: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Passing Score (%)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  max="100"
+                  value={mockAssignForm.passingScore}
+                  onChange={(e) => setMockAssignForm((p) => ({ ...p, passingScore: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Due Date</label>
+              <input
+                type="date"
+                required
+                value={mockAssignForm.dueDate}
+                onChange={(e) => setMockAssignForm((p) => ({ ...p, dueDate: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Target Student Audience</label>
+              <div className="flex items-center gap-4 py-1">
+                <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
+                  <input
+                    type="radio"
+                    name="mockTargetAudience"
+                    value="all"
+                    checked={mockAssignForm.assignmentType === 'all'}
+                    onChange={() => setMockAssignForm((p) => ({ ...p, assignmentType: 'all' }))}
+                    className="text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>All Students</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
+                  <input
+                    type="radio"
+                    name="mockTargetAudience"
+                    value="students"
+                    checked={mockAssignForm.assignmentType === 'students'}
+                    onChange={() => setMockAssignForm((p) => ({ ...p, assignmentType: 'students' }))}
+                    className="text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Select Specific Students</span>
+                </label>
+              </div>
+            </div>
+
+            {mockAssignForm.assignmentType === 'students' && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 max-h-36 overflow-y-auto">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Select Students ({mockAssignForm.selectedStudentIds.length} selected)
+                </span>
+                {studentsList.length === 0 ? (
+                  <p className="text-slate-400 italic text-[11px]">No students found.</p>
+                ) : (
+                  studentsList.map((std, idx) => (
+                    <label key={std._id || idx} className="flex items-center gap-2.5 p-1.5 hover:bg-white rounded-lg cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={mockAssignForm.selectedStudentIds.includes(std._id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setMockAssignForm((p) => ({ ...p, selectedStudentIds: [...p.selectedStudentIds, std._id] }));
+                          } else {
+                            setMockAssignForm((p) => ({ ...p, selectedStudentIds: p.selectedStudentIds.filter((id) => id !== std._id) }));
+                          }
+                        }}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-800 text-xs truncate">{std.name}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{std.email}</p>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowMockAssignModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submittingMockAssign}
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Send size={13} />
+                <span>{submittingMockAssign ? 'Assigning...' : 'Assign Mock Assessment'}</span>
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 };
