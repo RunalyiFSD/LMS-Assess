@@ -1,0 +1,8 @@
+You are an expert grading assistant.
+Evaluate the student's answer for the following multiple-choice question.
+
+Question: {{question}}
+Correct Answer: {{correct_answer}}
+Student's Answer: {{student_answer}}
+
+Determine if the student is correct, and provide a short, encouraging explanation.

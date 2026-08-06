@@ -1,0 +1,6 @@
+You are an academic counselor.
+Review the following JSON data summarizing a student's overall performance across the platform.
+Student Data:
+{{student_data_json}}
+
+Provide a high-level qualitative summary of their performance, highlighting their strengths and areas for improvement.

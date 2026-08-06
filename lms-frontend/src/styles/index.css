@@ -1,0 +1,188 @@
+/* Tailwind CSS v3 base, component, and utility imports */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased font-sans transition-colors duration-150;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-slate-200/60 shadow-sm rounded-xl;
+  }
+  .transition-micro {
+    @apply transition-all duration-200 ease-out;
+  }
+}
+
+/* ── DARK MODE OVERRIDES (only applied when html has .dark class) ─────── */
+
+html.dark {
+  color-scheme: dark;
+  background-color: #0b0f19 !important;
+  color: #f8fafc !important;
+}
+
+html.dark body {
+  background-color: #0b0f19 !important;
+  color: #f8fafc !important;
+}
+
+html.dark #root {
+  background-color: #0b0f19 !important;
+}
+
+/* Viewport backgrounds */
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-50\/80,
+html.dark .bg-slate-100 {
+  background-color: #0b0f19 !important;
+  color: #f8fafc !important;
+}
+
+/* Card containers */
+html.dark .bg-white,
+html.dark .bg-white\/80,
+html.dark .bg-white\/90,
+html.dark .glass-card {
+  background-color: #121827 !important;
+  color: #f8fafc !important;
+  border-color: #1e2638 !important;
+}
+
+/* Hero gradient cards */
+html.dark .bg-gradient-to-r,
+html.dark .bg-gradient-to-br {
+  background: linear-gradient(135deg, #17153b 0%, #1c154e 100%) !important;
+  border-color: #3b0764 !important;
+}
+
+/* Sub-card backgrounds */
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-50\/60,
+html.dark .bg-slate-50\/40 {
+  background-color: #182033 !important;
+  border-color: #222b40 !important;
+}
+
+/* Leaderboard highlighted row */
+html.dark .bg-purple-50\/90,
+html.dark .bg-purple-50,
+html.dark .bg-indigo-50\/90 {
+  background-color: #1e1740 !important;
+  border-color: #581c87 !important;
+  color: #f3e8ff !important;
+}
+
+/* Icon badge backgrounds */
+html.dark .bg-purple-50,
+html.dark .bg-purple-100 {
+  background-color: rgba(88, 28, 135, 0.4) !important;
+  color: #c084fc !important;
+  border-color: rgba(147, 51, 234, 0.3) !important;
+}
+
+html.dark .bg-blue-50,
+html.dark .bg-blue-100 {
+  background-color: rgba(30, 58, 138, 0.4) !important;
+  color: #60a5fa !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100 {
+  background-color: rgba(6, 78, 59, 0.4) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-100 {
+  background-color: rgba(120, 53, 15, 0.4) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+html.dark .bg-rose-50,
+html.dark .bg-red-50 {
+  background-color: rgba(136, 19, 55, 0.4) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+html.dark .bg-indigo-50 {
+  background-color: rgba(49, 46, 129, 0.4) !important;
+  color: #818cf8 !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+html.dark .bg-orange-50 {
+  background-color: rgba(124, 45, 18, 0.4) !important;
+  color: #fb923c !important;
+  border-color: rgba(249, 115, 22, 0.3) !important;
+}
+
+html.dark .bg-cyan-50 {
+  background-color: rgba(8, 51, 68, 0.4) !important;
+  color: #22d3ee !important;
+  border-color: rgba(6, 182, 212, 0.3) !important;
+}
+
+/* Typography */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+/* Borders */
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-300 {
+  border-color: #1e2638 !important;
+}
+
+/* Form inputs */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #121827 !important;
+  color: #f8fafc !important;
+  border-color: #1e2638 !important;
+}
+
+/* Data tables */
+html.dark table thead,
+html.dark table thead tr,
+html.dark table thead th {
+  background-color: #182033 !important;
+  color: #cbd5e1 !important;
+  border-color: #222b40 !important;
+}
+
+html.dark table tbody tr {
+  background-color: #121827 !important;
+  border-color: #1e2638 !important;
+}
+
+html.dark table tbody tr:hover {
+  background-color: #182033 !important;
+}
+
+/* Shadows */
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+}

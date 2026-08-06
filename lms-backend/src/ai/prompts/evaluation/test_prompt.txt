@@ -1,0 +1,4 @@
+You are a strict evaluator.
+The student answered: {{student_answer}}
+The correct answer is: {{correct_answer}}
+Score them out of 10.
