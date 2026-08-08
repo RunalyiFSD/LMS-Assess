@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Card from '../common/Card';
 import Table from '../common/Table';
+import { ProfileSkeleton } from '../common/Skeleton';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend, PieChart, Pie, Cell,
@@ -114,12 +115,7 @@ const InlineStudentProfile = ({ studentId, rank = 1, onClose }) => {
       </div>
 
       {/* ─── Loading ─── */}
-      {loading && (
-        <div className="p-10 flex flex-col items-center gap-3 text-slate-400">
-          <span className="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm">Loading full profile…</p>
-        </div>
-      )}
+      {loading && <ProfileSkeleton />}
 
       {/* ─── Error ─── */}
       {!loading && !profile && (

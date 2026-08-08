@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Bell, LogOut, User as UserIcon, X, MessageSquare } from 'lucide-react';
+import { Bell, LogOut, User as UserIcon, X, MessageSquare, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import Button from '../common/Button';
 
 const Header = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [hasUnreadMsg, setHasUnreadMsg] = useState(true); // default active indicator
+  const [hasUnreadMsg, setHasUnreadMsg] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const handleConfirmLogout = async () => {
@@ -20,7 +22,6 @@ const Header = () => {
     navigate('/login', { replace: true });
   };
 
-  // Fetch notifications and unread messages status
   useEffect(() => {
     if (!user) return;
     const fetchNotificationsAndMessages = async () => {
@@ -32,7 +33,6 @@ const Header = () => {
           setNotifications(list);
           setUnreadCount(list.filter((n) => !n.isRead).length);
         }
-
         const msgRes = await api.get('/messages/conversations');
         if (msgRes.data?.status === 'success' && msgRes.data?.data?.conversations) {
           const totalUnread = msgRes.data.data.conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
@@ -43,7 +43,7 @@ const Header = () => {
       }
     };
     fetchNotificationsAndMessages();
-    const interval = setInterval(fetchNotificationsAndMessages, 15000); // refresh every 15s
+    const interval = setInterval(fetchNotificationsAndMessages, 15000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -60,10 +60,18 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#2D2354] border-b border-[#3D317C]/40 px-6 py-3 flex items-center justify-between print:hidden">
+    <header className={`sticky top-0 z-40 px-6 py-3 flex items-center justify-between print:hidden transition-colors duration-200 border-b ${
+      isDark
+        ? 'bg-[#0b0f19] border-[#1e2436]'
+        : 'bg-[#2D2354] border-[#3D317C]/40'
+    }`}>
       {/* Brand Logo */}
       <div className="flex items-center gap-2">
-        <span className="w-8 h-8 rounded-lg bg-[#3D317C] border border-[#4E3F9B] flex items-center justify-center text-white font-bold text-base shadow-sm">
+        <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-base shadow-sm border ${
+          isDark
+            ? 'bg-purple-600 border-purple-500'
+            : 'bg-[#3D317C] border-[#4E3F9B]'
+        }`}>
           A
         </span>
         <span className="font-bold text-white text-lg tracking-tight">AssessLMS</span>
@@ -71,18 +79,35 @@ const Header = () => {
 
       {/* User Actions & Alerts */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Messages Icon Button with Green Dot indicator */}
+        {/* Dark / Light Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          className={`p-2 rounded-lg transition-colors ${
+            isDark
+              ? 'hover:bg-[#1e2436] text-amber-400'
+              : 'hover:bg-[#3D317C] text-slate-400 hover:text-amber-400'
+          }`}
+        >
+          {isDark ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+
+        {/* Messages Icon */}
         <button
           onClick={() => {
             setHasUnreadMsg(false);
             navigate('/messages');
           }}
           title="Messages"
-          className="p-2 rounded-lg hover:bg-[#3D317C] text-slate-400 hover:text-slate-200 relative transition-colors"
+          className={`p-2 rounded-lg text-slate-400 hover:text-slate-200 relative transition-colors ${
+            isDark ? 'hover:bg-[#1e2436]' : 'hover:bg-[#3D317C]'
+          }`}
         >
           <MessageSquare size={20} />
           {hasUnreadMsg && (
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#2D2354] animate-pulse"></span>
+            <span className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 animate-pulse ${
+              isDark ? 'ring-[#0b0f19]' : 'ring-[#2D2354]'
+            }`}></span>
           )}
         </button>
 
@@ -90,7 +115,9 @@ const Header = () => {
         <div className="relative">
           <button
             onClick={() => setShowNotif(!showNotif)}
-            className="p-2 rounded-lg hover:bg-[#3D317C] text-slate-400 hover:text-slate-200 relative transition-colors"
+            className={`p-2 rounded-lg text-slate-400 hover:text-slate-200 relative transition-colors ${
+              isDark ? 'hover:bg-[#1e2436]' : 'hover:bg-[#3D317C]'
+            }`}
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -122,9 +149,7 @@ const Header = () => {
                     <div
                       key={notif._id}
                       onClick={() => handleMarkAsRead(notif._id)}
-                      className={`px-4 py-3 text-xs border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${
-                        !notif.isRead ? 'bg-brand-50/20 font-medium' : ''
-                      }`}
+                      className={`px-4 py-3 text-xs border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${!notif.isRead ? 'bg-brand-50/20 font-medium' : ''}`}
                     >
                       <div className="flex justify-between items-start">
                         <p className="text-slate-800 font-semibold">{notif.title}</p>
@@ -135,8 +160,6 @@ const Header = () => {
                   ))
                 )}
               </div>
-
-              {/* View All Notifications Footer Link */}
               <div className="p-2.5 bg-slate-50 border-t border-slate-100 text-center">
                 <button
                   onClick={() => {
@@ -153,42 +176,50 @@ const Header = () => {
           )}
         </div>
 
-         {/* User Info & Profile Menu */}
-          {user ? (
-            <div className="flex items-center gap-3 pl-2 border-l border-[#3D317C]/40">
-              <Link to="/dashboard?tab=profile" className="flex items-center gap-3 hover:opacity-85 transition-opacity">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-semibold text-slate-200">{user.name}</p>
-                  <p className="text-xs text-slate-400 capitalize">{user.role}</p>
+        {/* User Info & Profile Menu */}
+        {user ? (
+          <div className={`flex items-center gap-3 pl-2 border-l ${
+            isDark ? 'border-[#1e2436]' : 'border-[#3D317C]/40'
+          }`}>
+            <Link to="/dashboard?tab=profile" className="flex items-center gap-3 hover:opacity-85 transition-opacity">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-semibold text-slate-200">{user.name}</p>
+                <p className="text-xs text-slate-400 capitalize">{user.role}</p>
+              </div>
+              {user.profilePicture ? (
+                <img
+                  src={user.profilePicture}
+                  alt={user.name}
+                  className="w-9 h-9 rounded-full object-cover border border-slate-700"
+                />
+              ) : (
+                <div className={`w-9 h-9 rounded-full text-slate-200 flex items-center justify-center font-black font-mono text-[10px] tracking-tight border ${
+                  isDark
+                    ? 'bg-purple-600 border-purple-500'
+                    : 'bg-[#3D317C] border-[#4E3F9B]'
+                }`}>
+                  {user.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
                 </div>
-                {user.profilePicture ? (
-                  <img
-                    src={user.profilePicture}
-                    alt={user.name}
-                    className="w-9 h-9 rounded-full object-cover border border-slate-700"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-[#3D317C] text-slate-200 border border-[#4E3F9B] flex items-center justify-center font-black font-mono text-[10px] tracking-tight">
-                    {user.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
-                  </div>
-                )}
-              </Link>
-             
-             <button
-               onClick={() => setShowConfirmModal(true)}
-               title="Log Out"
-               className="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-950/20 transition-colors ml-1"
-             >
-               <LogOut size={18} />
-             </button>
-           </div>
-         ) : (
-           <div className="flex items-center gap-3 pl-2 border-l border-[#3D317C]/40">
-             <Link to="/login" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">
-               Sign In
-             </Link>
-           </div>
-         )}
+              )}
+            </Link>
+
+            <button
+              onClick={() => setShowConfirmModal(true)}
+              title="Log Out"
+              className="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-950/20 transition-colors ml-1"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
+        ) : (
+          <div className={`flex items-center gap-3 pl-2 border-l ${
+            isDark ? 'border-[#1e2436]' : 'border-[#3D317C]/40'
+          }`}>
+            <Link to="/login" className="text-sm font-semibold text-slate-300 hover:text-white transition-colors">
+              Sign In
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Logout Confirmation Modal */}
@@ -198,7 +229,7 @@ const Header = () => {
             <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-4">
               <LogOut size={22} />
             </div>
-            
+
             <h3 className="text-lg font-black text-slate-800">Are you sure?</h3>
             <p className="text-slate-500 text-xs mt-2 leading-relaxed">
               You will be logged out.

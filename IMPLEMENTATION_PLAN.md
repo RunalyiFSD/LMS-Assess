@@ -21,6 +21,7 @@ This document consolidates the complete implementation plans across all core mod
 14. [Module 14: Activity Audit Logs (`/admin/logs`)](#module-14-activity-audit-logs-adminlogs)
 15. [Module 15: Support & Helpdesk Hub (`/admin/support`)](#module-15-support--helpdesk-hub-adminsupport)
 16. [Module 16: Instructor Grade Submissions Suite (`/instructor/grade`)](#module-16-instructor-grade-submissions-suite-instructorgrade)
+17. [Module 17: Question Bank Direct Assignment to Students (`/instructor/questions/assign`)](#module-17-question-bank-direct-assignment-to-students-instructorquestionsassign)
 
 ---
 
@@ -342,21 +343,44 @@ Provide a ticketing support system for students and instructors to submit techni
 
 ---
 
-## Module 16: Instructor Grade Submissions Suite (`/instructor/grade`)
+
+
+---
+
+
+
+---
+
+
+---
+
+
+---
+
+
+---
+
+## Module 24: Dark Mode Theme & Preference Persistence
 
 ### Objectives
-Provide faculty instructors with a comprehensive grading workflow to review student assessment attempts, evaluate theory/subjective text responses, assign question marks, write feedback, and update student results.
+Implement a dark mode theme across the platform with a user-controlled toggle (Sun / Moon icon) and dual-layer persistence (LocalStorage + User Database Settings) so selected theme preferences are automatically restored on page refreshes and logins.
 
-### Backend Architecture (`lms-backend`)
-1. **Controllers & Endpoints (`attemptController.js` / `assessmentController.js`)**:
-   - `GET /api/assessments/attempts/pending`: Returns student test submissions containing ungraded subjective responses.
-   - `POST /api/assessments/attempts/:attemptId/grade`: Evaluates subjective questions, awards manual marks, appends instructor remarks, recalculates total score percentage, and marks attempt as `graded`.
+### Frontend Architecture (`lms-frontend`)
+1. **Theme Context & Hook (`ThemeContext.jsx`)**:
+   - Manages `'light'` vs `'dark'` theme state.
+   - Applies `.dark` class to `document.documentElement` (`<html>`).
+   - Persists state in `localStorage.setItem('theme', theme)`.
+   - Syncs user preference asynchronously to backend (`PUT /api/users/profile`, setting `user.settings.theme`).
+2. **Header Integration (`Header.jsx`)**:
+   - Renders Sun / Moon toggle button in top right navigation toolbar.
+3. **App Wrapper (`App.jsx`)**:
+   - Wrapped route hierarchy in `<ThemeProvider>`.
 
-### Frontend Integration (`lms-frontend`)
-1. **Instructor Dashboard (`InstructorDashboardView.jsx`)**:
-   - Sub-navigation tab & route `/instructor/grade`.
-   - **Summary Metric Cards**: Pending Evaluation, Graded Submissions, Class Pass Rate, Submissions Needing Attention.
-   - **Search & Filters**: Search by student name, roll number, or test title; filter by Assessment and Status (`Pending Review`, `Graded`).
-   - **Submissions Roster Table**: Student details, Assessment title, Submitted timestamp, Auto-graded score (MCQ/Coding), Theory evaluation status, Total score, and Action button (**Grade Submission**).
-   - **Interactive Grading Modal**: Renders student's written theory answers, max marks, input field for awarded marks, feedback comment textarea, and "Publish Grades" submit action.
+
+
+
+
+
+
+
 

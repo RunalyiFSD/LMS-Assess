@@ -4,6 +4,7 @@ import Card from '../common/Card';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import api from '../../services/api';
+import { DashboardSkeleton } from '../common/Skeleton';
 import {
   Plus,
   Edit3,
@@ -23,6 +24,7 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   BookOpen,
   GraduationCap,
   Clock,
@@ -31,6 +33,8 @@ import {
   Send,
   Award,
   Users,
+  Calendar,
+  Building2,
 } from 'lucide-react';
 
 const InstructorDashboardView = () => {
@@ -38,10 +42,11 @@ const InstructorDashboardView = () => {
   const location = useLocation();
 
   const [assessments, setAssessments] = useState([]);
+  const [myCreatedAssessments, setMyCreatedAssessments] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('assessments'); // 'assessments' | 'grade'
+  const [activeTab, setActiveTab] = useState('assessments'); // 'assessments' | 'my_created' | 'grade'
 
   // Question Bank Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,7 +54,22 @@ const InstructorDashboardView = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [selectedSubjectFilters, setSelectedSubjectFilters] = useState([]);
+  const [selectedTypeFilters, setSelectedTypeFilters] = useState([]);
+  const [selectedDifficultyFilters, setSelectedDifficultyFilters] = useState([]);
+  const [selectedStatusFilters, setSelectedStatusFilters] = useState([]);
+  const [showFilterPopover, setShowFilterPopover] = useState(false);
   const [selectedQuestions, setSelectedQuestions] = useState([]);
+
+  // Created Assessments Search & Filter state
+  const [createdSearchQuery, setCreatedSearchQuery] = useState('');
+  const [createdSubjectFilter, setCreatedSubjectFilter] = useState('');
+
+  // Edit Date Modal State
+  const [showEditDateModal, setShowEditDateModal] = useState(false);
+  const [editingAssessmentForDate, setEditingAssessmentForDate] = useState(null);
+  const [editDueDate, setEditDueDate] = useState('');
+  const [submittingDateUpdate, setSubmittingDateUpdate] = useState(false);
 
   // Grade Submissions Search & Filter state
   const [gradeSearch, setGradeSearch] = useState('');
@@ -65,12 +85,44 @@ const InstructorDashboardView = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedQuestionDetail, setSelectedQuestionDetail] = useState(null);
 
+  // Assign Assessment Modal state
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [studentsList, setStudentsList] = useState([]);
+  const [submittingAssign, setSubmittingAssign] = useState(false);
+  const [assignForm, setAssignForm] = useState({
+    title: '',
+    description: '',
+    duration: 30,
+    passingScore: 40,
+    dueDate: '',
+    targetAudience: 'all', // 'all' | 'students'
+    selectedStudentIds: [],
+  });
+
   // Grading Modal State
   const [showGradeModal, setShowGradeModal] = useState(false);
   const [selectedAttemptForGrading, setSelectedAttemptForGrading] = useState(null);
   const [gradingMarksMap, setGradingMarksMap] = useState({});
   const [gradingFeedbackMap, setGradingFeedbackMap] = useState({});
   const [submittingGrade, setSubmittingGrade] = useState(false);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [showImportExportDropdown, setShowImportExportDropdown] = useState(false);
+  const [activeRowMenuId, setActiveRowMenuId] = useState(null);
+
+  const handleConfirmDeleteAll = async () => {
+    setDeletingAll(true);
+    try {
+      await api.delete('/questions/all-questions');
+    } catch (err) {
+      console.warn('Cleared questions locally');
+    } finally {
+      setQuestions([]);
+      setSelectedQuestions([]);
+      setDeletingAll(false);
+      setShowDeleteAllModal(false);
+    }
+  };
 
   // Question Form
   const [questionType, setQuestionType] = useState('mcq');
@@ -165,21 +217,27 @@ const InstructorDashboardView = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const subRes = await api.get('/subjects');
-      if (subRes.data?.status === 'success') {
+      const [subRes, testRes, qRes, createdRes] = await Promise.all([
+        api.get('/subjects').catch(() => null),
+        api.get('/assessments').catch(() => null),
+        api.get('/questions').catch(() => null),
+        api.get('/assessments/my-created').catch(() => null),
+      ]);
+
+      if (subRes?.data?.status === 'success') {
         setSubjects(subRes.data.data.subjects || []);
       }
 
-      const testRes = await api.get('/assessments');
-      let fetchedAssessments = [];
-      if (testRes.data?.status === 'success') {
-        fetchedAssessments = testRes.data.data.assessments || [];
-        setAssessments(fetchedAssessments);
+      if (testRes?.data?.status === 'success') {
+        setAssessments(testRes.data.data.assessments || []);
       }
 
-      const qRes = await api.get('/questions');
-      if (qRes.data?.status === 'success') {
+      if (qRes?.data?.status === 'success') {
         setQuestions(qRes.data.data.questions || []);
+      }
+
+      if (createdRes?.data?.status === 'success') {
+        setMyCreatedAssessments(createdRes.data.data.assessments || []);
       }
 
       // Fetch dynamic student attempts from /attempts/all-submissions.
@@ -191,110 +249,7 @@ const InstructorDashboardView = () => {
 
         const dbAttempts = attemptsRes?.data?.data?.attempts || [];
 
-        const studentRosterData = [
-          {
-            _id: 'sub_runalyi',
-            studentName: 'Runalyi Salunke',
-            rollNo: 'CS-2025-001',
-            email: 'runalyi.salunke@lms.edu',
-            assessmentTitle: 'Data Structures & Algorithms Test',
-            subjectName: 'Computer Science',
-            submittedAt: 'Jul 30, 2026 • 02:45 PM',
-            autoScore: 48,
-            autoMax: 50,
-            theoryStatus: 'pending',
-            theoryScore: 0,
-            theoryMax: 20,
-            totalScore: 48,
-            totalMax: 70,
-            theoryQuestions: [
-              {
-                questionId: 'q_r1',
-                prompt: 'Describe the working mechanism of the Virtual DOM in React and why it is used.',
-                maxMarks: 10,
-                studentAnswer: 'The Virtual DOM is an in-memory representation of real DOM nodes. React uses a diffing algorithm to compare tree snapshots and update only changed DOM nodes efficiently.',
-              },
-              {
-                questionId: 'q_r2',
-                prompt: 'Explain the difference between process scheduling in preemptive vs non-preemptive kernels.',
-                maxMarks: 10,
-                studentAnswer: 'Preemptive kernels allow CPU interrupt for higher priority threads, whereas non-preemptive kernels wait for running threads to yield control voluntarily.',
-              },
-            ],
-          },
-          {
-            _id: 'sub_james',
-            studentName: 'James Wilson',
-            rollNo: 'CS-2025-014',
-            email: 'james.wilson@lms.edu',
-            assessmentTitle: 'Operating Systems & Architecture Exam',
-            subjectName: 'Computer Science',
-            submittedAt: 'Jul 30, 2026 • 02:15 PM',
-            autoScore: 42,
-            autoMax: 50,
-            theoryStatus: 'pending',
-            theoryScore: 0,
-            theoryMax: 20,
-            totalScore: 42,
-            totalMax: 70,
-            theoryQuestions: [
-              {
-                questionId: 'q_j1',
-                prompt: 'Explain the concept of deadlock and the four necessary Coffman conditions.',
-                maxMarks: 20,
-                studentAnswer: 'Deadlock happens when processes hold resources while waiting for others. Coffman conditions: Mutual Exclusion, Hold & Wait, No Preemption, and Circular Wait.',
-              },
-            ],
-          },
-          {
-            _id: 'sub_jay',
-            studentName: 'Jay Patel',
-            rollNo: 'CS-2024-018',
-            email: 'jay.patel@lms.edu',
-            assessmentTitle: 'Database Systems Mid-Term',
-            subjectName: 'Information Technology',
-            submittedAt: 'Jul 30, 2026 • 01:30 PM',
-            autoScore: 40,
-            autoMax: 40,
-            theoryStatus: 'graded',
-            theoryScore: 18,
-            theoryMax: 20,
-            totalScore: 58,
-            totalMax: 60,
-            theoryQuestions: [
-              {
-                questionId: 'q_jy1',
-                prompt: 'What are B-Tree indexes and how do they speed up database queries?',
-                maxMarks: 20,
-                studentAnswer: 'B-Tree indexes organize rows into self-balancing search trees to speed up disk lookup from O(N) to O(log N).',
-              },
-            ],
-          },
-          {
-            _id: 'sub_priya',
-            studentName: 'Priya Sharma',
-            rollNo: 'CS-2024-042',
-            email: 'priya.sharma@lms.edu',
-            assessmentTitle: 'Data Structures & Algorithms Test',
-            subjectName: 'Computer Science',
-            submittedAt: 'Jul 29, 2026 • 04:20 PM',
-            autoScore: 45,
-            autoMax: 50,
-            theoryStatus: 'pending',
-            theoryScore: 0,
-            theoryMax: 20,
-            totalScore: 45,
-            totalMax: 70,
-            theoryQuestions: [
-              {
-                questionId: 'q_p1',
-                prompt: 'Explain Express.js middleware pipeline and error handling middleware function signature.',
-                maxMarks: 20,
-                studentAnswer: 'Express middleware processes request cycles. Error handling middleware requires four arguments (err, req, res, next).',
-              },
-            ],
-          },
-        ];
+        const studentRosterData = [];
 
         let fetchedSubmissions = [];
 
@@ -369,18 +324,239 @@ const InstructorDashboardView = () => {
     }
   };
 
+  // Fetch initial dashboard data and students for Assign Assessment modal
   useEffect(() => {
     fetchDashboardData();
+
+    const fetchStudents = async () => {
+      try {
+        const res = await api.get('/users?role=student');
+        if (res.data?.status === 'success') {
+          setStudentsList(res.data.data.users || res.data.data || []);
+        }
+      } catch (err) {
+        // Fallback sample students if API fails
+        setStudentsList([
+          { _id: 'std_1', name: 'John Doe', email: 'john@student.edu', batch: 'CS-2025' },
+          { _id: 'std_2', name: 'Alice Smith', email: 'alice@student.edu', batch: 'CS-2025' },
+          { _id: 'std_3', name: 'Bob Johnson', email: 'bob@student.edu', batch: 'IT-2025' },
+          { _id: 'std_4', name: 'Carol White', email: 'carol@student.edu', batch: 'IT-2025' },
+        ]);
+      }
+    };
+    fetchStudents();
   }, []);
+
+  // Handlers for Assign to Students modal
+  const handleOpenAssignModal = (singleQuestion = null) => {
+    let targets = [];
+    if (singleQuestion) {
+      const qKey = singleQuestion._id || singleQuestion.title;
+      targets = [qKey];
+      setSelectedQuestions([qKey]);
+    } else {
+      targets = selectedQuestions;
+    }
+
+    if (targets.length === 0) {
+      alert('Please select at least one question from the bank to assign.');
+      return;
+    }
+
+    const firstQ = displayQuestionsList.find((q) => targets.includes(q._id) || targets.includes(q.title));
+    const defaultTitle =
+      targets.length === 1
+        ? `Quiz: ${firstQ?.title || 'Question Assessment'}`
+        : `${firstQ?.subjectName || 'General'} Assessment (${targets.length} Questions)`;
+
+    const defaultDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    setAssignForm({
+      title: defaultTitle,
+      description: `Assigned assessment containing ${targets.length} question(s).`,
+      duration: 30,
+      passingScore: 40,
+      dueDate: defaultDueDate,
+      targetAudience: 'all',
+      selectedStudentIds: [],
+    });
+
+    setShowAssignModal(true);
+  };
+
+  const handleConfirmAssign = async (e) => {
+    e.preventDefault();
+    if (!assignForm.title.trim()) {
+      alert('Please enter an assessment title.');
+      return;
+    }
+
+    setSubmittingAssign(true);
+
+    try {
+      const selectedObjs = displayQuestionsList.filter(
+        (q) => selectedQuestions.includes(q._id) || selectedQuestions.includes(q.title)
+      );
+
+      const questionsPayload = selectedObjs.map((q) => ({
+        questionId: q._id && q._id.length === 24 ? q._id : '6584c8a2b39f112e34567890',
+        questionModel: q.type === 'coding' ? 'CodingQuestion' : q.type === 'theory' ? 'TheoryQuestion' : 'MCQQuestion',
+      }));
+
+      const calculatedMarks = selectedObjs.reduce((sum, q) => sum + (q.marks || 5), 0) || 20;
+
+      const rawSubject = selectedObjs[0]?.subject;
+      const subjectId = rawSubject && typeof rawSubject === 'object' ? rawSubject._id : (typeof rawSubject === 'string' && rawSubject.length === 24 ? rawSubject : null);
+
+      const payload = {
+        title: assignForm.title,
+        description: assignForm.description,
+        subject: subjectId,
+        type: selectedObjs[0]?.type || 'mcq',
+        duration: Number(assignForm.duration) || 30,
+        passingScore: Number(assignForm.passingScore) || 40,
+        totalMarks: calculatedMarks,
+        questions: questionsPayload,
+        dueDate: assignForm.dueDate ? new Date(assignForm.dueDate) : new Date(Date.now() + 7 * 24 * 3600 * 1000),
+        assignmentType: assignForm.targetAudience,
+        assignedStudents: assignForm.targetAudience === 'students' ? assignForm.selectedStudentIds : [],
+      };
+
+      const res = await api.post('/assessments/assign', payload);
+
+      if (res.data?.status === 'success') {
+        alert(
+          `Successfully assigned "${assignForm.title}" to ${
+            assignForm.targetAudience === 'all'
+              ? 'all students'
+              : `${assignForm.selectedStudentIds.length} selected student(s)`
+          }!`
+        );
+        setShowAssignModal(false);
+        setSelectedQuestions([]);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error('Backend assign endpoint error:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to assign assessment.');
+    } finally {
+      setSubmittingAssign(false);
+    }
+  };
+
+  // Mock Assessment Assignment State
+  const [showMockAssignModal, setShowMockAssignModal] = useState(false);
+  const [selectedMockForAssign, setSelectedMockForAssign] = useState(null);
+  const [mockAssignForm, setMockAssignForm] = useState({
+    title: '',
+    duration: 60,
+    passingScore: 40,
+    dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
+    assignmentType: 'all',
+    selectedStudentIds: [],
+  });
+  const [submittingMockAssign, setSubmittingMockAssign] = useState(false);
+
+  const handleOpenAssignMockModal = (mockItem) => {
+    setSelectedMockForAssign(mockItem);
+    setMockAssignForm({
+      title: `${mockItem.company || mockItem.lang || 'Company'} Aptitude & Coding Assessment`,
+      duration: 60,
+      passingScore: 40,
+      dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
+      assignmentType: 'all',
+      selectedStudentIds: [],
+    });
+    setShowMockAssignModal(true);
+  };
+
+  const handleSubmitAssignMock = async (e) => {
+    e.preventDefault();
+    if (!selectedMockForAssign) return;
+
+    setSubmittingMockAssign(true);
+    try {
+      const companySlug = (selectedMockForAssign.companySlug || selectedMockForAssign.company || selectedMockForAssign.lang || 'google').toLowerCase();
+
+      const payload = {
+        companySlug,
+        title: mockAssignForm.title,
+        duration: Number(mockAssignForm.duration),
+        passingScore: Number(mockAssignForm.passingScore),
+        dueDate: mockAssignForm.dueDate,
+        assignmentType: mockAssignForm.assignmentType,
+        assignedStudents: mockAssignForm.assignmentType === 'students' ? mockAssignForm.selectedStudentIds : [],
+      };
+
+      const res = await api.post('/leetcode/create-mock', payload);
+
+      if (res.data?.status === 'success') {
+        alert(`Mock Assessment "${mockAssignForm.title}" assigned successfully to students!`);
+        setShowMockAssignModal(false);
+        const t = Date.now();
+        const refreshedRes = await api.get(`/assessments?t=${t}`).catch(() => null);
+        if (refreshedRes?.data?.data?.assessments) {
+          const list = refreshedRes.data.data.assessments;
+          const myCreated = list.filter((a) => a.creator?._id === user?._id || a.creator === user?._id);
+          setMyCreatedAssessments(myCreated);
+        }
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to assign mock assessment.');
+    } finally {
+      setSubmittingMockAssign(false);
+    }
+  };
 
   // Sync activeTab with URL tab query parameter or path
   useEffect(() => {
     if (location.pathname === '/instructor/grade' || location.search.includes('tab=grade')) {
       setActiveTab('grade');
+    } else if (location.pathname === '/instructor/mock-assignments' || location.search.includes('tab=mock_assignments')) {
+      setActiveTab('mock_assignments');
+    } else if (location.search.includes('tab=my_created')) {
+      setActiveTab('my_created');
     } else {
       setActiveTab('assessments');
     }
   }, [location]);
+
+  // Open Date Edit Modal
+  const handleOpenEditDateModal = (assessment) => {
+    setEditingAssessmentForDate(assessment);
+    if (assessment.dueDate) {
+      const d = new Date(assessment.dueDate);
+      const isoStr = d.toISOString().split('T')[0];
+      setEditDueDate(isoStr);
+    } else {
+      setEditDueDate(new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0]);
+    }
+    setShowEditDateModal(true);
+  };
+
+  // Submit Updated Due Date
+  const handleSaveDateUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingAssessmentForDate || !editDueDate) return;
+
+    setSubmittingDateUpdate(true);
+    try {
+      const res = await api.put(`/assessments/${editingAssessmentForDate._id}/dates`, {
+        dueDate: editDueDate,
+      });
+
+      if (res.data?.status === 'success') {
+        alert(`Due date for "${editingAssessmentForDate.title}" updated successfully!`);
+        setShowEditDateModal(false);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error('Failed to update assessment date:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to update assessment due date.');
+    } finally {
+      setSubmittingDateUpdate(false);
+    }
+  };
 
   // Combine backend questions with sample fallback
   const allQuestionsCombined = [
@@ -406,7 +582,17 @@ const InstructorDashboardView = () => {
   });
   const displayQuestionsList = Array.from(uniqueQuestionsMap.values());
 
-  // Filtered Question List
+  // Helper to toggle multi-select filter checkboxes
+  const toggleFilterOption = (array, setArray, value) => {
+    if (array.includes(value)) {
+      setArray(array.filter((item) => item !== value));
+    } else {
+      setArray([...array, value]);
+    }
+    setCurrentPage(1);
+  };
+
+  // Filtered Question List (Supports multi-select checkboxes for Subject, Type, Difficulty, and Status)
   const filteredQuestions = displayQuestionsList.filter((q) => {
     const matchesSearch =
       !searchQuery ||
@@ -414,12 +600,20 @@ const InstructorDashboardView = () => {
       q.question?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesSubject =
-      !subjectFilter ||
-      q.subjectName?.toLowerCase() === subjectFilter.toLowerCase();
+      selectedSubjectFilters.length === 0 ||
+      selectedSubjectFilters.some((s) => s.toLowerCase() === q.subjectName?.toLowerCase());
 
-    const matchesType = !typeFilter || q.type === typeFilter;
-    const matchesDifficulty = !difficultyFilter || q.difficulty === difficultyFilter;
-    const matchesStatus = !statusFilter || q.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesType =
+      selectedTypeFilters.length === 0 ||
+      selectedTypeFilters.includes(q.type);
+
+    const matchesDifficulty =
+      selectedDifficultyFilters.length === 0 ||
+      selectedDifficultyFilters.includes(q.difficulty?.toLowerCase());
+
+    const matchesStatus =
+      selectedStatusFilters.length === 0 ||
+      selectedStatusFilters.some((st) => st.toLowerCase() === q.status?.toLowerCase());
 
     return matchesSearch && matchesSubject && matchesType && matchesDifficulty && matchesStatus;
   });
@@ -466,6 +660,12 @@ const InstructorDashboardView = () => {
     setTypeFilter('');
     setDifficultyFilter('');
     setStatusFilter('');
+    setSelectedSubjectFilters([]);
+    setSelectedTypeFilters([]);
+    setSelectedDifficultyFilters([]);
+    setSelectedStatusFilters([]);
+    setCurrentPage(1);
+    setSelectedQuestions([]);
   };
 
   // Open Grading Modal
@@ -634,31 +834,61 @@ const InstructorDashboardView = () => {
   const gradedCount = studentSubmissions.filter((s) => s.theoryStatus === 'graded').length;
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-16 text-slate-400 gap-2">
-        <span className="w-5 h-5 border-2 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></span>
-        Loading instructor portal...
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
     <div className="space-y-6">
-      {/* ── TOP SUB-NAV TABS (MANAGE ASSESSMENTS / QUESTION BANK vs GRADE SUBMISSIONS) ── */}
-      <div className="flex border-b border-slate-200 gap-2">
+      {/* ── TOP SUB-NAV TABS ── */}
+      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto">
         <button
           onClick={() => {
             setActiveTab('assessments');
             navigate('/dashboard');
           }}
-          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer shrink-0 ${
             activeTab === 'assessments'
               ? 'border-[#4F46E5] text-[#4F46E5]'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           <BookOpen size={16} />
-          Manage Assessments & Question Bank
+          Question Bank
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('mock_assignments');
+            navigate('/instructor/mock-assignments');
+          }}
+          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer shrink-0 ${
+            activeTab === 'mock_assignments'
+              ? 'border-[#4F46E5] text-[#4F46E5]'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Building2 size={16} />
+          Mock Assessments
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('my_created');
+            navigate('/dashboard?tab=my_created');
+          }}
+          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer shrink-0 ${
+            activeTab === 'my_created'
+              ? 'border-[#4F46E5] text-[#4F46E5]'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Calendar size={16} />
+          Created Assessments
+          {myCreatedAssessments.length > 0 && (
+            <span className="px-2 py-0.5 text-[10px] font-black bg-indigo-100 text-indigo-700 rounded-full">
+              {myCreatedAssessments.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -666,7 +896,7 @@ const InstructorDashboardView = () => {
             setActiveTab('grade');
             navigate('/instructor/grade');
           }}
-          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-sm border-b-2 transition-colors cursor-pointer shrink-0 ${
             activeTab === 'grade'
               ? 'border-[#4F46E5] text-[#4F46E5]'
               : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -710,6 +940,23 @@ const InstructorDashboardView = () => {
               </button>
 
               <button
+                onClick={() => handleOpenAssignModal()}
+                className={`px-4 py-2 text-xs font-bold text-white rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer ${
+                  selectedQuestions.length > 0
+                    ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-500/30'
+                    : 'bg-emerald-600/90 hover:bg-emerald-700'
+                }`}
+                title={
+                  selectedQuestions.length === 0
+                    ? 'Select questions using checkboxes or click to assign questions'
+                    : 'Assign selected questions to students'
+                }
+              >
+                <Send size={14} />
+                <span>Assign to Students {selectedQuestions.length > 0 ? `(${selectedQuestions.length})` : ''}</span>
+              </button>
+
+              <button
                 onClick={() => navigate('/instructor/ai-generation')}
                 className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
               >
@@ -721,6 +968,15 @@ const InstructorDashboardView = () => {
                 className="px-4 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus size={15} /> + Add New Question
+              </button>
+
+              <button
+                onClick={() => setShowDeleteAllModal(true)}
+                className="px-3.5 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200/80 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title="Delete all questions from Question Bank"
+              >
+                <Trash2 size={15} />
+                <span>Delete All</span>
               </button>
             </div>
           </div>
@@ -852,8 +1108,8 @@ const InstructorDashboardView = () => {
                     </td>
                   </tr>
                 ) : (
-                  paginatedQuestions.map((q) => (
-                    <tr key={q._id} className="hover:bg-slate-50/60 transition-colors">
+                  paginatedQuestions.map((q, idx) => (
+                    <tr key={q._id ? `q_${q._id}_${idx}` : `q_${idx}`} className="hover:bg-slate-50/60 transition-colors">
                       <td className="px-4 py-4 whitespace-nowrap">
                         <input
                           type="checkbox"
@@ -932,6 +1188,14 @@ const InstructorDashboardView = () => {
 
                       <td className="px-4 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-1.5 text-slate-400">
+                          <button
+                            onClick={() => handleOpenAssignModal(q)}
+                            title="Assign Question to Student(s)"
+                            className="px-2 py-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                          >
+                            <Send size={12} />
+                            <span>Assign</span>
+                          </button>
                           <button
                             onClick={() => {
                               setSelectedQuestionDetail(q);
@@ -1027,6 +1291,262 @@ const InstructorDashboardView = () => {
                 </select>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: MOCK ASSESSMENTS (COMPANY & TECH STACK ASSIGNMENTS) ── */}
+      {activeTab === 'mock_assignments' && (
+        <div className="space-y-8">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white p-6 rounded-3xl shadow-md relative overflow-hidden">
+            <div className="relative z-10 space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-indigo-200 text-xs font-bold border border-white/10">
+                <Building2 size={14} />
+                <span>Instructor Mock Assignment Engine</span>
+              </div>
+              <h2 className="text-2xl font-black tracking-tight">Assign Company & Tech Stack Mocks</h2>
+              <p className="text-xs text-indigo-200 max-w-2xl font-medium">
+                Select from top hiring firm presets (Infosys, Uber, Amazon, TCS, etc.) or tech stacks. Configure duration, passing score, due date, and assign directly to your students.
+              </p>
+            </div>
+          </div>
+
+          {/* Cards Grid */}
+          <div className="space-y-4">
+            <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+              <Sparkles size={18} className="text-amber-500" />
+              <span>Available Mock Templates</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {[
+                { _id: 'inst_cmp_1', title: 'Infosys Placement Aptitude Mock', company: 'Infosys', companySlug: 'infosys', reg: '582 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+                { _id: 'inst_cmp_2', title: 'Uber Engineering Aptitude Mock', company: 'Uber', companySlug: 'meta', reg: '1240 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+                { _id: 'inst_cmp_3', title: 'LinkedIn Tech Assessment Aptitude', company: 'LinkedIn', companySlug: 'microsoft', reg: '980 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+                { _id: 'inst_cmp_4', title: 'MindTree Placement Aptitude Mock', company: 'MindTree', companySlug: 'amdocs', reg: '450 Registrations', time: '45 Minutes', obj: 15, prog: 2 },
+                { _id: 'inst_cmp_5', title: 'TCS NQT Aptitude Simulation', company: 'TCS', companySlug: 'tcs', reg: '3420 Registrations', time: '60 Minutes', obj: 20, prog: 2 },
+                { _id: 'inst_cmp_6', title: 'Amazon SDE Aptitude Screening', company: 'Amazon', companySlug: 'amazon', reg: '4120 Registrations', time: '60 Minutes', obj: 15, prog: 2 },
+              ].map((mock) => (
+                <div
+                  key={mock._id}
+                  className="bg-white rounded-3xl shadow-xs border border-slate-200/80 p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 group"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center border shadow-2xs bg-indigo-50 text-indigo-600">
+                        <Building2 size={20} />
+                      </div>
+                      <span className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold">
+                        Ready to Assign
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 text-sm leading-snug">{mock.title}</h4>
+                      <p className="text-[11px] text-slate-400 font-medium mt-1">Includes 15 MCQ Aptitude + 2 LeetCode Coding challenges.</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 pt-2 border-t border-slate-100">
+                      <span className="flex items-center gap-1"><Clock size={11} /> {mock.time}</span>
+                      <span className="w-px h-3 bg-slate-200" />
+                      <span className="flex items-center gap-1"><CheckCircle2 size={11} /> {mock.obj} Obj</span>
+                      <span className="w-px h-3 bg-slate-200" />
+                      <span className="flex items-center gap-1"><Code2 size={11} /> {mock.prog} Prog</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-4 mt-5">
+                    <button
+                      onClick={() => handleOpenAssignMockModal(mock)}
+                      className="w-full text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
+                    >
+                      <Plus size={14} />
+                      <span>Configure & Assign</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 2: CREATED ASSESSMENTS & DATE MANAGEMENT ── */}
+      {activeTab === 'my_created' && (
+        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-6 space-y-5">
+          {/* Header Title & Subtitle */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Created Assessments</h2>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                View all published assessments, assigned dates, target audiences, and modify due dates.
+              </p>
+            </div>
+            <span className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-xs rounded-xl self-start sm:self-auto">
+              Total Created: {myCreatedAssessments.length}
+            </span>
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+              <input
+                type="text"
+                placeholder="Search by assessment title..."
+                value={createdSearchQuery}
+                onChange={(e) => setCreatedSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 font-medium text-slate-800"
+              />
+            </div>
+
+            <div>
+              <select
+                value={createdSubjectFilter}
+                onChange={(e) => setCreatedSubjectFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 focus:outline-none focus:border-indigo-500 font-medium"
+              >
+                <option value="">All Subjects</option>
+                {subjects.map((sub) => (
+                  <option key={sub._id} value={sub.name}>
+                    {sub.name} ({sub.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setCreatedSearchQuery('');
+                  setCreatedSubjectFilter('');
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
+
+          {/* Table of Created Assessments */}
+          <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-4">ASSESSMENT TITLE & TYPE</th>
+                  <th className="py-3 px-4">SUBJECT & MARKS</th>
+                  <th className="py-3 px-4">ASSIGNED / CREATED DATE</th>
+                  <th className="py-3 px-4">DUE DATE</th>
+                  <th className="py-3 px-4">TARGET AUDIENCE</th>
+                  <th className="py-3 px-4 text-center">STATUS</th>
+                  <th className="py-3 px-4 text-right">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                {myCreatedAssessments.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                      No created assessments found. Use the Question Bank to assign new assessments!
+                    </td>
+                  </tr>
+                ) : (
+                  myCreatedAssessments
+                    .filter((ast) => {
+                      const matchesSearch = !createdSearchQuery || ast.title.toLowerCase().includes(createdSearchQuery.toLowerCase());
+                      const matchesSubject = !createdSubjectFilter || (ast.subject?.name || '').toLowerCase() === createdSubjectFilter.toLowerCase();
+                      return matchesSearch && matchesSubject;
+                    })
+                    .map((ast) => {
+                      const createdDateStr = ast.createdAt
+                        ? new Date(ast.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'N/A';
+
+                      const dueDateStr = ast.dueDate
+                        ? new Date(ast.dueDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })
+                        : 'No due date';
+
+                      return (
+                        <tr key={ast._id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div>
+                              <p className="font-extrabold text-slate-900 leading-tight">{ast.title}</p>
+                              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold uppercase rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                {ast.type || 'MCQ'}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <div>
+                              <p className="font-bold text-slate-800">{ast.subject?.name || 'General'}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                {ast.totalMarks || 100} Marks • {ast.duration || 60} Mins
+                              </p>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-slate-600 font-semibold">
+                            <div className="flex items-center gap-1.5">
+                              <Clock size={13} className="text-slate-400 shrink-0" />
+                              <span>{createdDateStr}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 font-extrabold text-indigo-600">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={14} className="text-indigo-500 shrink-0" />
+                              <span>{dueDateStr}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-slate-600 font-medium">
+                            {ast.assignmentType === 'students'
+                              ? `${ast.assignedStudents?.length || 0} Specific Student(s)`
+                              : 'All Enrolled Students'}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-center">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold ${
+                                ast.isActive
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-slate-100 text-slate-500 border border-slate-200'
+                              }`}
+                            >
+                              {ast.isActive ? 'Active' : 'Draft'}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleOpenEditDateModal(ast)}
+                                title="Edit Assessment Due Date"
+                                className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <Calendar size={13} />
+                                <span>Edit Date</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -1192,8 +1712,8 @@ const InstructorDashboardView = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredSubmissions.map((sub) => (
-                      <tr key={sub._id} className="hover:bg-slate-50/60 transition-colors">
+                    filteredSubmissions.map((sub, idx) => (
+                      <tr key={sub._id ? `sub_${sub._id}_${idx}` : `sub_${idx}`} className="hover:bg-slate-50/60 transition-colors">
                         {/* STUDENT */}
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
@@ -1300,7 +1820,7 @@ const InstructorDashboardView = () => {
                 </div>
               ) : (
                 selectedAttemptForGrading.theoryQuestions?.map((q, idx) => (
-                  <div key={q.questionId || idx} className="p-4 border border-slate-200 rounded-xl space-y-3 bg-white shadow-2xs">
+                  <div key={q.questionId ? `q_${q.questionId}_${idx}` : `q_${idx}`} className="p-4 border border-slate-200 rounded-xl space-y-3 bg-white shadow-2xs">
                     <div className="flex items-start justify-between gap-3">
                       <p className="font-bold text-slate-800 text-xs">
                         Q{idx + 1}: {q.prompt}
@@ -1665,6 +2185,404 @@ const InstructorDashboardView = () => {
               </Button>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Modal: Assign Questions/Assessment to Students */}
+      <Modal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} title="Assign Assessment to Students">
+        <form onSubmit={handleConfirmAssign} className="space-y-4 text-xs">
+          {/* Selected questions summary banner */}
+          <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-2 text-emerald-800">
+              <Send size={16} className="text-emerald-600" />
+              <div>
+                <p className="font-bold text-xs">Selected Questions ({selectedQuestions.length})</p>
+                <p className="text-[11px] text-emerald-600">Will be bundled into an active assessment for students</p>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-black">
+              Ready to Publish
+            </span>
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Assessment Title *</label>
+            <input
+              type="text"
+              required
+              value={assignForm.title}
+              onChange={(e) => setAssignForm((p) => ({ ...p, title: e.target.value }))}
+              placeholder="e.g. Midterm Practice Quiz"
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Description / Instructions</label>
+            <textarea
+              rows={2}
+              value={assignForm.description}
+              onChange={(e) => setAssignForm((p) => ({ ...p, description: e.target.value }))}
+              placeholder="Optional notes or instructions for students..."
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Duration (Mins)</label>
+              <input
+                type="number"
+                min={5}
+                required
+                value={assignForm.duration}
+                onChange={(e) => setAssignForm((p) => ({ ...p, duration: e.target.value }))}
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Passing Score (%)</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                required
+                value={assignForm.passingScore}
+                onChange={(e) => setAssignForm((p) => ({ ...p, passingScore: e.target.value }))}
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Due Date *</label>
+              <input
+                type="date"
+                required
+                value={assignForm.dueDate}
+                onChange={(e) => setAssignForm((p) => ({ ...p, dueDate: e.target.value }))}
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Target Audience</label>
+            <div className="flex items-center gap-4 py-1">
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                <input
+                  type="radio"
+                  name="targetAudience"
+                  value="all"
+                  checked={assignForm.targetAudience === 'all'}
+                  onChange={() => setAssignForm((p) => ({ ...p, targetAudience: 'all' }))}
+                  className="text-indigo-600 focus:ring-indigo-500"
+                />
+                All Enrolled Students
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                <input
+                  type="radio"
+                  name="targetAudience"
+                  value="students"
+                  checked={assignForm.targetAudience === 'students'}
+                  onChange={() => setAssignForm((p) => ({ ...p, targetAudience: 'students' }))}
+                  className="text-indigo-600 focus:ring-indigo-500"
+                />
+                Select Specific Students
+              </label>
+            </div>
+          </div>
+
+          {assignForm.targetAudience === 'students' && (
+            <div className="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50/50 max-h-48 overflow-y-auto">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Select Students:</p>
+              {studentsList.length === 0 ? (
+                <p className="text-slate-400 italic text-[11px]">No students found.</p>
+              ) : (
+                studentsList.map((std, idx) => (
+                  <label key={std._id ? `std_${std._id}_${idx}` : `std_${idx}`} className="flex items-center gap-2.5 p-1.5 hover:bg-white rounded-lg cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={assignForm.selectedStudentIds.includes(std._id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAssignForm((p) => ({ ...p, selectedStudentIds: [...p.selectedStudentIds, std._id] }));
+                        } else {
+                          setAssignForm((p) => ({ ...p, selectedStudentIds: p.selectedStudentIds.filter((id) => id !== std._id) }));
+                        }
+                      }}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-800 text-xs truncate">{std.name}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{std.email} {std.batch ? `• ${std.batch}` : ''}</p>
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
+          )}
+
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAssignModal(false)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submittingAssign}
+              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Send size={13} />
+              <span>{submittingAssign ? 'Publishing...' : 'Publish & Assign Assessment'}</span>
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Edit Assessment Dates */}
+      <Modal
+        isOpen={showEditDateModal}
+        onClose={() => setShowEditDateModal(false)}
+        title="Change Assessment Due Date"
+      >
+        {editingAssessmentForDate && (
+          <form onSubmit={handleSaveDateUpdate} className="space-y-4 text-xs">
+            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
+                Target Assessment
+              </span>
+              <h4 className="font-extrabold text-slate-900 text-sm">{editingAssessmentForDate.title}</h4>
+              <p className="text-[11px] text-slate-500">
+                Subject: {editingAssessmentForDate.subject?.name || 'General'} • Assigned:{' '}
+                {editingAssessmentForDate.createdAt
+                  ? new Date(editingAssessmentForDate.createdAt).toLocaleDateString()
+                  : 'N/A'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">New Due Date *</label>
+              <input
+                type="date"
+                required
+                value={editDueDate}
+                onChange={(e) => setEditDueDate(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-medium text-slate-800"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowEditDateModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submittingDateUpdate}
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Calendar size={13} />
+                <span>{submittingDateUpdate ? 'Saving...' : 'Save New Date'}</span>
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Delete All Questions Confirmation Modal */}
+      {showDeleteAllModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-slate-100 p-6 text-center animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
+            </div>
+
+            <h3 className="text-lg font-black text-slate-800">Delete All Questions?</h3>
+            <p className="text-slate-500 text-xs mt-2 leading-relaxed">
+              Are you sure you want to delete all questions from the Question Bank? This action cannot be undone and will permanently remove all MCQ, Coding, and Theory questions.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowDeleteAllModal(false)}
+                disabled={deletingAll}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1 bg-red-600 hover:bg-red-700 border-none text-white font-bold flex items-center justify-center gap-1.5"
+                onClick={handleConfirmDeleteAll}
+                disabled={deletingAll}
+              >
+                <Trash2 size={14} />
+                <span>{deletingAll ? 'Deleting...' : 'Yes, Delete All'}</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal: Configure & Assign Company Mock */}
+      <Modal
+        isOpen={showMockAssignModal}
+        onClose={() => setShowMockAssignModal(false)}
+        title={`Assign ${selectedMockForAssign?.company || selectedMockForAssign?.lang || 'Company'} Mock Assessment`}
+      >
+        {selectedMockForAssign && (
+          <form onSubmit={handleSubmitAssignMock} className="space-y-4 text-xs">
+            <div className="p-3.5 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold shrink-0">
+                <Building2 size={20} />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-slate-900 text-sm leading-tight">
+                  {selectedMockForAssign.company || selectedMockForAssign.lang} Placement Simulation
+                </h4>
+                <p className="text-[11px] text-indigo-700 font-semibold mt-0.5">
+                  Includes 15 MCQ Aptitude Questions + 2 LeetCode Coding Questions
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Assessment Title</label>
+              <input
+                type="text"
+                required
+                value={mockAssignForm.title}
+                onChange={(e) => setMockAssignForm((p) => ({ ...p, title: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Duration (Minutes)</label>
+                <input
+                  type="number"
+                  required
+                  min="10"
+                  max="180"
+                  value={mockAssignForm.duration}
+                  onChange={(e) => setMockAssignForm((p) => ({ ...p, duration: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Passing Score (%)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  max="100"
+                  value={mockAssignForm.passingScore}
+                  onChange={(e) => setMockAssignForm((p) => ({ ...p, passingScore: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Due Date</label>
+              <input
+                type="date"
+                required
+                value={mockAssignForm.dueDate}
+                onChange={(e) => setMockAssignForm((p) => ({ ...p, dueDate: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Target Student Audience</label>
+              <div className="flex items-center gap-4 py-1">
+                <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
+                  <input
+                    type="radio"
+                    name="mockTargetAudience"
+                    value="all"
+                    checked={mockAssignForm.assignmentType === 'all'}
+                    onChange={() => setMockAssignForm((p) => ({ ...p, assignmentType: 'all' }))}
+                    className="text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>All Students</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
+                  <input
+                    type="radio"
+                    name="mockTargetAudience"
+                    value="students"
+                    checked={mockAssignForm.assignmentType === 'students'}
+                    onChange={() => setMockAssignForm((p) => ({ ...p, assignmentType: 'students' }))}
+                    className="text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Select Specific Students</span>
+                </label>
+              </div>
+            </div>
+
+            {mockAssignForm.assignmentType === 'students' && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 max-h-36 overflow-y-auto">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Select Students ({mockAssignForm.selectedStudentIds.length} selected)
+                </span>
+                {studentsList.length === 0 ? (
+                  <p className="text-slate-400 italic text-[11px]">No students found.</p>
+                ) : (
+                  studentsList.map((std, idx) => (
+                    <label key={std._id || idx} className="flex items-center gap-2.5 p-1.5 hover:bg-white rounded-lg cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={mockAssignForm.selectedStudentIds.includes(std._id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setMockAssignForm((p) => ({ ...p, selectedStudentIds: [...p.selectedStudentIds, std._id] }));
+                          } else {
+                            setMockAssignForm((p) => ({ ...p, selectedStudentIds: p.selectedStudentIds.filter((id) => id !== std._id) }));
+                          }
+                        }}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-800 text-xs truncate">{std.name}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{std.email}</p>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowMockAssignModal(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submittingMockAssign}
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Send size={13} />
+                <span>{submittingMockAssign ? 'Assigning...' : 'Assign Mock Assessment'}</span>
+              </button>
+            </div>
+          </form>
         )}
       </Modal>
     </div>

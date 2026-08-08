@@ -67,6 +67,17 @@ const mcqQuestionSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    companyTags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    source: {
+      type: String,
+      enum: ['manual', 'ai', 'leetcode', 'company_bank'],
+      default: 'manual',
+    },
   },
   {
     timestamps: true,

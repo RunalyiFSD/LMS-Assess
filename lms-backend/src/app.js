@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const routes = require('./routes/index');
 const errorMiddleware = require('./middleware/errorMiddleware');
 const AppError = require('./utils/AppError');
+const logger = require('./utils/logger');
 const { globalLimiter } = require('./middleware/rateLimitMiddleware');
 const requestIdMiddleware = require('./middleware/requestIdMiddleware');
 
@@ -21,11 +22,11 @@ app.use(
 // -1. Request ID (attach to all requests first)
 app.use(requestIdMiddleware);
 
-// 0. Request logging
+// 0. Request logging via Winston logger stream
 if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+  app.use(morgan('dev', { stream: logger.stream }));
 } else {
-  app.use(morgan('combined'));
+  app.use(morgan('combined', { stream: logger.stream }));
 }
 
 // 0.1 Global Rate Limiting

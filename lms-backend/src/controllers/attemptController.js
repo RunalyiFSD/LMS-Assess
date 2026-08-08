@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Attempt = require('../models/Attempt');
 const Assessment = require('../models/Assessment');
 const Result = require('../models/Result');
@@ -13,7 +14,15 @@ const AppError = require('../utils/AppError');
 // @access  Student
 exports.startAssessment = async (req, res, next) => {
   try {
-    const { assessmentId } = req.params;
+    let { assessmentId } = req.params;
+
+    if (!mongoose.isValidObjectId(assessmentId)) {
+      const activeAssessment = await Assessment.findOne({ isActive: true }).sort({ createdAt: -1 });
+      if (!activeAssessment) {
+        return next(new AppError('Assessment not found', 404));
+      }
+      assessmentId = activeAssessment._id.toString();
+    }
 
     // Verify assessment exists and is active
     const assessment = await Assessment.findById(assessmentId);
@@ -38,10 +47,8 @@ exports.startAssessment = async (req, res, next) => {
           },
         });
       } else {
-        // For testing purposes: delete the previous completed/submitted attempt and its results
-        // so that the student can start a fresh attempt.
-        await Attempt.deleteOne({ _id: attempt._id });
-        await Result.deleteOne({ attempt: attempt._id });
+        // Prevent retaking completed/submitted assessments
+        return next(new AppError('You have already completed this assessment. Re-attempts are strictly restricted.', 400));
       }
     }
 

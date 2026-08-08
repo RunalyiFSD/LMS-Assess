@@ -11,38 +11,48 @@ const AppError = require('../utils/AppError');
 // ─────────────────────────────────────────────────────────────────────────────
 exports.getPublicTopFive = async (req, res, next) => {
   try {
-    const standings = await Result.aggregate([
-      { $group: { _id: '$student', totalScore: { $sum: '$scoreObtained' }, assessmentsCompleted: { $sum: 1 } } },
-      { $sort: { totalScore: -1 } },
+    const topFive = await User.aggregate([
+      { $match: { role: 'student' } },
+      {
+        $lookup: {
+          from: 'results',
+          localField: '_id',
+          foreignField: 'student',
+          as: 'studentResults',
+        },
+      },
+      {
+        $addFields: {
+          totalScore: { $sum: '$studentResults.scoreObtained' },
+          assessmentsCompleted: { $size: '$studentResults' },
+        },
+      },
+      {
+        $project: {
+          studentInfo: '$$ROOT',
+          totalScore: 1,
+          assessmentsCompleted: 1,
+        },
+      },
+      { $sort: { totalScore: -1, assessmentsCompleted: -1 } },
       { $limit: 5 },
     ]);
 
-    const students = await User.find(
-      { _id: { $in: standings.map((s) => s._id) } },
-      { name: 1, profilePicture: 1, college: 1, department: 1, batch: 1, videoBioUrl: 1 }
-    );
-
-    const studentMap = {};
-    students.forEach((s) => { studentMap[s._id.toString()] = s; });
-
     const badgeLabels = ['Gold Medalist', 'Silver Medalist', 'Bronze Medalist', 'Rising Star', 'Top Performer'];
 
-    const rankings = standings.map((s, i) => {
-      const student = studentMap[s._id.toString()];
-      return {
-        rank: i + 1,
-        studentId: s._id,
-        name: student?.name || 'Unknown',
-        profilePicture: student?.profilePicture || '',
-        college: student?.college || '',
-        department: student?.department || '',
-        batch: student?.batch || '',
-        videoBioUrl: student?.videoBioUrl || '',
-        totalScore: s.totalScore,
-        assessmentsCompleted: s.assessmentsCompleted,
-        badge: badgeLabels[i] || 'Star Performer',
-      };
-    });
+    const rankings = topFive.map((record, i) => ({
+      rank: i + 1,
+      studentId: record.studentInfo._id,
+      name: record.studentInfo.name,
+      profilePicture: record.studentInfo.profilePicture || '',
+      college: record.studentInfo.college || '',
+      department: record.studentInfo.department || '',
+      batch: record.studentInfo.batch || '',
+      videoBioUrl: record.studentInfo.videoBioUrl || '',
+      totalScore: record.totalScore || 0,
+      assessmentsCompleted: record.assessmentsCompleted || 0,
+      badge: badgeLabels[i] || 'Star Performer',
+    }));
 
     res.status(200).json({ status: 'success', data: { rankings } });
   } catch (error) {
@@ -57,78 +67,83 @@ exports.getPublicTopFive = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 exports.getPublicLeaderboard = async (req, res, next) => {
   try {
+    const mongoose = require('mongoose');
+    const Assessment = require('../models/Assessment');
     const { search, subject, batch, type, sortBy, page = 1, limit = 10 } = req.query;
     const skipVal = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
 
-    // Build a match filter for results if subject/type filters are present
-    const resultMatch = {};
+    const matchStage = {};
     if (subject || type) {
-      const Assessment = require('../models/Assessment');
-      const mongoose = require('mongoose');
       const assessmentQuery = {};
-      if (subject) assessmentQuery.subject = new mongoose.Types.ObjectId(subject);
+      if (subject && mongoose.Types.ObjectId.isValid(subject)) {
+        assessmentQuery.subject = new mongoose.Types.ObjectId(subject);
+      }
       if (type) assessmentQuery.type = type;
       const matchedAssessments = await Assessment.find(assessmentQuery).select('_id');
-      resultMatch.assessment = { $in: matchedAssessments.map(a => a._id) };
+      matchStage.assessment = { $in: matchedAssessments.map((a) => a._id) };
     }
 
-    // Build the aggregation pipeline starting from Result (only students with results)
+    const studentMatch = { role: 'student' };
+    if (batch) studentMatch.batch = batch;
+    if (search) studentMatch.name = { $regex: search, $options: 'i' };
+
     const pipeline = [
-      // If we have assessment filters, apply them
-      ...(Object.keys(resultMatch).length ? [{ $match: resultMatch }] : []),
-      // Group by student
-      {
-        $group: {
-          _id: '$student',
-          totalScore: { $sum: '$scoreObtained' },
-          assessmentsCompleted: { $sum: 1 },
-          avgPercentage: { $avg: '$percentage' },
-          latestActivity: { $max: '$publishedAt' },
-        },
-      },
-      // Lookup user info
+      { $match: studentMatch },
       {
         $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'studentInfo',
+          from: 'results',
+          let: { studentId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$student', '$$studentId'] },
+                ...(Object.keys(matchStage).length ? matchStage : {}),
+              },
+            },
+          ],
+          as: 'studentResults',
         },
       },
-      { $unwind: '$studentInfo' },
+      {
+        $addFields: {
+          totalScore: { $sum: '$studentResults.scoreObtained' },
+          assessmentsCompleted: { $size: '$studentResults' },
+          avgPercentage: { $ifNull: [{ $avg: '$studentResults.percentage' }, 0] },
+          latestActivity: { $max: '$studentResults.publishedAt' },
+        },
+      },
+      {
+        $project: {
+          studentInfo: '$$ROOT',
+          totalScore: 1,
+          assessmentsCompleted: 1,
+          avgPercentage: 1,
+          latestActivity: 1,
+        },
+      },
     ];
 
-    // Apply student filters (batch, name search)
-    const studentFilter = {};
-    if (batch) studentFilter['studentInfo.batch'] = batch;
-    if (search) studentFilter['studentInfo.name'] = { $regex: search, $options: 'i' };
-    if (Object.keys(studentFilter).length) {
-      pipeline.push({ $match: studentFilter });
-    }
-
-    // Sorting
     let sortStage = { totalScore: -1 };
     if (sortBy === 'completed') sortStage = { assessmentsCompleted: -1, totalScore: -1 };
     else if (sortBy === 'latest') sortStage = { latestActivity: -1 };
     else if (sortBy === 'percentage') sortStage = { avgPercentage: -1 };
     pipeline.push({ $sort: sortStage });
 
-    // Count total for pagination
     const countPipeline = [...pipeline, { $count: 'total' }];
-    const countResult = await Result.aggregate(countPipeline);
+    const countResult = await User.aggregate(countPipeline);
     const totalRecords = countResult.length > 0 ? countResult[0].total : 0;
 
-    // Paginate
     pipeline.push({ $skip: skipVal });
     pipeline.push({ $limit: limitVal });
 
-    const rankingsRaw = await Result.aggregate(pipeline);
+    const rankingsRaw = await User.aggregate(pipeline);
 
     const rankings = rankingsRaw.map((record, index) => ({
       student: {
         _id: record.studentInfo._id,
         name: record.studentInfo.name,
+        email: record.studentInfo.email,
         profilePicture: record.studentInfo.profilePicture,
         college: record.studentInfo.college,
         department: record.studentInfo.department,
@@ -148,7 +163,9 @@ exports.getPublicLeaderboard = async (req, res, next) => {
       limit: limitVal,
       totalPages: Math.ceil(totalRecords / limitVal),
       totalResults: totalRecords,
-      data: { rankings },
+      data: {
+        rankings,
+      },
     });
   } catch (error) {
     next(error);

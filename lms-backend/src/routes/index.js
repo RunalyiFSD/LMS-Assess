@@ -14,6 +14,7 @@ const { authLimiter } = require('../middleware/rateLimitMiddleware');
 const messageRoutes = require('./messageRoutes');
 const departmentRoutes = require('./departmentRoutes');
 const batchRoutes = require('./batchRoutes');
+const leetcodeRoutes = require('./leetcodeRoutes');
 
 const router = express.Router();
 
@@ -30,6 +31,7 @@ router.use('/users', userRoutes);
 router.use('/messages', messageRoutes);
 router.use('/departments', departmentRoutes);
 router.use('/batches', batchRoutes);
+router.use('/leetcode', leetcodeRoutes);
 router.use('/public', publicRoutes); // No auth — safe public data only
 
 module.exports = router;

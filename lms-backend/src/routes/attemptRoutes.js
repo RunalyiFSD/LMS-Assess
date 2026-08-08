@@ -2,6 +2,7 @@ const express = require('express');
 const attemptController = require('../controllers/attemptController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
+const { codeExecutionLimiter } = require('../middleware/rateLimitMiddleware');
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ router.get('/assessment/:assessmentId', authorize('admin', 'instructor'), attemp
 router.get('/:id', attemptController.getAttemptDetails);
 router.put('/:id/auto-save', authorize('student'), attemptController.autoSaveAttempt);
 router.post('/:id/submit', authorize('student'), attemptController.submitAssessment);
-router.post('/:id/run-code', authorize('student'), attemptController.runCode);
+router.post('/:id/run-code', authorize('student'), codeExecutionLimiter, attemptController.runCode);
 router.put('/:id/grade', authorize('admin', 'instructor'), attemptController.gradeTheoryAttempt);
 
 module.exports = router;
