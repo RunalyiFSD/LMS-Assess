@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Attempt = require('../models/Attempt');
 const Assessment = require('../models/Assessment');
+const Subject = require('../models/Subject');
 const Result = require('../models/Result');
 const User = require('../models/User');
 const AIEvaluationLog = require('../models/AIEvaluationLog');
@@ -571,7 +572,7 @@ exports.getAttemptDetails = async (req, res, next) => {
         path: 'assessment',
         populate: [
           { path: 'subject', select: 'name code' },
-          { path: 'questions.questionId' }
+          { path: 'questions.questionId', refPath: 'questions.questionModel' }
         ]
       });
 

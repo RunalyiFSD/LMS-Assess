@@ -114,10 +114,12 @@ const InstructorDashboardView = () => {
     setDeletingAll(true);
     try {
       await api.delete('/questions/all-questions');
+      // Re-fetch from server to confirm DB state reflects deletion
+      await fetchDashboardData();
     } catch (err) {
-      console.warn('Cleared questions locally');
+      console.error('Failed to delete all questions:', err);
+      alert(err.message || 'Failed to delete questions. Please try again.');
     } finally {
-      setQuestions([]);
       setSelectedQuestions([]);
       setDeletingAll(false);
       setShowDeleteAllModal(false);
@@ -558,7 +560,9 @@ const InstructorDashboardView = () => {
     }
   };
 
-  // Combine backend questions with sample fallback
+  // Build display list from real DB questions only.
+  // defaultSampleQuestions are not merged here — the Question Bank must
+  // reflect actual database state so that Delete All correctly empties the view.
   const allQuestionsCombined = [
     ...questions.map((q) => ({
       _id: q._id,
@@ -570,7 +574,6 @@ const InstructorDashboardView = () => {
       difficulty: q.difficulty || 'easy',
       status: 'Active',
     })),
-    ...defaultSampleQuestions,
   ];
 
   const uniqueQuestionsMap = new Map();

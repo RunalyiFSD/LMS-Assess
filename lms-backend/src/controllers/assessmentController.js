@@ -103,7 +103,7 @@ exports.getAssessmentDetails = async (req, res, next) => {
 
     const assessment = await Assessment.findById(targetId)
       .populate('subject', 'name code')
-      .populate('questions.questionId');
+      .populate({ path: 'questions.questionId', refPath: 'questions.questionModel' });
 
     if (!assessment) {
       return next(new AppError('Assessment not found', 404));
