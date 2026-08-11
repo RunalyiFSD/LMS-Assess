@@ -51,6 +51,8 @@ import {
 const AdminDashboardView = () => {
   const [users, setUsers] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [assessments, setAssessments] = useState([]);
+  const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'subjects' | 'analytics'
 
@@ -97,14 +99,24 @@ const AdminDashboardView = () => {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const userRes = await api.get('/users');
-      if (userRes.data?.status === 'success') {
+      const [userRes, subRes, testRes, attemptsRes] = await Promise.all([
+        api.get('/users').catch(() => null),
+        api.get('/subjects').catch(() => null),
+        api.get('/assessments').catch(() => null),
+        api.get('/attempts/all-submissions').catch(() => null),
+      ]);
+
+      if (userRes?.data?.status === 'success') {
         setUsers(userRes.data.data.users || []);
       }
-
-      const subRes = await api.get('/subjects');
-      if (subRes.data?.status === 'success') {
+      if (subRes?.data?.status === 'success') {
         setSubjects(subRes.data.data.subjects || []);
+      }
+      if (testRes?.data?.status === 'success') {
+        setAssessments(testRes.data.data.assessments || []);
+      }
+      if (attemptsRes?.data?.data?.attempts) {
+        setAttempts(attemptsRes.data.data.attempts || []);
       }
     } catch (err) {
       console.warn('Failed to load administrator resources', err);
@@ -116,6 +128,66 @@ const AdminDashboardView = () => {
   useEffect(() => {
     fetchAdminData();
   }, []);
+
+  const formatTimeAgo = (date) => {
+    if (!date || isNaN(date.getTime())) return 'Recently';
+    const seconds = Math.floor((new Date() - date) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hr${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+
+  const recentActivities = React.useMemo(() => {
+    const list = [];
+
+    // 1. User Registrations
+    (users || []).forEach((u) => {
+      list.push({
+        id: `user_${u._id}`,
+        title: u.name || 'New User',
+        description: `Registered as a new ${u.role || 'user'} (${u.email || ''})`,
+        timestamp: u.createdAt ? new Date(u.createdAt) : new Date(),
+        icon: <UserCheck size={14} />,
+        bgColor: 'bg-emerald-50 text-emerald-600',
+      });
+    });
+
+    // 2. Assessments Created
+    (assessments || []).forEach((a) => {
+      list.push({
+        id: `assessment_${a._id}`,
+        title: a.title || 'New Assessment',
+        description: `Created new assessment (${a.type?.toUpperCase() || 'MCQ'}, ${a.totalMarks || 100} Marks)`,
+        timestamp: a.createdAt ? new Date(a.createdAt) : new Date(),
+        icon: <BookOpen size={14} />,
+        bgColor: 'bg-blue-50 text-blue-600',
+      });
+    });
+
+    // 3. Student Attempts Submitted
+    (attempts || []).forEach((att) => {
+      const studentName = att.student?.name || 'Student';
+      const testTitle = att.assessment?.title || 'Assessment';
+      list.push({
+        id: `attempt_${att._id}`,
+        title: `${studentName} submitted assessment`,
+        description: `Completed "${testTitle}" with score ${att.totalMarksObtained || 0}`,
+        timestamp: att.updatedAt || att.submittedAt ? new Date(att.updatedAt || att.submittedAt) : new Date(),
+        icon: <Activity size={14} />,
+        bgColor: 'bg-purple-50 text-purple-600',
+      });
+    });
+
+    // Sort descending by date
+    list.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    return list.slice(0, 6);
+  }, [users, assessments, attempts]);
 
   // Filtered Users List
   const filteredUsers = users.filter((u) => {
@@ -793,49 +865,22 @@ const AdminDashboardView = () => {
                 </div>
 
                 <div className="space-y-3.5">
-                  <div className="flex items-start gap-3 text-xs">
-                    <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <UserCheck size={14} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-800">Priya Sharma</p>
-                      <p className="text-slate-400 text-[11px]">Registered as a new student</p>
-                      <span className="text-[10px] text-slate-400">2 mins ago</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 text-xs">
-                    <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <UserCheck size={14} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-800">Dr. John Instructor</p>
-                      <p className="text-slate-400 text-[11px]">Updated profile information</p>
-                      <span className="text-[10px] text-slate-400">15 mins ago</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 text-xs">
-                    <div className="w-7 h-7 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <FileSpreadsheet size={14} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-800">5 new students imported</p>
-                      <p className="text-slate-400 text-[11px]">From CSV file upload</p>
-                      <span className="text-[10px] text-slate-400">1 hour ago</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 text-xs">
-                    <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <RefreshCw size={14} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-800">Jay Patel</p>
-                      <p className="text-slate-400 text-[11px]">Password reset successful</p>
-                      <span className="text-[10px] text-slate-400">2 hours ago</span>
-                    </div>
-                  </div>
+                  {recentActivities.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic py-3 text-center">No recent activities recorded.</p>
+                  ) : (
+                    recentActivities.map((act) => (
+                      <div key={act.id} className="flex items-start gap-3 text-xs">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${act.bgColor}`}>
+                          {act.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-slate-800 truncate">{act.title}</p>
+                          <p className="text-slate-400 text-[11px] truncate">{act.description}</p>
+                          <span className="text-[10px] text-slate-400">{formatTimeAgo(act.timestamp)}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 <button

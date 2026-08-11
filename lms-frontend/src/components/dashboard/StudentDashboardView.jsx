@@ -50,6 +50,7 @@ const StudentDashboardView = () => {
   const [leaderboardPeriod, setLeaderboardPeriod] = useState('This Month');
   const [selectedMockCategory, setSelectedMockCategory] = useState(null);
   const [startingCardId, setStartingCardId] = useState(null);
+  const [leaderboardList, setLeaderboardList] = useState([]);
 
   // Sync viewMode with URL params
   useEffect(() => {
@@ -71,10 +72,11 @@ const StudentDashboardView = () => {
       const t = Date.now();
 
       try {
-        const [assignedRes, assessRes, attemptsRes] = await Promise.all([
+        const [assignedRes, assessRes, attemptsRes, leaderboardRes] = await Promise.all([
           api.get(`/assessments/assigned-to-me?t=${t}`).catch(() => null),
           api.get(`/assessments?t=${t}`).catch(() => ({ data: { data: { assessments: [] } } })),
           api.get(`/attempts/my-attempts?t=${t}`).catch(() => ({ data: { data: { attempts: [] } } })),
+          api.get(`/leaderboard/top-five?t=${t}`).catch(() => null),
         ]);
 
         const assignedList = assignedRes?.data?.data?.assessments || [];
@@ -89,6 +91,26 @@ const StudentDashboardView = () => {
 
         if (attemptsRes.data?.status === 'success') {
           setMyAttempts(attemptsRes.data.data.attempts || []);
+        }
+
+        if (leaderboardRes?.data?.status === 'success' && leaderboardRes.data.data?.rankings) {
+          const ranks = leaderboardRes.data.data.rankings;
+          const rankBgs = ['bg-amber-400 text-white', 'bg-slate-300 text-slate-700', 'bg-amber-600 text-white', 'bg-slate-800 text-white', 'bg-slate-800 text-white'];
+          const rankBadges = ['🥇', '🥈', '🥉', '', ''];
+
+          const mappedLeaderboard = ranks.map((item, idx) => {
+            const isMe = (user?._id && String(item.studentId) === String(user._id)) || (item.name && item.name.toLowerCase() === user?.name?.toLowerCase());
+            return {
+              rank: item.rank || idx + 1,
+              name: isMe ? `${item.name} (You)` : item.name,
+              score: `${item.totalScore || 0} pts`,
+              points: item.totalScore || 0,
+              badge: rankBadges[idx] || '',
+              isCurrentUser: isMe,
+              rankBg: rankBgs[idx] || 'bg-slate-800 text-white',
+            };
+          });
+          setLeaderboardList(mappedLeaderboard);
         }
 
         if (user?._id) {
@@ -107,79 +129,112 @@ const StudentDashboardView = () => {
     fetchDashboardData();
   }, [user]);
 
-  // Mock assessments for "Assigned Assessments" section (matches screenshot 1)
-  const defaultAssignedList = [
-    {
-      id: 'asgn_1',
-      title: 'Midterm Coding Sandbox',
-      type: 'Coding',
-      icon: <Code size={18} className="text-indigo-600" />,
-      boxBg: 'bg-indigo-50 border-indigo-100',
-      borderLeft: 'border-l-4 border-l-indigo-500',
-      dueDate: 'Due: Aug 3, 2026',
-    },
-    {
-      id: 'asgn_2',
-      title: 'Midterm Theory Paper',
-      type: 'Theory',
-      icon: <BookOpen size={18} className="text-amber-600" />,
-      boxBg: 'bg-amber-50 border-amber-100',
-      borderLeft: 'border-l-4 border-l-amber-500',
-      dueDate: 'Due: Aug 5, 2026',
-    },
-    {
-      id: 'asgn_3',
-      title: 'Midterm MCQ Quiz',
-      type: 'MCQ',
-      icon: <CheckSquare size={18} className="text-emerald-600" />,
-      boxBg: 'bg-emerald-50 border-emerald-100',
-      borderLeft: 'border-l-4 border-l-emerald-500',
-      dueDate: 'Due: Aug 7, 2026',
-    },
-  ];
+  // Compute dynamic submission list based strictly on real backend attempts / evaluation
+  const dynamicSubmissions = React.useMemo(() => {
+    const list = [];
+    const processedAssessmentIds = new Set();
 
-  // Submission Status list (matches screenshot 1)
-  const defaultSubmissions = [
-    {
-      id: 'sub_1',
-      title: 'Midterm Coding Sandbox',
-      category: 'Coding',
-      icon: <Code size={16} className="text-indigo-600" />,
-      status: 'Graded',
-      timeSpent: '45 min',
-      score: '85%',
-      details: '(17/20)',
-    },
-    {
-      id: 'sub_2',
-      title: 'Midterm Theory Paper',
-      category: 'Theory',
-      icon: <BookOpen size={16} className="text-amber-600" />,
-      status: 'Graded',
-      timeSpent: '30 min',
-      score: '60%',
-      details: '(6/10)',
-    },
-    {
-      id: 'sub_3',
-      title: 'Midterm MCQ Quiz',
-      category: 'MCQ',
-      icon: <CheckSquare size={16} className="text-emerald-600" />,
-      status: 'Graded',
-      timeSpent: '20 min',
-      score: '90%',
-      details: '(9/10)',
-    },
-  ];
+    // 1. Process all attempts in myAttempts (real database submissions)
+    (myAttempts || []).forEach((att) => {
+      const ast = att.assessment || {};
+      const astId = ast._id || att.assessment;
+      if (astId) processedAssessmentIds.add(String(astId));
 
-  // Leaderboard data (Top 5 performers)
-  const leaderboardData = [
-    { rank: 1, name: 'james', score: '15/20', points: 15, badge: '🥇', rankBg: 'bg-amber-400 text-white' },
-    { rank: 2, name: `${user?.name || 'jay'} (You)`, score: '8/20', points: 8, badge: '🥈', isCurrentUser: true, rankBg: 'bg-slate-300 text-slate-700' },
-    { rank: 3, name: 'runalyi', score: '5/20', points: 5, badge: '🥉', rankBg: 'bg-amber-600 text-white' },
-    { rank: 4, name: 'anisha', score: '4/20', points: 4, rankBg: 'bg-slate-800 text-white' },
-    { rank: 5, name: 'siddharth', score: '3/20', points: 3, rankBg: 'bg-slate-800 text-white' },
-  ];
+      const title = ast.title || 'Assessment';
+      const rawType = ast.type || 'mcq';
+      const category = rawType === 'coding' ? 'Coding' : rawType === 'mcq' ? 'MCQ' : 'Theory';
+
+      const icon =
+        rawType === 'coding' ? (
+          <Code size={16} className="text-indigo-600" />
+        ) : rawType === 'mcq' ? (
+          <CheckSquare size={16} className="text-emerald-600" />
+        ) : (
+          <BookOpen size={16} className="text-amber-600" />
+        );
+
+      const totalMarks = ast.totalMarks || 10;
+      const scoreObtained = att.totalMarksObtained || 0;
+      const percentage = totalMarks > 0 ? Math.round((scoreObtained / totalMarks) * 100) : 0;
+
+      const minutesSpent = att.timeTakenSeconds ? Math.max(1, Math.round(att.timeTakenSeconds / 60)) : null;
+      const timeSpentStr = minutesSpent !== null ? `${minutesSpent} min` : '--';
+
+      let statusText = 'Not Attempted';
+      let statusBadge = 'bg-slate-100 text-slate-500 border-slate-200';
+
+      if (att.status === 'graded') {
+        statusText = 'Graded';
+        statusBadge = 'bg-emerald-50 text-emerald-600 border-emerald-200/60';
+      } else if (att.status === 'submitted') {
+        statusText = 'Pending';
+        statusBadge = 'bg-amber-50 text-amber-600 border-amber-200/60';
+      } else if (att.status === 'started') {
+        statusText = 'In Progress';
+        statusBadge = 'bg-indigo-50 text-indigo-600 border-indigo-200/60';
+      }
+
+      list.push({
+        id: att._id,
+        attemptId: att._id,
+        assessmentId: astId,
+        title,
+        category,
+        icon,
+        status: statusText,
+        statusRaw: att.status,
+        statusBadge,
+        timeSpent: timeSpentStr,
+        timeTakenMinutes: minutesSpent || 0,
+        score: att.status === 'graded' ? `${percentage}%` : att.status === 'submitted' ? 'In Review' : '--',
+        details: att.status === 'graded' ? `(${scoreObtained}/${totalMarks})` : '',
+        scoreObtained,
+        totalMarks,
+        percentage,
+        gradedAt: att.submittedAt ? new Date(att.submittedAt).toLocaleDateString() : new Date().toLocaleDateString(),
+      });
+    });
+
+    // 2. Include assigned assessments that have not been attempted yet as "Not Attempted"
+    (assessments || []).forEach((ast) => {
+      if (ast._id && !processedAssessmentIds.has(String(ast._id))) {
+        const title = ast.title || 'Assessment';
+        const rawType = ast.type || 'mcq';
+        const category = rawType === 'coding' ? 'Coding' : rawType === 'mcq' ? 'MCQ' : 'Theory';
+
+        const icon =
+          rawType === 'coding' ? (
+            <Code size={16} className="text-indigo-600" />
+          ) : rawType === 'mcq' ? (
+            <CheckSquare size={16} className="text-emerald-600" />
+          ) : (
+            <BookOpen size={16} className="text-amber-600" />
+          );
+
+        list.push({
+          id: `unatt_${ast._id}`,
+          attemptId: null,
+          assessmentId: ast._id,
+          title,
+          category,
+          icon,
+          status: 'Not Attempted',
+          statusRaw: 'not_started',
+          statusBadge: 'bg-slate-100 text-slate-500 border-slate-200',
+          timeSpent: '--',
+          timeTakenMinutes: 0,
+          score: '--',
+          details: '',
+          scoreObtained: 0,
+          totalMarks: ast.totalMarks || 10,
+          percentage: 0,
+          gradedAt: '--',
+        });
+      }
+    });
+
+    return list;
+  }, [myAttempts, assessments]);
 
   // Tech Preparation Tracks (matches screenshot 2)
   const techTracks = [
@@ -272,16 +327,17 @@ const StudentDashboardView = () => {
   };
 
   const handleDownloadReport = (submission) => {
+    if (!submission) return;
     setSelectedScorecard({
-      studentName: user?.name || 'Jay',
+      studentName: user?.name || 'Student',
       college: user?.college || 'SPPU',
       department: user?.department || 'CS',
-      assessmentTitle: submission.title,
-      scoreObtained: submission.score === '85%' ? 17 : submission.score === '90%' ? 9 : 6,
-      totalMarks: submission.score === '85%' ? 20 : 10,
-      timeTakenMinutes: parseInt(submission.timeSpent),
-      percentage: parseInt(submission.score),
-      gradedAt: new Date().toLocaleDateString(),
+      assessmentTitle: submission.title || 'Assessment',
+      scoreObtained: submission.scoreObtained ?? 0,
+      totalMarks: submission.totalMarks ?? 10,
+      timeTakenMinutes: submission.timeTakenMinutes || 0,
+      percentage: submission.percentage ?? 0,
+      gradedAt: submission.gradedAt || new Date().toLocaleDateString(),
     });
   };
 
@@ -1050,49 +1106,81 @@ const StudentDashboardView = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
-                    {defaultSubmissions.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
-                              {sub.icon}
-                            </div>
-                            <div>
-                              <p className="font-extrabold text-slate-900 leading-tight">{sub.title}</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">{sub.category}</p>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="py-3.5 px-4">
-                          <span className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-2.5 py-1 rounded-lg text-[11px] font-bold">
-                            {sub.status}
-                          </span>
-                        </td>
-
-                        <td className="py-3.5 px-4 text-slate-500">{sub.timeSpent}</td>
-
-                        <td className="py-3.5 px-4 font-bold text-slate-900">
-                          {sub.score}{' '}
-                          <span className="text-[11px] text-slate-400 font-normal">{sub.details}</span>
-                        </td>
-
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleDownloadReport(sub)}
-                              className="inline-flex items-center gap-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all shadow-2xs cursor-pointer"
-                            >
-                              <Download size={12} className="text-indigo-600" />
-                              <span>Download</span>
-                            </button>
-                            <button className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
-                              <MoreVertical size={14} />
-                            </button>
+                    {dynamicSubmissions.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-10 text-center">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <ClipboardList className="text-slate-300" size={32} />
+                            <p className="text-sm font-extrabold text-slate-700">No Submissions Yet</p>
+                            <p className="text-xs text-slate-400 max-w-sm">
+                              Results will appear here after an assessment is submitted and evaluated.
+                            </p>
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      dynamicSubmissions.map((sub) => (
+                        <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                                {sub.icon}
+                              </div>
+                              <div>
+                                <p className="font-extrabold text-slate-900 leading-tight">{sub.title}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5">{sub.category}</p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <span className={`${sub.statusBadge} px-2.5 py-1 rounded-lg text-[11px] font-bold border`}>
+                              {sub.status}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-slate-500">{sub.timeSpent}</td>
+
+                          <td className="py-3.5 px-4 font-bold text-slate-900">
+                            {sub.score}{' '}
+                            {sub.details && <span className="text-[11px] text-slate-400 font-normal">{sub.details}</span>}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {sub.statusRaw === 'graded' ? (
+                                <button
+                                  onClick={() => handleDownloadReport(sub)}
+                                  className="inline-flex items-center gap-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all shadow-2xs cursor-pointer"
+                                >
+                                  <Download size={12} className="text-indigo-600" />
+                                  <span>Download</span>
+                                </button>
+                              ) : sub.statusRaw === 'submitted' ? (
+                                <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200/60">
+                                  In Review
+                                </span>
+                              ) : sub.statusRaw === 'started' ? (
+                                <button
+                                  onClick={() => handleStartTest(sub.assessmentId)}
+                                  className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all shadow-2xs cursor-pointer"
+                                >
+                                  <Clock size={12} />
+                                  <span>Resume</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleStartTest(sub.assessmentId)}
+                                  className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all shadow-2xs cursor-pointer"
+                                >
+                                  <span>Start</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1148,42 +1236,48 @@ const StudentDashboardView = () => {
 
               {/* Ranked Student List (Top 5 Performers Only) */}
               <div className="space-y-2">
-                {leaderboardData.slice(0, 5).map((item) => (
-                  <div
-                    key={item.rank}
-                    className={`flex items-center justify-between p-3 rounded-2xl transition-all ${item.isCurrentUser
-                        ? 'bg-indigo-50/70 border border-indigo-100 shadow-2xs'
-                        : 'hover:bg-slate-50/80 border border-transparent'
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Rank Badge */}
-                      <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${item.rankBg}`}
-                      >
-                        {item.rank}
+                {leaderboardList.length > 0 ? (
+                  leaderboardList.slice(0, 5).map((item) => (
+                    <div
+                      key={item.rank}
+                      className={`flex items-center justify-between p-3 rounded-2xl transition-all ${item.isCurrentUser
+                          ? 'bg-indigo-50/70 border border-indigo-100 shadow-2xs'
+                          : 'hover:bg-slate-50/80 border border-transparent'
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Rank Badge */}
+                        <div
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${item.rankBg}`}
+                        >
+                          {item.rank}
+                        </div>
+
+                        {/* Avatar */}
+                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-black text-xs flex items-center justify-center shrink-0">
+                          {item.name ? item.name[0].toUpperCase() : 'U'}
+                        </div>
+
+                        {/* Name & Subtitle */}
+                        <div>
+                          <p className={`text-xs font-bold leading-tight ${item.isCurrentUser ? 'text-indigo-950' : 'text-slate-900'}`}>
+                            {item.name}
+                          </p>
+                          <p className="text-[10px] font-semibold text-slate-400">Score: {item.score}</p>
+                        </div>
                       </div>
 
-                      {/* Avatar */}
-                      <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-black text-xs flex items-center justify-center shrink-0">
-                        {item.name[0].toUpperCase()}
-                      </div>
-
-                      {/* Name & Subtitle */}
-                      <div>
-                        <p className={`text-xs font-bold leading-tight ${item.isCurrentUser ? 'text-indigo-950' : 'text-slate-900'}`}>
-                          {item.name}
-                        </p>
-                        <p className="text-[10px] font-semibold text-slate-400">Score: {item.score}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900 font-mono">{item.points}</span>
+                        {item.badge && <span className="text-sm">{item.badge}</span>}
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-slate-900 font-mono">{item.points}</span>
-                      {item.badge && <span className="text-sm">{item.badge}</span>}
-                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-xs font-medium text-slate-400">
+                    No leaderboard activity available yet.
                   </div>
-                ))}
+                )}
               </div>
             </div>
 

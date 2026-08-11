@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
@@ -34,9 +35,11 @@ import {
   Award,
   Users,
   Calendar,
+  Building2,
 } from 'lucide-react';
 
 const InstructorDashboardView = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -58,6 +61,8 @@ const InstructorDashboardView = () => {
   const [selectedDifficultyFilters, setSelectedDifficultyFilters] = useState([]);
   const [selectedStatusFilters, setSelectedStatusFilters] = useState([]);
   const [showFilterPopover, setShowFilterPopover] = useState(false);
+  const [openFilterDropdown, setOpenFilterDropdown] = useState(null); // 'subject' | 'type' | 'difficulty' | 'status' | null
+  const [openImportExportDropdown, setOpenImportExportDropdown] = useState(false);
   const [selectedQuestions, setSelectedQuestions] = useState([]);
 
   // Created Assessments Search & Filter state
@@ -114,8 +119,9 @@ const InstructorDashboardView = () => {
     try {
       await api.delete('/questions/all-questions');
     } catch (err) {
-      console.warn('Cleared questions locally');
+      console.warn('Cleared questions locally', err);
     } finally {
+      setQuestions([]);
       setMcqQuestions([]);
       setCodingQuestions([]);
       setTheoryQuestions([]);
@@ -912,19 +918,52 @@ const InstructorDashboardView = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
-              <button
-                onClick={() => alert('Drag and drop your CSV / JSON file to import questions into the bank.')}
-                className="px-3.5 py-2 text-xs font-bold text-[#4F46E5] bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Upload size={14} /> Import Questions
-              </button>
+              {/* Consolidated Import / Export Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOpenImportExportDropdown(!openImportExportDropdown)}
+                  className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Upload size={14} className="text-indigo-600" />
+                  <span>Import / Export</span>
+                  <ChevronDown size={12} className={`text-slate-400 transition-transform ${openImportExportDropdown ? 'rotate-180' : ''}`} />
+                </button>
 
-              <button
-                onClick={handleExportQuestionsCSV}
-                className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Download size={14} /> Export Questions
-              </button>
+                {openImportExportDropdown && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40 bg-transparent"
+                      onClick={() => setOpenImportExportDropdown(false)}
+                    />
+                    <div className="absolute right-0 mt-1.5 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenImportExportDropdown(false);
+                          alert('Drag and drop your CSV / JSON file to import questions into the bank.');
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        <Upload size={14} className="text-indigo-600" />
+                        <span>Import Questions (CSV/JSON)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenImportExportDropdown(false);
+                          handleExportQuestionsCSV();
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        <Download size={14} className="text-emerald-600" />
+                        <span>Export Questions (CSV)</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
 
               <button
                 onClick={() => handleOpenAssignModal()}
@@ -968,86 +1007,295 @@ const InstructorDashboardView = () => {
             </div>
           </div>
 
-          {/* Search & Filters Bar */}
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <div className="relative flex-1 min-w-[240px]">
+          {/* Search & Filters Bar with Consolidated Filter Dropdown Popover */}
+          {openFilterDropdown && (
+            <div
+              className="fixed inset-0 z-20 bg-transparent"
+              onClick={() => setOpenFilterDropdown(null)}
+            />
+          )}
+
+          <div className={`flex flex-wrap items-center gap-3 pt-2 ${openFilterDropdown ? 'relative z-30' : 'relative z-0'}`}>
+            {/* Search Input */}
+            <div className="relative w-64 max-w-xs">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search by question title or keyword..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
               />
             </div>
 
+            {/* CONSOLIDATED SINGLE FILTER BUTTON & POPOVER WITH ALL 4 CATEGORIES */}
             <div className="relative">
-              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Subject</label>
-              <select
-                value={subjectFilter}
-                onChange={(e) => setSubjectFilter(e.target.value)}
-                className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
-              >
-                <option value="">All Subjects</option>
-                {Array.from(new Set(displayQuestionsList.map((q) => q.subjectName).filter(Boolean))).map((s, idx) => (
-                  <option key={idx} value={s}>{s}</option>
-                ))}
-              </select>
+              {(() => {
+                const activeCount =
+                  selectedSubjectFilters.length +
+                  selectedTypeFilters.length +
+                  selectedDifficultyFilters.length +
+                  selectedStatusFilters.length;
+
+                const availableSubjectsList = Array.from(
+                  new Set(displayQuestionsList.map((q) => q.subjectName).filter(Boolean))
+                )
+                  .concat(['Mock Assessments', 'Data Structures', 'Web Development'])
+                  .filter((v, i, a) => a.indexOf(v) === i);
+
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setOpenFilterDropdown(openFilterDropdown === 'all' ? null : 'all')}
+                      className={`px-4 py-2 text-xs font-extrabold rounded-xl border flex items-center gap-2 transition-all cursor-pointer shadow-2xs ${
+                        activeCount > 0
+                          ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-500/20'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Filter size={14} className={activeCount > 0 ? 'text-white' : 'text-indigo-600'} />
+                      <span>Filters</span>
+                      {activeCount > 0 && (
+                        <span className="bg-white/20 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                          {activeCount}
+                        </span>
+                      )}
+                      <ChevronDown size={13} className={`transition-transform ${openFilterDropdown === 'all' ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {openFilterDropdown === 'all' && (
+                      <div className="absolute right-0 sm:left-0 mt-2 w-80 sm:w-[500px] bg-white border border-slate-200 rounded-3xl shadow-2xl z-50 p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                        {/* Popover Header */}
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                          <div className="flex items-center gap-2">
+                            <Filter size={16} className="text-indigo-600" />
+                            <span className="text-sm font-black text-slate-900">Filter Questions</span>
+                            {activeCount > 0 && (
+                              <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                {activeCount} active
+                              </span>
+                            )}
+                          </div>
+
+                          {activeCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleClearFilters}
+                              className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer"
+                            >
+                              Reset All
+                            </button>
+                          )}
+                        </div>
+
+                        {/* 4 Filter Categories Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[380px] overflow-y-auto pr-1">
+                          
+                          {/* 1. SUBJECT CATEGORY */}
+                          <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                                <BookOpen size={13} className="text-indigo-600" />
+                                Subject
+                              </span>
+                              {selectedSubjectFilters.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedSubjectFilters([])}
+                                  className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                            <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                              {availableSubjectsList.map((subj) => {
+                                const isChecked = selectedSubjectFilters.includes(subj);
+                                return (
+                                  <label
+                                    key={subj}
+                                    className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white cursor-pointer text-xs font-medium text-slate-700 transition-colors"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleFilterOption(selectedSubjectFilters, setSelectedSubjectFilters, subj)}
+                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                    />
+                                    <span className="truncate">{subj}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* 2. TYPE CATEGORY */}
+                          <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                                <Code2 size={13} className="text-indigo-600" />
+                                Question Type
+                              </span>
+                              {selectedTypeFilters.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTypeFilters([])}
+                                  className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              {[
+                                { id: 'mcq', label: 'MCQ' },
+                                { id: 'coding', label: 'Coding' },
+                                { id: 'theory', label: 'Theory' },
+                              ].map((t) => {
+                                const isChecked = selectedTypeFilters.includes(t.id);
+                                return (
+                                  <label
+                                    key={t.id}
+                                    className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white cursor-pointer text-xs font-medium text-slate-700 transition-colors"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleFilterOption(selectedTypeFilters, setSelectedTypeFilters, t.id)}
+                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                    />
+                                    <span>{t.label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* 3. DIFFICULTY CATEGORY */}
+                          <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                                <Layers size={13} className="text-indigo-600" />
+                                Difficulty
+                              </span>
+                              {selectedDifficultyFilters.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedDifficultyFilters([])}
+                                  className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              {[
+                                { id: 'easy', label: 'Easy', color: 'text-emerald-600 font-bold' },
+                                { id: 'medium', label: 'Medium', color: 'text-amber-600 font-bold' },
+                                { id: 'hard', label: 'Hard', color: 'text-rose-600 font-bold' },
+                              ].map((d) => {
+                                const isChecked = selectedDifficultyFilters.includes(d.id);
+                                return (
+                                  <label
+                                    key={d.id}
+                                    className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white cursor-pointer text-xs font-medium text-slate-700 transition-colors"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleFilterOption(selectedDifficultyFilters, setSelectedDifficultyFilters, d.id)}
+                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                    />
+                                    <span className={d.color}>{d.label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* 4. STATUS CATEGORY */}
+                          <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                                <CheckCircle2 size={13} className="text-indigo-600" />
+                                Status
+                              </span>
+                              {selectedStatusFilters.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedStatusFilters([])}
+                                  className="text-[10px] font-bold text-slate-400 hover:text-indigo-600"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              {[
+                                { id: 'active', label: 'Active', color: 'text-emerald-600 font-bold' },
+                                { id: 'draft', label: 'Draft', color: 'text-amber-600 font-bold' },
+                                { id: 'archived', label: 'Archived', color: 'text-slate-500 font-bold' },
+                              ].map((st) => {
+                                const isChecked = selectedStatusFilters.includes(st.id) || selectedStatusFilters.includes(st.label.toLowerCase());
+                                return (
+                                  <label
+                                    key={st.id}
+                                    className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white cursor-pointer text-xs font-medium text-slate-700 transition-colors"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => toggleFilterOption(selectedStatusFilters, setSelectedStatusFilters, st.id)}
+                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                    />
+                                    <span className={st.color}>{st.label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                        </div>
+
+                        {/* Popover Footer Action */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-slate-400">
+                            {filteredQuestions.length} question(s) found
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setOpenFilterDropdown(null)}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                          >
+                            Apply Filters
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
-            <div className="relative">
-              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Type</label>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
-              >
-                <option value="">All Types</option>
-                <option value="mcq">MCQ</option>
-                <option value="coding">Coding</option>
-                <option value="theory">Theory</option>
-              </select>
-            </div>
-
-            <div className="relative">
-              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Difficulty</label>
-              <select
-                value={difficultyFilter}
-                onChange={(e) => setDifficultyFilter(e.target.value)}
-                className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
-              >
-                <option value="">All Levels</option>
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
-
-            <div className="relative">
-              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Status</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2 mt-4">
-              <button
-                onClick={() => {}}
-                className="px-3 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <Filter size={13} /> Filters
-              </button>
-              <button
-                onClick={handleClearFilters}
-                className="px-2.5 py-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors cursor-pointer"
-              >
-                Clear All
-              </button>
+            {/* MASTER CLEAR ALL */}
+            <div className="flex items-center gap-2">
+              {(selectedSubjectFilters.length > 0 ||
+                selectedTypeFilters.length > 0 ||
+                selectedDifficultyFilters.length > 0 ||
+                selectedStatusFilters.length > 0 ||
+                searchQuery) && (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="px-3.5 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded-xl transition-colors cursor-pointer"
+                >
+                  Clear All
+                </button>
+              )}
             </div>
           </div>
 
@@ -2506,6 +2754,44 @@ const InstructorDashboardView = () => {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Modal: Delete All Questions Confirmation */}
+      <Modal
+        isOpen={showDeleteAllModal}
+        onClose={() => setShowDeleteAllModal(false)}
+        title="Delete All Questions"
+      >
+        <div className="space-y-4 text-xs">
+          <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3">
+            <AlertCircle size={22} className="text-rose-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-rose-900 text-sm">Are you sure you want to delete ALL questions?</h4>
+              <p className="text-rose-700 leading-relaxed font-medium">
+                This action is permanent. All MCQ, Coding, and Theory questions stored in the Question Bank (including AI-generated questions) will be permanently deleted from the database.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteAllModal(false)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmDeleteAll}
+              disabled={deletingAll}
+              className="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Trash2 size={14} />
+              <span>{deletingAll ? 'Deleting All...' : 'Yes, Delete All Questions'}</span>
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

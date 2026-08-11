@@ -337,43 +337,103 @@ exports.getUserAnalytics = async (req, res, next) => {
   try {
     const studentId = req.params.id;
 
-    const results = await Result.find({ student: studentId })
-      .populate({
-        path: 'assessment',
-        populate: { path: 'subject', select: 'name code' }
-      })
-      .sort({ publishedAt: 1 });
+    const [results, attempts] = await Promise.all([
+      Result.find({ student: studentId })
+        .populate({
+          path: 'assessment',
+          populate: { path: 'subject', select: 'name code' },
+        })
+        .sort({ publishedAt: 1 }),
+      Attempt.find({ student: studentId, status: { $in: ['graded', 'submitted'] } })
+        .populate({
+          path: 'assessment',
+          populate: { path: 'subject', select: 'name code' },
+        })
+        .sort({ submittedAt: 1, createdAt: 1 }),
+    ]);
+
+    // Build unified performance record list for student's real performance
+    const perfRecordsMap = new Map();
+
+    (attempts || []).forEach((att) => {
+      const totalMarks = att.assessment?.totalMarks || 10;
+      const scoreObtained = att.totalMarksObtained || 0;
+      const percentage = totalMarks > 0 ? Math.round((scoreObtained / totalMarks) * 100) : 0;
+      const date = att.submittedAt || att.createdAt || new Date();
+
+      perfRecordsMap.set(String(att.assessment?._id || att._id), {
+        id: att._id,
+        assessment: att.assessment,
+        type: att.assessment?.type || 'mcq',
+        scoreObtained,
+        totalMarks,
+        percentage,
+        timeTakenSeconds: att.timeTakenSeconds || 0,
+        date,
+        status: percentage >= 50 ? 'pass' : 'fail',
+      });
+    });
+
+    (results || []).forEach((r) => {
+      if (r.assessment?._id) {
+        perfRecordsMap.set(String(r.assessment._id), {
+          id: r._id,
+          assessment: r.assessment,
+          type: r.assessment?.type || 'mcq',
+          scoreObtained: r.scoreObtained,
+          totalMarks: r.totalMarks,
+          percentage: r.percentage,
+          timeTakenSeconds: 0,
+          date: r.publishedAt || new Date(),
+          status: r.status,
+        });
+      }
+    });
+
+    const perfRecords = Array.from(perfRecordsMap.values());
+    const totalResultsCount = perfRecords.length;
 
     // 1. Overall Performance Summary Metrics
-    const totalResultsCount = results.length;
+    const averageScore =
+      totalResultsCount > 0
+        ? Number((perfRecords.reduce((acc, curr) => acc + curr.percentage, 0) / totalResultsCount).toFixed(1))
+        : 0;
 
-    const averageScore = totalResultsCount > 0
-      ? Number((results.reduce((acc, curr) => acc + curr.percentage, 0) / totalResultsCount).toFixed(1))
-      : 78.6;
+    const assessmentsTaken = totalResultsCount;
 
-    const assessmentsTaken = totalResultsCount > 0 ? totalResultsCount : 24;
+    const mcqResults = perfRecords.filter((r) => r.type === 'mcq');
+    const accuracy =
+      mcqResults.length > 0
+        ? Number((mcqResults.reduce((acc, curr) => acc + curr.percentage, 0) / mcqResults.length).toFixed(1))
+        : 0;
 
-    const mcqResults = results.filter((r) => r.assessment?.type === 'mcq');
-    const accuracy = mcqResults.length > 0
-      ? Number((mcqResults.reduce((acc, curr) => acc + curr.percentage, 0) / mcqResults.length).toFixed(1))
-      : 92.3;
-
-    const codingResults = results.filter((r) => r.assessment?.type === 'coding');
-    const codingSpeed = codingResults.length > 0
-      ? Math.round(codingResults.reduce((acc, curr) => acc + (curr.percentage * 2.5), 0) / codingResults.length)
-      : 215;
+    const codingResults = perfRecords.filter((r) => r.type === 'coding');
+    const codingSpeed =
+      codingResults.length > 0
+        ? Math.round(
+            codingResults.reduce(
+              (acc, curr) => acc + (curr.timeTakenSeconds ? Math.max(1, Math.round(curr.timeTakenSeconds / 60)) : 15),
+              0
+            ) / codingResults.length
+          )
+        : 0;
 
     // Percentile rank estimation
-    let percentileRank = 'Top 18%';
+    let percentileRank = totalResultsCount > 0 ? 'Top 10%' : 'N/A';
     try {
       const studentAggregates = await Result.aggregate([
         { $group: { _id: '$student', avgScore: { $avg: '$percentage' } } },
-        { $sort: { avgScore: -1 } }
+        { $sort: { avgScore: -1 } },
       ]);
       if (studentAggregates.length > 0) {
-        const studentIndex = studentAggregates.findIndex((s) => s._id?.toString() === studentId.toString());
+        const studentIndex = studentAggregates.findIndex(
+          (s) => s._id?.toString() === studentId.toString()
+        );
         if (studentIndex !== -1) {
-          const topPct = Math.max(1, Math.round(((studentIndex + 1) / studentAggregates.length) * 100));
+          const topPct = Math.max(
+            1,
+            Math.round(((studentIndex + 1) / studentAggregates.length) * 100)
+          );
           percentileRank = `Top ${topPct}%`;
         }
       }
@@ -383,26 +443,28 @@ exports.getUserAnalytics = async (req, res, next) => {
 
     // 2. Dynamic Weekly Performance Data
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const defaultScores = { Mon: 62, Tue: 68, Wed: 74, Thu: 85, Fri: 78, Sat: 90, Sun: 82 };
-    const dayScores = { ...defaultScores };
+    const dayScoresMap = { Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [], Sun: [] };
 
-    results.slice(-14).forEach((r) => {
-      if (r.publishedAt) {
-        const day = dayNames[new Date(r.publishedAt).getDay()];
-        dayScores[day] = r.percentage;
+    perfRecords.forEach((r) => {
+      if (r.date) {
+        const day = dayNames[new Date(r.date).getDay()];
+        if (dayScoresMap[day]) {
+          dayScoresMap[day].push(r.percentage);
+        }
       }
     });
 
-    const weeklyPerformance = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => ({
-      day,
-      score: dayScores[day] || 70,
-    }));
+    const weeklyPerformance = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => {
+      const arr = dayScoresMap[day];
+      const avg = arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+      return { day, score: avg };
+    });
 
     // 3. Monthly Performance Chart
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthlyMap = {};
-    results.forEach((r) => {
-      const monthIndex = new Date(r.publishedAt).getMonth();
+    perfRecords.forEach((r) => {
+      const monthIndex = new Date(r.date).getMonth();
       const monthName = months[monthIndex];
       if (!monthlyMap[monthName]) monthlyMap[monthName] = { scoreSum: 0, count: 0 };
       monthlyMap[monthName].scoreSum += r.percentage;
@@ -425,7 +487,7 @@ exports.getUserAnalytics = async (req, res, next) => {
     });
 
     const studentAvgMap = {};
-    results.forEach((r) => {
+    perfRecords.forEach((r) => {
       const sub = r.assessment?.subject;
       if (!sub) return;
       const subId = (sub._id || sub).toString();
@@ -435,73 +497,98 @@ exports.getUserAnalytics = async (req, res, next) => {
     });
 
     const subjects = await Subject.find().select('name code');
-    const subjectComparison = subjects.map((sub) => {
-      const subIdStr = sub._id.toString();
-      const studentAvg = studentAvgMap[subIdStr] ? Math.round(studentAvgMap[subIdStr].scoreSum / studentAvgMap[subIdStr].count) : 0;
-      const classAvg = classAvgMap[subIdStr] ? Math.round(classAvgMap[subIdStr].scoreSum / classAvgMap[subIdStr].count) : 0;
-      return {
-        subject: sub.code || sub.name,
-        student: studentAvg,
-        average: classAvg,
-      };
-    }).filter(item => item.student > 0 || item.average > 0);
+    const subjectComparison = subjects
+      .map((sub) => {
+        const subIdStr = sub._id.toString();
+        const studentAvg = studentAvgMap[subIdStr]
+          ? Math.round(studentAvgMap[subIdStr].scoreSum / studentAvgMap[subIdStr].count)
+          : 0;
+        const classAvg = classAvgMap[subIdStr]
+          ? Math.round(classAvgMap[subIdStr].scoreSum / classAvgMap[subIdStr].count)
+          : 0;
+        return {
+          subject: sub.code || sub.name,
+          student: studentAvg,
+          average: classAvg,
+        };
+      })
+      .filter((item) => item.student > 0 || item.average > 0);
 
     // 5. Dynamic Topic Performance Breakdown
     const topicMap = {};
-    results.forEach((r) => {
-      const topicName = r.assessment?.subject?.name || 'General Skills';
+    perfRecords.forEach((r) => {
+      const topicName = r.assessment?.subject?.name || r.assessment?.title || 'General Skills';
       if (!topicMap[topicName]) topicMap[topicName] = { scoreSum: 0, count: 0 };
       topicMap[topicName].scoreSum += r.percentage;
       topicMap[topicName].count += 1;
     });
 
-    let topicPerformance = Object.keys(topicMap).map((name) => {
-      const score = Math.round(topicMap[name].scoreSum / topicMap[name].count);
-      let status = 'Needs Improvement';
-      if (score >= 90) status = 'Excellent';
-      else if (score >= 85) status = 'Very Good';
-      else if (score >= 75) status = 'Good';
-      else if (score >= 70) status = 'Average';
-      return { name, score, status };
-    }).sort((a, b) => b.score - a.score);
+    let topicPerformance = Object.keys(topicMap)
+      .map((name) => {
+        const score = Math.round(topicMap[name].scoreSum / topicMap[name].count);
+        let status = 'Needs Improvement';
+        if (score >= 90) status = 'Excellent';
+        else if (score >= 85) status = 'Very Good';
+        else if (score >= 75) status = 'Good';
+        else if (score >= 70) status = 'Average';
+        return { name, score, status };
+      })
+      .sort((a, b) => b.score - a.score);
 
-    // Fallback topic performance list if student has no subject results yet
-    if (topicPerformance.length === 0) {
-      topicPerformance = [
-        { name: 'Web Development', score: 90, status: 'Excellent' },
-        { name: 'Problem Solving', score: 85, status: 'Very Good' },
-        { name: 'Data Structures', score: 80, status: 'Good' },
-        { name: 'Algorithms', score: 75, status: 'Good' },
-        { name: 'DBMS', score: 70, status: 'Average' },
-        { name: 'System Design', score: 65, status: 'Needs Improvement' },
-      ];
-    }
-
-    const strongestTopic = topicPerformance[0];
-    const weakestTopic = topicPerformance[topicPerformance.length - 1];
+    const strongestTopic =
+      topicPerformance.length > 0 ? topicPerformance[0] : { name: 'N/A', score: 0, status: 'No Data' };
+    const weakestTopic =
+      topicPerformance.length > 0
+        ? topicPerformance[topicPerformance.length - 1]
+        : { name: 'N/A', score: 0, status: 'No Data' };
 
     // 6. Problem Solved & Skill Analysis
-    const mcqGradedCount = results.filter((r) => r.assessment?.type === 'mcq').length;
-    const codingGradedCount = results.filter((r) => r.assessment?.type === 'coding').length;
-    const theoryGradedCount = results.filter((r) => r.assessment?.type === 'theory').length;
+    const mcqGradedCount = perfRecords.filter((r) => r.type === 'mcq').length;
+    const codingGradedCount = perfRecords.filter((r) => r.type === 'coding').length;
+    const theoryGradedCount = perfRecords.filter((r) => r.type === 'theory').length;
 
     const problemsSolved = [
       { name: 'MCQ Assessments', value: mcqGradedCount },
       { name: 'Coding Assessments', value: codingGradedCount },
       { name: 'Theory Assessments', value: theoryGradedCount },
-    ].filter(item => item.value > 0);
+    ].filter((item) => item.value > 0);
 
-    const passedCount = results.filter((r) => r.status === 'pass').length;
-    const failedCount = results.filter((r) => r.status === 'fail').length;
+    const mcqAvg =
+      mcqGradedCount > 0
+        ? Math.round(
+            perfRecords
+              .filter((r) => r.type === 'mcq')
+              .reduce((acc, curr) => acc + curr.percentage, 0) / mcqGradedCount
+          )
+        : 0;
 
-    const mcqAvg = mcqGradedCount > 0 ? Math.round(results.filter(r => r.assessment?.type === 'mcq').reduce((acc, curr) => acc + curr.percentage, 0) / mcqGradedCount) : (accuracy || 92);
-    const codingAvg = codingGradedCount > 0 ? Math.round(results.filter(r => r.assessment?.type === 'coding').reduce((acc, curr) => acc + curr.percentage, 0) / codingGradedCount) : 75;
-    const theoryAvg = theoryGradedCount > 0 ? Math.round(results.filter(r => r.assessment?.type === 'theory').reduce((acc, curr) => acc + curr.percentage, 0) / theoryGradedCount) : 80;
+    const codingAvg =
+      codingGradedCount > 0
+        ? Math.round(
+            perfRecords
+              .filter((r) => r.type === 'coding')
+              .reduce((acc, curr) => acc + curr.percentage, 0) / codingGradedCount
+          )
+        : 0;
+
+    const theoryAvg =
+      theoryGradedCount > 0
+        ? Math.round(
+            perfRecords
+              .filter((r) => r.type === 'theory')
+              .reduce((acc, curr) => acc + curr.percentage, 0) / theoryGradedCount
+          )
+        : 0;
 
     const skillAnalysis = [
       { name: 'MCQ Accuracy', score: mcqAvg },
       { name: 'Coding Logic', score: codingAvg },
       { name: 'Theory Mastery', score: theoryAvg },
+    ];
+
+    const submissionAnalysis = [
+      { name: 'Passed', value: perfRecords.filter((r) => r.status === 'pass').length },
+      { name: 'Failed / Under Review', value: perfRecords.filter((r) => r.status === 'fail').length },
     ];
 
     res.status(200).json({

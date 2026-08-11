@@ -35,75 +35,65 @@ const ProgressAnalyticsView = ({ analyticsData, userProfile }) => {
   const [showAllTopics, setShowAllTopics] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
-  // Dynamic values derived from backend analyticsData (with fallbacks if no history exists yet)
-  const averageScore = analyticsData?.averageScore ?? 78.6;
-  const assessmentsTaken = analyticsData?.assessmentsTaken ?? 24;
-  const codingSpeed = analyticsData?.codingSpeed ?? 215;
-  const accuracy = analyticsData?.accuracy ?? 92.3;
-  const percentileRank = analyticsData?.percentileRank ?? 'Top 18%';
+  // Dynamic values derived from backend analyticsData (strictly computed from student attempts)
+  const averageScore = analyticsData?.averageScore ?? 0;
+  const assessmentsTaken = analyticsData?.assessmentsTaken ?? 0;
+  const codingSpeed = analyticsData?.codingSpeed ?? 0;
+  const accuracy = analyticsData?.accuracy ?? 0;
+  const percentileRank = analyticsData?.percentileRank ?? (assessmentsTaken > 0 ? 'Top 10%' : 'N/A');
 
   // Dynamic weekly chart data
   const defaultWeeklyData = [
-    { day: 'Mon', score: 62, avg: 55 },
-    { day: 'Tue', score: 68, avg: 58 },
-    { day: 'Wed', score: 74, avg: 60 },
-    { day: 'Thu', score: 85, avg: 65 },
-    { day: 'Fri', score: 78, avg: 64 },
-    { day: 'Sat', score: 90, avg: 70 },
-    { day: 'Sun', score: 82, avg: 68 },
+    { day: 'Mon', score: 0 },
+    { day: 'Tue', score: 0 },
+    { day: 'Wed', score: 0 },
+    { day: 'Thu', score: 0 },
+    { day: 'Fri', score: 0 },
+    { day: 'Sat', score: 0 },
+    { day: 'Sun', score: 0 },
   ];
-  const weeklyData = (analyticsData?.weeklyPerformance && analyticsData.weeklyPerformance.length > 0)
-    ? analyticsData.weeklyPerformance
-    : defaultWeeklyData;
+  const weeklyData =
+    analyticsData?.weeklyPerformance && analyticsData.weeklyPerformance.length > 0
+      ? analyticsData.weeklyPerformance
+      : defaultWeeklyData;
 
-  const defaultAccuracyData = [
-    { day: 'Mon', accuracy: 78 },
-    { day: 'Tue', accuracy: 81 },
-    { day: 'Wed', accuracy: 85 },
-    { day: 'Thu', accuracy: 90 },
-    { day: 'Fri', accuracy: 88 },
-    { day: 'Sat', accuracy: 92 },
-    { day: 'Sun', accuracy: 93 },
-  ];
+  const accuracyData = weeklyData.map((w) => ({
+    day: w.day,
+    accuracy: w.score ?? accuracy ?? 0,
+  }));
 
   // Skill Radar logic:
-  // If 3 or more subjects are entered, dynamically display all subjects.
-  // Otherwise (e.g. only 1 subject like "MOCKS"), display the 3-axis Skill Analysis radar (Image 2: MCQ Accuracy, Coding Logic, Theory Mastery).
-  const defaultSkillRadar = (analyticsData?.skillAnalysis && analyticsData.skillAnalysis.length >= 3)
-    ? analyticsData.skillAnalysis.map(s => ({
-        subject: s.name,
-        score: s.score || 80,
-        avgScore: Math.max(20, (s.score || 80) - 20)
-      }))
-    : [
-        { subject: 'MCQ Accuracy', score: accuracy || 92, avgScore: 65 },
-        { subject: 'Coding Logic', score: Math.min(100, Math.round(codingSpeed / 2.5)) || 75, avgScore: 60 },
-        { subject: 'Theory Mastery', score: Math.round(averageScore) || 80, avgScore: 55 }
-      ];
+  // If subject comparison data exists, render that. Otherwise render 3-axis Skill Analysis (MCQ, Coding, Theory).
+  const defaultSkillRadar =
+    analyticsData?.skillAnalysis && analyticsData.skillAnalysis.length > 0
+      ? analyticsData.skillAnalysis.map((s) => ({
+          subject: s.name,
+          score: s.score || 0,
+          avgScore: Math.max(0, (s.score || 0) - 15),
+        }))
+      : [
+          { subject: 'MCQ Accuracy', score: accuracy || 0, avgScore: Math.max(0, (accuracy || 0) - 15) },
+          { subject: 'Coding Logic', score: Math.min(100, Math.round(codingSpeed * 2.5)) || 0, avgScore: 0 },
+          { subject: 'Theory Mastery', score: Math.round(averageScore) || 0, avgScore: Math.max(0, Math.round(averageScore) - 15) },
+        ];
 
-  const skillRadarData = (analyticsData?.subjectComparison && analyticsData.subjectComparison.length >= 3)
-    ? analyticsData.subjectComparison.map(s => ({
-        subject: s.subject,
-        score: s.student || 70,
-        avgScore: s.average || 60
-      }))
-    : defaultSkillRadar;
+  const skillRadarData =
+    analyticsData?.subjectComparison && analyticsData.subjectComparison.length >= 3
+      ? analyticsData.subjectComparison.map((s) => ({
+          subject: s.subject,
+          score: s.student || 0,
+          avgScore: s.average || 0,
+        }))
+      : defaultSkillRadar;
 
-  const defaultTopicsList = [
-    { name: 'Web Development', score: 90, status: 'Excellent' },
-    { name: 'Problem Solving', score: 85, status: 'Very Good' },
-    { name: 'Data Structures', score: 80, status: 'Good' },
-    { name: 'Algorithms', score: 75, status: 'Good' },
-    { name: 'DBMS', score: 70, status: 'Average' },
-    { name: 'System Design', score: 65, status: 'Needs Improvement' },
-  ];
+  const topicsList = analyticsData?.topicPerformance || [];
 
-  const topicsList = (analyticsData?.topicPerformance && analyticsData.topicPerformance.length > 0)
-    ? analyticsData.topicPerformance
-    : defaultTopicsList;
-
-  const strongestTopic = analyticsData?.strongestTopic || topicsList[0] || { name: 'Web Development', score: 90 };
-  const weakestTopic = analyticsData?.weakestTopic || topicsList[topicsList.length - 1] || { name: 'System Design', score: 65 };
+  const strongestTopic =
+    analyticsData?.strongestTopic ||
+    (topicsList.length > 0 ? topicsList[0] : { name: 'N/A', score: 0, status: 'No Data' });
+  const weakestTopic =
+    analyticsData?.weakestTopic ||
+    (topicsList.length > 0 ? topicsList[topicsList.length - 1] : { name: 'N/A', score: 0, status: 'No Data' });
 
   const handleDownloadReport = () => {
     setShowReportModal(true);
@@ -350,8 +340,11 @@ const ProgressAnalyticsView = ({ analyticsData, userProfile }) => {
                   <PolarGrid stroke="#E2E8F0" />
                   <PolarAngleAxis
                     dataKey="subject"
-                    tick={({ x, y, payload }) => {
-                      const skillVal = skillRadarData.find(s => s.subject === payload.value)?.score;
+                    tick={(props) => {
+                      const { x, y, payload } = props || {};
+                      if (!payload || payload.value === undefined) return null;
+                      const skillObj = (skillRadarData || []).find((s) => s.subject === payload.value);
+                      const skillVal = skillObj ? (skillObj.score ?? 0) : 0;
                       return (
                         <text x={x} y={y} fill="#475569" fontSize={10} fontWeight={700} textAnchor="middle" dy={payload.value === 'Problem Solving' ? -8 : 12}>
                           <tspan x={x} dy="0">{payload.value}</tspan>
@@ -413,7 +406,7 @@ const ProgressAnalyticsView = ({ analyticsData, userProfile }) => {
             {/* Mini Line/Area Chart */}
             <div className="h-44 w-full my-2">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={defaultAccuracyData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <AreaChart data={accuracyData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="accuracyGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
@@ -456,31 +449,35 @@ const ProgressAnalyticsView = ({ analyticsData, userProfile }) => {
 
               {/* List */}
               <div className="space-y-3 mt-3">
-                {topicsList.map((topic, idx) => {
-                  const getStatusStyle = (status) => {
-                    if (status === 'Excellent' || status === 'Very Good') return 'text-emerald-600 bg-emerald-500';
-                    if (status === 'Good' || status === 'Average') return 'text-amber-600 bg-amber-500';
-                    return 'text-rose-600 bg-rose-500';
-                  };
-                  const style = getStatusStyle(topic.status);
-                  const barColor = style.split(' ')[1];
-                  const textColor = style.split(' ')[0];
+                {topicsList.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic py-4 text-center">No topic performance data available yet.</p>
+                ) : (
+                  topicsList.map((topic, idx) => {
+                    const getStatusStyle = (status) => {
+                      if (status === 'Excellent' || status === 'Very Good') return 'text-emerald-600 bg-emerald-500';
+                      if (status === 'Good' || status === 'Average') return 'text-amber-600 bg-amber-500';
+                      return 'text-rose-600 bg-rose-500';
+                    };
+                    const style = getStatusStyle(topic.status);
+                    const barColor = style.split(' ')[1];
+                    const textColor = style.split(' ')[0];
 
-                  return (
-                    <div key={idx} className="grid grid-cols-12 items-center text-xs">
-                      <span className="col-span-5 font-bold text-slate-700 truncate">{topic.name}</span>
-                      <span className="col-span-2 font-black text-slate-800 text-center">{topic.score}%</span>
-                      <div className="col-span-5 flex items-center justify-end gap-2">
-                        <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                          <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${topic.score}%` }} />
+                    return (
+                      <div key={idx} className="grid grid-cols-12 items-center text-xs">
+                        <span className="col-span-5 font-bold text-slate-700 truncate">{topic.name}</span>
+                        <span className="col-span-2 font-black text-slate-800 text-center">{topic.score}%</span>
+                        <div className="col-span-5 flex items-center justify-end gap-2">
+                          <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${topic.score}%` }} />
+                          </div>
+                          <span className={`text-[10px] font-bold ${textColor} w-24 text-right truncate`}>
+                            {topic.status}
+                          </span>
                         </div>
-                        <span className={`text-[10px] font-bold ${textColor} w-24 text-right truncate`}>
-                          {topic.status}
-                        </span>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
 

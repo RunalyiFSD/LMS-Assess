@@ -609,37 +609,53 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Professional Information (Optional) Section */}
+              {/* Role-Based Information Section */}
               <div className="pt-4 border-t border-slate-100 space-y-3">
-                <h4 className="text-xs font-semibold text-slate-400">Professional Information (Optional)</h4>
+                <h4 className="text-xs font-semibold text-slate-400">
+                  {user?.role === 'student'
+                    ? 'Academic Information (Optional)'
+                    : user?.role === 'admin'
+                    ? 'Administrative Information (Optional)'
+                    : 'Professional Information (Optional)'}
+                </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 min-h-[24px] flex items-end">DEPARTMENT</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 min-h-[24px] flex items-end">
+                      DEPARTMENT
+                    </label>
                     <input
                       type="text"
                       value={profileForm.department}
                       onChange={(e) => setProfileForm((prev) => ({ ...prev, department: e.target.value }))}
-                      placeholder="e.g. Computer Sc"
+                      placeholder="e.g. Computer Science"
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 min-h-[24px] flex items-end">LANGUAGE</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 min-h-[24px] flex items-end">
+                      {user?.role === 'student' ? 'PREFERRED LANGUAGES' : 'PROGRAMMING LANGUAGE'}
+                    </label>
                     <input
                       type="text"
                       value={profileForm.language}
                       onChange={(e) => setProfileForm((prev) => ({ ...prev, language: e.target.value }))}
-                      placeholder="e.g. Java, Python"
+                      placeholder={user?.role === 'student' ? 'e.g. C++, Java, Python' : 'e.g. Java, Python'}
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 min-h-[24px] flex items-end">EXPERIENCE (YRS)</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 min-h-[24px] flex items-end">
+                      {user?.role === 'student' ? 'BATCH / YEAR' : 'EXPERIENCE (YRS)'}
+                    </label>
                     <input
                       type="text"
-                      value={profileForm.experience}
-                      onChange={(e) => setProfileForm((prev) => ({ ...prev, experience: e.target.value }))}
-                      placeholder="e.g. 5 years"
+                      value={user?.role === 'student' ? profileForm.batch : profileForm.experience}
+                      onChange={(e) =>
+                        user?.role === 'student'
+                          ? setProfileForm((prev) => ({ ...prev, batch: e.target.value }))
+                          : setProfileForm((prev) => ({ ...prev, experience: e.target.value }))
+                      }
+                      placeholder={user?.role === 'student' ? 'e.g. 2025 / 4th Year' : 'e.g. 5 years'}
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                     />
                   </div>
